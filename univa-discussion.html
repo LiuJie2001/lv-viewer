@@ -1,0 +1,2960 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UniVA 论文讨论 - Universal Video Agent</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;700&display=swap"
+        rel="stylesheet">
+
+    <!-- KaTeX for math -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+    <!-- Prism.js for code highlighting -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-json.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-markdown.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-yaml.min.js"></script>
+
+    <style>
+        :root {
+            --color-text: #1a1a1a;
+            --color-text-secondary: #555;
+            --color-text-muted: #888;
+            --color-bg: #ffffff;
+            --color-bg-alt: #f8f9fa;
+            --color-border: #e5e5e5;
+            --color-accent: #2563eb;
+            --color-accent-light: #dbeafe;
+            --color-success: #059669;
+            --color-warning: #d97706;
+            --font-serif: 'Crimson Pro', 'Noto Sans SC', serif;
+            --font-sans: 'Noto Sans SC', -apple-system, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            font-size: 16px;
+            line-height: 1.8;
+            color: var(--color-text);
+            background: var(--color-bg);
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #f0f4ff 0%, #fefefe 100%);
+            border-bottom: 1px solid var(--color-border);
+            padding: 4rem 2rem 3rem;
+            text-align: center;
+        }
+
+        .header-tag {
+            display: inline-block;
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--color-accent);
+            background: var(--color-accent-light);
+            padding: 0.25rem 0.75rem;
+            border-radius: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .header h1 {
+            font-family: var(--font-serif);
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: 700;
+            color: var(--color-text);
+            margin-bottom: 0.5rem;
+        }
+
+        .header .subtitle {
+            font-size: 1.25rem;
+            color: var(--color-text-secondary);
+            font-weight: 400;
+        }
+
+        .header-meta {
+            margin-top: 1.5rem;
+            font-size: 0.875rem;
+            color: var(--color-text-muted);
+        }
+
+        .header-meta span {
+            margin: 0 0.5rem;
+        }
+
+        /* Navigation */
+        .nav {
+            position: sticky;
+            top: 0;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--color-border);
+            z-index: 100;
+            padding: 0 2rem;
+        }
+
+        .nav-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            gap: 0.25rem;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+
+        .nav-inner::-webkit-scrollbar {
+            display: none;
+        }
+
+        .nav a {
+            display: block;
+            padding: 0.875rem 1rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--color-text-secondary);
+            text-decoration: none;
+            white-space: nowrap;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .nav a:hover,
+        .nav a.active {
+            color: var(--color-accent);
+            border-bottom-color: var(--color-accent);
+        }
+
+        /* Main content */
+        .main {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 3rem 2rem 6rem;
+        }
+
+        /* Sections */
+        section {
+            margin-bottom: 4rem;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid var(--color-text);
+        }
+
+        .section-number {
+            font-family: var(--font-serif);
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--color-accent);
+            line-height: 1;
+        }
+
+        .section-title {
+            font-family: var(--font-serif);
+            font-size: 1.75rem;
+            font-weight: 600;
+        }
+
+
+        /* Subsections */
+        h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 2rem 0 1rem;
+            color: var(--color-text);
+        }
+
+        h4 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 1.75rem 0 0.75rem;
+            color: var(--color-text);
+            padding-left: 0.75rem;
+            border-left: 3px solid var(--color-accent);
+        }
+
+        h5 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 1.5rem 0 0.5rem;
+            color: var(--color-text);
+            padding-left: 0.5rem;
+            border-left: 2px solid var(--color-border);
+        }
+
+        p {
+            margin-bottom: 1rem;
+        }
+
+        /* Lists */
+        ul,
+        ol {
+            margin: 1rem 0;
+            padding-left: 1.5rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        li::marker {
+            color: var(--color-accent);
+        }
+
+        /* Tables */
+        .table-wrapper {
+            overflow-x: auto;
+            margin: 1.5rem 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        th,
+        td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        th {
+            font-weight: 600;
+            background: var(--color-bg-alt);
+            white-space: nowrap;
+        }
+
+        tr:hover td {
+            background: var(--color-bg-alt);
+        }
+
+        /* Figure reference */
+        .figure-ref {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            font-size: 0.875rem;
+            color: var(--color-accent);
+            background: var(--color-accent-light);
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.25rem;
+            margin: 0.5rem 0;
+        }
+
+        .figure-ref::before {
+            content: '📊';
+        }
+
+        /* Images */
+        .figure {
+            margin: 2rem 0;
+            text-align: center;
+        }
+
+        .figure img {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid var(--color-border);
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .figure-caption {
+            margin-top: 0.75rem;
+            font-size: 0.875rem;
+            color: var(--color-text-secondary);
+            font-style: italic;
+        }
+
+        /* Code blocks */
+        pre {
+            margin: 1.5rem 0;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+        }
+
+        pre[class*="language-"] {
+            background: #f6f8fa;
+            border: 1px solid var(--color-border);
+            padding: 1rem;
+            font-size: 0.875rem;
+            line-height: 1.6;
+        }
+
+        code {
+            font-family: var(--font-mono);
+            font-size: 0.875em;
+        }
+
+        :not(pre)>code {
+            background: var(--color-bg-alt);
+            padding: 0.125rem 0.375rem;
+            border-radius: 0.25rem;
+            color: #c7254e;
+        }
+
+        /* Inline code flow */
+        .code-flow {
+            font-family: var(--font-mono);
+            font-size: 0.875rem;
+            background: var(--color-bg-alt);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            border-left: 3px solid var(--color-accent);
+            margin: 1rem 0;
+            overflow-x: auto;
+            white-space: pre;
+        }
+
+        /* Details/Summary (expandable content) */
+        details {
+            margin: 1.5rem 0;
+            border: 1px solid var(--color-border);
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+
+        summary {
+            padding: 1rem 1.25rem;
+            background: var(--color-bg-alt);
+            cursor: pointer;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: background 0.2s;
+        }
+
+        summary:hover {
+            background: #eef2ff;
+        }
+
+        summary::marker {
+            color: var(--color-accent);
+        }
+
+        details[open] summary {
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .details-content {
+            padding: 1.25rem;
+        }
+
+        /* Highlight box */
+        .highlight-box {
+            background: linear-gradient(135deg, #fefce8 0%, #fef9c3 100%);
+            border: 1px solid #fde047;
+            border-radius: 0.5rem;
+            padding: 1rem 1.25rem;
+            margin: 1.5rem 0;
+        }
+
+        .highlight-box.blue {
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            border-color: #93c5fd;
+        }
+
+        .highlight-box.green {
+            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+            border-color: #6ee7b7;
+        }
+
+        .highlight-box.yellow {
+            background: linear-gradient(135deg, #fefce8 0%, #fef9c3 100%);
+            border-color: #fde047;
+        }
+
+        /* Tags */
+        .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin: 1rem 0;
+        }
+
+        .tag {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            background: var(--color-bg-alt);
+            border: 1px solid var(--color-border);
+        }
+
+        .tag.type {
+            background: #dbeafe;
+            border-color: #93c5fd;
+        }
+
+        .tag.problem {
+            background: #fce7f3;
+            border-color: #f9a8d4;
+        }
+
+        .tag.challenge {
+            background: #fef3c7;
+            border-color: #fcd34d;
+        }
+
+        /* Comparison arrows */
+        .comparison {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin: 1rem 0;
+            flex-wrap: wrap;
+        }
+
+        .comparison-item {
+            flex: 1;
+            min-width: 200px;
+            padding: 1rem;
+            background: var(--color-bg-alt);
+            border-radius: 0.5rem;
+            text-align: center;
+        }
+
+        .comparison-arrow {
+            font-size: 1.5rem;
+            color: var(--color-success);
+        }
+
+        /* Metric highlight */
+        .metric {
+            display: inline-block;
+            font-weight: 700;
+            color: var(--color-success);
+        }
+
+        .metric.up::after {
+            content: ' ↑';
+        }
+
+        /* Agent trajectory */
+        .trajectory {
+            background: var(--color-bg-alt);
+            border-radius: 0.5rem;
+            padding: 1.25rem;
+            margin: 1rem 0;
+            border-left: 4px solid var(--color-accent);
+        }
+
+        .trajectory-step {
+            display: flex;
+            gap: 1rem;
+            margin: 0.5rem 0;
+            align-items: flex-start;
+        }
+
+        .trajectory-step-num {
+            background: var(--color-accent);
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .trajectory-step-content {
+            flex: 1;
+            font-family: var(--font-mono);
+            font-size: 0.875rem;
+        }
+
+        /* Footer */
+        .footer {
+            border-top: 1px solid var(--color-border);
+            padding: 2rem;
+            text-align: center;
+            font-size: 0.875rem;
+            color: var(--color-text-muted);
+        }
+
+        /* Math display */
+        .math-block {
+            overflow-x: auto;
+            padding: 1rem 0;
+            text-align: center;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header {
+                padding: 2rem 1rem;
+            }
+
+            .main {
+                padding: 2rem 1rem;
+            }
+
+            .section-header {
+                flex-wrap: wrap;
+            }
+
+
+            table {
+                font-size: 0.8rem;
+            }
+
+            th,
+            td {
+                padding: 0.5rem;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            .nav {
+                display: none;
+            }
+
+            .header {
+                background: white;
+            }
+
+            details {
+                break-inside: avoid;
+            }
+
+            details[open] {
+                display: block;
+            }
+        }
+
+        /* Prompt Annotation Split View */
+        .prompt-split-view {
+            display: flex;
+            gap: 1.5rem;
+            margin: 1rem 0;
+        }
+
+        .prompt-split-view .prompt-column {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .prompt-split-view .prompt-column.left {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1rem;
+            overflow-x: auto;
+        }
+
+        .prompt-split-view .prompt-column.left pre {
+            margin: 0;
+            background: transparent;
+            font-size: 0.8rem;
+            line-height: 1.6;
+        }
+
+        .prompt-split-view .prompt-column.right {
+            font-size: 0.85rem;
+            color: var(--color-text-secondary);
+        }
+
+        .prompt-annotation {
+            background: linear-gradient(to right, #fef3c7, #fefce8);
+            border-left: 3px solid #f59e0b;
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.75rem;
+            border-radius: 0 6px 6px 0;
+        }
+
+        .prompt-annotation .annotation-title {
+            font-weight: 600;
+            color: #92400e;
+            font-size: 0.8rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .prompt-annotation p {
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        .prompt-annotation code {
+            background: rgba(0, 0, 0, 0.08);
+            padding: 0.1rem 0.3rem;
+            border-radius: 3px;
+            font-size: 0.8rem;
+        }
+
+        .prompt-section-marker {
+            color: var(--color-accent);
+            font-weight: 600;
+            font-size: 0.75rem;
+            margin-bottom: 0.25rem;
+        }
+
+        @media (max-width: 900px) {
+            .prompt-split-view {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Header -->
+    <header class="header">
+        <span class="header-tag">论文讨论</span>
+        <h1>UniVA: Universal Video Agent</h1>
+        <p class="subtitle">towards Open-Source Next-Generation Video Generalist</p>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="nav-inner">
+            <a href="#paper-info">〇、基本信息</a>
+            <a href="#motivation">一、问题与动机</a>
+            <a href="#positioning">二、相关工作</a>
+            <a href="#method">三、核心方法</a>
+            <a href="#exp-design">四、实验设计</a>
+            <a href="#exp-results">五、实验结果</a>
+            <a href="#contribution">六、结论与局限性</a>
+            <a href="#cases">七、Case 展示</a>
+            <a href="#thoughts">八、个人思考</a>
+            <a href="#appendix">附录</a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main">
+
+        <!-- Section 0: Paper Info -->
+        <section id="paper-info">
+            <div class="section-header">
+                <span class="section-number">〇</span>
+                <h2 class="section-title">论文基本信息</h2>
+            </div>
+
+            <div class="table-wrapper">
+                <table>
+                    <tbody>
+                        <tr>
+                            <td><strong>标题</strong></td>
+                            <td>UniVA: Universal Video Agent towards Open-Source Next-Generation Video Generalist</td>
+                        </tr>
+                        <tr>
+                            <td><strong>作者</strong></td>
+                            <td>Zhengyang Liang, Daoan Zhang, ... , <strong>Hao Fei</strong> (通讯)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>机构</strong></td>
+                            <td>SMU, U. Rochester, UCL, NUS, CUHK, Stanford</td>
+                        </tr>
+                        <tr>
+                            <td><strong>发表</strong></td>
+                            <td>arXiv:2511.08521, 2025年11月</td>
+                        </tr>
+                        <tr>
+                            <td><strong>资源</strong></td>
+                            <td><a href="http://univa.online/" target="_blank">项目主页</a> · <a
+                                    href="https://github.com/univa-agent/univa" target="_blank">GitHub</a></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Section 1: Motivation -->
+        <section id="motivation">
+            <div class="section-header">
+                <span class="section-number">01</span>
+                <h2 class="section-title">问题与动机</h2>
+            </div>
+
+            <h3>1.1 背景：要解决的任务</h3>
+            <p>一个典型的视频创作流程包含多个步骤：从图像或文本构思出发，生成视频，再进行编辑、分割关键对象，最终合成完整场景。[Section 1, 第1段]</p>
+            <div class="code-flow">图像/文本构思 → 视频生成 → 视频编辑 / 分割关键对象 → 合成场景</div>
+
+            <div class="highlight-box">
+                <strong>传统方法的问题</strong>：完成这样的流程需要<strong>手动拼接多个独立工具</strong>（stitching together disparate
+                tools），导致流程<strong>脆弱、劳动密集、缺乏交互性</strong>（brittle, labor-intensive, and
+                non-interactive），无法提供自动化和主动辅助。[Section 1, 第1段]
+            </div>
+
+            <h4>Figure 1：UniVA 完整案例展示</h4>
+            <div class="figure">
+                <img src="images/univa/teaser_v5.png" alt="Figure 1: UniVA teaser">
+                <p class="figure-caption">Figure 1：UniVA 提供高度自动化、交互式、主动式的视频创作体验，支持多轮对话共创、基于记忆的上下文推理、意图理解和工具增强规划。</p>
+            </div>
+
+            <h4>Figure 4：单提示任务 vs 多轮任务</h4>
+            <div class="figure">
+                <img src="images/univa/task_v2.png" alt="Figure 4: One-prompt vs Multi-round task">
+                <p class="figure-caption">Figure 4：左图为单提示任务（one-prompt task），一次性应用水墨画风格；右图为多轮任务（multi-round
+                    task），通过分割、换背景、扩展等步骤逐步编辑。</p>
+            </div>
+
+            <h3>1.2 现有方法的问题</h3>
+            <p>原文指出现有方法的三类局限 [Section 1, 第2-3段]：</p>
+
+            <h4>① 单任务视频模型（Single-task video models）</h4>
+            <p><strong>做法</strong>：为特定任务设计专用网络，如分割网络、视频生成网络等，在各自任务上达到高性能。</p>
+            <div class="highlight-box">
+                <strong>局限</strong>：<strong>孤立运行</strong>（operate in isolation），无法处理多步骤目标，需要人工协调才能组合使用。
+            </div>
+
+            <h4>② 视频-语言基础模型（Video-language foundation models）</h4>
+            <p><strong>代表工作</strong>：VILA-U <a href="#ref-vila-u">[Wu et al., 2024]</a>、Show-o2 <a
+                    href="#ref-show-o2">[Xie et al., 2025]</a>、Omni-video <a href="#ref-omni-video">[Tan et al.,
+                    2025]</a>、Vitron <a href="#ref-vitron">[Fei et al., 2024]</a></p>
+            <p><strong>做法</strong>：尝试将理解和生成整合到单一模型中（integrate understanding and generation into one
+                model），通过大规模多模态训练学习广泛的能力。</p>
+            <div class="highlight-box">
+                <strong>局限</strong>：<strong>整体式且不灵活</strong>（monolithic and inflexible），难以整合新工具或模块化功能，用于复杂工作流时效率低下或不切实际。
+            </div>
+
+            <h4>③ 基于 LLM 的工具使用 Agent（LLM-based agents with tool use）</h4>
+            <p><strong>代表工作</strong>：</p>
+            <ul>
+                <li><strong>HuggingGPT</strong> <a href="#ref-hugginggpt">[Shen et al.,
+                        2023]</a>：使用语言模型作为控制器来规划任务，并按顺序调用合适的模型/工具（employs a language model as a controller to plan tasks
+                    and invoke appropriate models/tools in sequence）</li>
+                <li><strong>VideoAgent</strong> <a href="#ref-videoagent">[Fan et al., 2024]</a>：利用 LLM
+                    配合结构化记忆和预定义的视频工具集来回答长视频问题（leverages an LLM with a structured memory and a predefined set of video
+                    tools to answer questions on long videos）</li>
+            </ul>
+            <div class="highlight-box">
+                <strong>局限</strong>：HuggingGPT 是通用框架，<strong>未针对视频操作专门优化</strong>（not specialized for detailed video
+                operations）；VideoAgent <strong>主要关注视频理解问答</strong>（focuses mainly on video understanding
+                queries），编辑/生成能力有限。
+            </div>
+
+            <div class="highlight-box blue">
+                <strong>关键瓶颈</strong>：缺乏一个能够<strong>跨多个视频任务和步骤进行推理</strong>的统一系统，这已成为下一代视频智能的<strong>关键瓶颈</strong>（critical
+                bottleneck）。目前没有任何平台能完整支持统一的、端到端的智能体视频工作流，无缝集成理解、生成、编辑，并具备主动交互和可扩展模块化能力。[Section 1, 第1、3段]
+            </div>
+
+            <h3>1.3 本文贡献</h3>
+            <p>原文提出三项贡献 [Section 1, Contributions]：</p>
+
+            <div class="highlight-box green">
+                <strong>(1) UniVA 框架</strong>：首个<strong>开源、统一、全能</strong>（open-source, unified,
+                omni-capable）的视频通才框架，将视频理解、编辑、生成统一到单一智能体工作流，基于 Plan-Act 双智能体架构和多层级记忆设计
+            </div>
+
+            <div class="highlight-box green">
+                <strong>(2) MCP 工具生态</strong>：基于 MCP 协议 <a href="#ref-mcp">[Anthropic, 2024]</a>
+                的<strong>模块化视频生产引擎</strong>（modular, MCP-based video production engine），支持即插即用的开源或 API
+                工具，实现任意条件生成、跨模态编辑和工业级质量控制
+            </div>
+
+            <div class="highlight-box green">
+                <strong>(3) UniVA-Bench 基准</strong>：首个评估<strong>智能体视频智能</strong>（agentic video
+                intelligence）的基准，不仅评估任务性能，还评估规划质量、记忆利用和工具路由效率
+            </div>
+        </section>
+
+        <!-- Section 2: Related Work -->
+        <section id="positioning">
+            <div class="section-header">
+                <span class="section-number">02</span>
+                <h2 class="section-title">相关工作</h2>
+            </div>
+
+            <p>原文 Section 2 按研究领域组织，梳理了从视频处理到统一建模再到智能体范式的三条研究脉络。</p>
+
+            <h3>2.1 研究脉络总览</h3>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>研究方向</th>
+                            <th>核心目标</th>
+                            <th>代表工作</th>
+                            <th>局限性</th>
+                            <th>出处</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Video Processing and Intelligence</strong></td>
+                            <td>针对特定任务设计专用模型</td>
+                            <td>C3D <a href="#ref-c3d">[Tran et al., 2015]</a>, Vid2Seq <a href="#ref-vid2seq">[Yang et
+                                    al., 2023]</a>, Video-LLaVA <a href="#ref-videollava">[Lin et al., 2024]</a>, SAM2
+                                <a href="#ref-sam2">[Ravi et al., 2024]</a>, Imagen Video <a
+                                    href="#ref-imagen-video">[Ho et al., 2022]</a>, Make-A-Video <a
+                                    href="#ref-make-a-video">[Singer et al., 2022]</a>
+                            </td>
+                            <td>系统分散且任务专用（fragmented and task-specific），限制互操作性和可扩展性</td>
+                            <td>[Section 2, 第1段]</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Toward Unified Video Modeling</strong></td>
+                            <td>将多样任务整合到单一框架</td>
+                            <td>Show-o2 <a href="#ref-show-o2">[Xie et al., 2025]</a>, Omni-video <a
+                                    href="#ref-omni-video">[Tan et al., 2025]</a>, Vitron <a href="#ref-vitron">[Fei et
+                                    al., 2024]</a>, SA2VA <a href="#ref-sa2va">[Yuan et al., 2025a]</a></td>
+                            <td>依赖静态流水线，缺乏有效调度或协调机制（without effective scheduling or coordination mechanisms），难以扩展</td>
+                            <td>[Section 2, 第2段]</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Agents for Video Intelligence</strong></td>
+                            <td>利用规划、交互、记忆机制实现灵活智能</td>
+                            <td>VideoAgent <a href="#ref-videoagent">[Fan et al., 2024]</a>, StoryAgent <a
+                                    href="#ref-storyagent">[Hu et al., 2024]</a>, VideoMultiAgents <a
+                                    href="#ref-videomultiagents">[Kugo et al., 2025]</a>, PreMind <a
+                                    href="#ref-premind">[Wei et al., 2025]</a></td>
+                            <td>通信和协调仍是开放挑战（communication and coordination remain open challenges）</td>
+                            <td>[Section 2, 第3段]</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>2.2 UniVA 的解决思路</h3>
+
+            <p class="note"><strong>（以下为基于原文 Section 2 的归纳总结，非原文明确列出的对应关系）</strong></p>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>现有方法类型</th>
+                            <th>原文指出的局限</th>
+                            <th>UniVA 对应的解决思路</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>视频处理系统</td>
+                            <td>分散、任务专用</td>
+                            <td>统一框架整合多任务</td>
+                        </tr>
+                        <tr>
+                            <td>统一建模方法</td>
+                            <td>静态流水线、难扩展</td>
+                            <td>动态编排 + MCP 即插即用</td>
+                        </tr>
+                        <tr>
+                            <td>视频 Agent</td>
+                            <td>协调困难、功能单一</td>
+                            <td>Plan-Act 架构 + 三层记忆</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Section 3: Core Method -->
+        <section id="method">
+            <div class="section-header">
+                <span class="section-number">03</span>
+                <h2 class="section-title">核心方法</h2>
+            </div>
+
+            <h3>3.1 UniVA 控制核心（The UniVA Control Core）</h3>
+            <p>UniVA 的控制核心包含两个关键组件：负责任务规划的 <strong>决策引擎</strong>（decision engine），以及管理中间状态和交互历史的
+                <strong>记忆系统</strong>（memory system）。[Section 3.2, 第1段]
+            </p>
+
+            <h4>3.1.1 Plan-Act 双智能体架构（Plan–Act Dual Agent Architecture）</h4>
+
+            <div class="figure">
+                <img src="../../assets/images/univa/figure-2-univa-整体架构图展示-plan-act.png" alt="UniVA 整体架构图">
+                <p class="figure-caption">Figure 2: UniVA 整体架构 - Plan-Act 双智能体范式</p>
+            </div>
+
+            <p><strong>架构设计</strong>：UniVA 的核心是 Plan-Act dual-agent architecture。策略 <code>π</code> 通过双智能体 Plan-Act
+                框架实现。[Section 3.2.1, 第1段]</p>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>组件</th>
+                            <th>角色</th>
+                            <th>职责</th>
+                            <th>出处</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Plan Agent（规划智能体）</strong></td>
+                            <td>high-level policy network（高层策略网络）</td>
+                            <td>将目标 <code>G</code> 和当前状态 <code>sₜ</code> 映射为抽象的 plan 序列</td>
+                            <td>[Section 3.2.1, 第1段]</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Act Agent（执行智能体）</strong></td>
+                            <td>low-level execution policy（低层执行策略）</td>
+                            <td>将 plan 的每个步骤转换为具体动作 <code>aₜ</code>，通过 MCP 接口选择合适工具并填充参数</td>
+                            <td>[Section 3.2.1, 第1-2段]</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p><strong>设计原理</strong>：这种分离使 Planner 保持 <strong>lightweight and strategic</strong>（轻量级和战略性），而 Actor 专注于
+                <strong>reliable and efficient tool use</strong>（可靠高效的工具使用）。[Section 3.2.1, 第2段末]
+            </p>
+
+            <h4>Re-planning 机制</h4>
+            <p>原文提到这种 planning 和 acting 的分离允许系统 "look ahead and reason about long-horizon goals, while <strong>flexibly
+                    adapting the plan if intermediate results require
+                    changes</strong>"（前瞻性地推理长程目标，同时在中间结果需要变化时灵活调整计划）。[Section 1, 第1项第1点]</p>
+
+            <p>Plan Agent 提示词（Appendix A.3）中对 re-planning 的规则定义：</p>
+            <div class="highlight-box">
+                "If a step completes with a <strong>failure status</strong>, the planning should be <strong>dynamically
+                    adjusted</strong>."<br>
+                <span style="font-size:0.85rem">[Appendix A.3, IV. Planning Updates]</span>
+            </div>
+            <p>论文提出 <strong>ReplanQ（Re-planning Quality）</strong> 指标来衡量系统从失败中恢复的效率。[Section 4.2]</p>
+
+            <details>
+                <summary>🔍 <strong>可展开：Plan Agent 提示词模板</strong></summary>
+                <div class="details-content">
+                    <p>Plan Agent 系统提示词完整结构（<code>prompts/plan.txt</code>，125行）[Appendix A.3, p.18-20]：</p>
+
+                    <div class="prompt-split-view">
+                        <div class="prompt-column left">
+                            <pre><code class="language-markdown"># Unified Video Planner Agent
+
+## Role
+You are Univideo, an expert video generation
+and processing planner. Your task is to
+analyze user requests and create detailed,
+step-by-step execution plans using available
+tools. You must break down complex tasks into
+manageable steps and select appropriate tools
+for each operation.</code></pre>
+                        </div>
+                        <div class="prompt-column right">
+                            <div class="prompt-annotation">
+                                <div class="prompt-section-marker">▸ [Role] 角色定义</div>
+                                <p>定义 Agent 身份为"视频规划专家"，核心职责是<strong>任务分解</strong>和<strong>工具选择</strong>。通过明确的角色设定约束 LLM
+                                    的输出行为。</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="prompt-split-view">
+                        <div class="prompt-column left">
+                            <pre><code class="language-markdown">## Available Tools Overview
+The tools are divided to **atom** and **workflow**:
+- **Atom**: Basic, independent functional modules,
+  low-level operations
+- **Workflow**: Series of operations with clear
+  steps and sequence
+
+### Video Generation Tools:
+#### Atom Functions:
+- text2video_gen: ~5s video from text
+- image2video_gen: ~5s video from text + image
+- video_extension: Extend video from last frame
+- frame2frame_video_gen: Transition between frames
+
+#### Workflow Functions:
+- storyvideo_gen: Full story pipeline
+- entity2video: Story video with character images</code></pre>
+                        </div>
+                        <div class="prompt-column right">
+                            <div class="prompt-annotation">
+                                <div class="prompt-section-marker">▸ [I. AVAILABLE TOOLS] 工具清单</div>
+                                <p><strong>Atom vs Workflow 分层设计</strong>：原子工具是最小执行单元，工作流则封装了多步骤流程。这种分层让 Plan Agent
+                                    可以灵活组合原子操作，也可直接调用预定义工作流简化规划。</p>
+                                <p style="margin-top:0.5rem"><code>storyvideo_gen</code> 等 Workflow 内部自动处理：Storyboard →
+                                    角色生成 → 关键帧 → 片段合并，Plan Agent 无需手动编排这些步骤。</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="prompt-split-view">
+                        <div class="prompt-column left">
+                            <pre><code class="language-markdown">### Video Editing Tools (Atom):
+- depth_modify: Edit foreground/background using depth
+- style_transfer: Convert video to artistic style
+- repainting: Repaint/replace specific objects
+
+### Video Understanding Tools:
+- vision2text_gen (Atom): Visual → Text description
+- video_timestamp_analysis (Workflow): Frame analysis
+- main_object_analysis (Workflow): Object analysis
+
+### Video Tracking Tools:
+- video_referring_segmentation: Instance segmentation
+
+### Image Generation Tools:
+- text2image_generate: Image from text
+- image2image_generate: Image with style consistency</code></pre>
+                        </div>
+                        <div class="prompt-column right">
+                            <div class="prompt-annotation">
+                                <div class="prompt-section-marker">▸ 工具分类（续）</div>
+                                <p>工具覆盖视频全生命周期：<strong>生成 → 编辑 → 理解 → 跟踪</strong>。每个工具都明确说明输入输出，便于 Plan Agent 构建依赖链。</p>
+                                <p style="margin-top:0.5rem"><code>vision2text_gen</code>
+                                    是关键的"桥接工具"——当用户只提供视觉素材而无文字描述时，先调用它理解内容再规划后续步骤。</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="prompt-split-view">
+                        <div class="prompt-column left">
+                            <pre><code class="language-markdown">## II. Core Planning Logic & Tool Selection
+
+### Basic Calling Logic:
+- If user does not provide semantic information
+  about visual content → use vision2text_gen first
+- For materials not provided by user → generate
+  using existing tools first, then proceed
+- Style consistency requires careful reference
+  management</code></pre>
+                        </div>
+                        <div class="prompt-column right">
+                            <div class="prompt-annotation">
+                                <div class="prompt-section-marker">▸ [II. CORE PLANNING LOGIC] 规划逻辑</div>
+                                <p>三条核心规则指导工具选择：</p>
+                                <p>① <strong>信息补全原则</strong>：缺语义信息先理解<br>
+                                    ② <strong>素材生成原则</strong>：缺素材先生成<br>
+                                    ③ <strong>一致性原则</strong>：跨步骤保持风格</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="prompt-split-view">
+                        <div class="prompt-column left">
+                            <pre><code class="language-json">## III. Plan Output Format
+{
+  "task_analysis": "Brief description of task type",
+  "execution_plan": {
+    "total_steps": N,
+    "steps": [{
+      "step_number": 1,
+      "action_description": "What this step does",
+      "tool": {
+        "name": "tool_name",
+        "purpose": "What this achieves",
+        "input_requirements": ["material 1", ...]
+      },
+      "dependencies": [],
+      "status": "ongoing/pending/success/failure",
+      "output": ""
+    }]
+  }
+}</code></pre>
+                        </div>
+                        <div class="prompt-column right">
+                            <div class="prompt-annotation">
+                                <div class="prompt-section-marker">▸ [III. PLAN OUTPUT FORMAT] 输出格式</div>
+                                <p>严格的 JSON Schema 约束输出结构，每个字段都有明确语义：</p>
+                                <p>• <code>dependencies</code>：显式建模步骤依赖关系<br>
+                                    • <code>status</code>：支持状态机转换<br>
+                                    • <code>input_requirements</code>：声明每步所需输入，便于 Act Agent 执行</p>
+                                <p style="margin-top:0.5rem;font-size:0.8rem;color:#666">⚠️ 提示词强调：每次只能输入一张图像，多素材需分步调用
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="prompt-split-view">
+                        <div class="prompt-column left">
+                            <pre><code class="language-markdown">## IV. Planning Updates
+- At beginning: first step = ongoing, rest = pending
+- After each step: update status based on result
+- Only sequential execution allowed
+- Only ONE step can be ongoing at any time
+- If step fails → dynamically adjust planning
+- Each plan output must have one ONGOING step
+- When plan ends successfully → output brief summary</code></pre>
+                        </div>
+                        <div class="prompt-column right">
+                            <div class="prompt-annotation">
+                                <div class="prompt-section-marker">▸ [IV. PLANNING UPDATES] 动态更新机制</div>
+                                <p>实现 Plan-Act 循环的核心约束：</p>
+                                <p>• <strong>单步执行</strong>：避免并行带来的状态混乱<br>
+                                    • <strong>失败重规划</strong>：Re-planning 触发条件<br>
+                                    • <strong>Ongoing 指示器</strong>：Act Agent 通过查找 <code>status="ongoing"</code> 确定当前执行步骤
+                                </p>
+                                <p style="margin-top:0.5rem;color:#059669;font-size:0.8rem">✓ 这套状态机设计保证了 Plan-Act
+                                    解耦执行的确定性</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="highlight-box green">
+                        <strong>关键设计要点</strong>
+                        <ul>
+                            <li><strong>工具分 Atom/Workflow</strong>：降低规划复杂度，支持灵活组合或快捷调用</li>
+                            <li><strong><code>dependencies</code> 显式依赖</strong>：支持 DAG 结构的任务依赖建模</li>
+                            <li><strong><code>status</code> 状态机</strong>：pending → ongoing → success/failure，驱动 Plan-Act
+                                循环</li>
+                            <li><strong>结构化 JSON 输出</strong>：便于程序解析，减少 Act Agent 理解成本</li>
+                        </ul>
+                    </div>
+                </div>
+            </details>
+
+            <details>
+                <summary>🔍 <strong>可展开：execution_plan JSON 示例</strong></summary>
+                <div class="details-content">
+                    <pre><code class="language-json">{
+  "task_analysis": "用户请求生成一段关于猫的视频",
+  "execution_plan": {
+    "total_steps": 2,
+    "steps": [
+      {
+        "step_number": 1,
+        "action_description": "生成猫的参考图像",
+        "tool": {"name": "text2image_generate", "purpose": "创建视觉参考"},
+        "dependencies": [],
+        "status": "ongoing"
+      },
+      {
+        "step_number": 2,
+        "action_description": "基于图像生成视频",
+        "tool": {"name": "image2video_gen", "purpose": "静态图转动态视频"},
+        "dependencies": [1],
+        "status": "pending"
+      }
+    ]
+  }
+}</code></pre>
+                </div>
+            </details>
+
+            <details>
+                <summary>🔍 <strong>可展开：Act Agent 提示词模板</strong></summary>
+                <div class="details-content">
+                    <p>Act Agent 系统提示词存在<strong>论文附录版本</strong>（详细）和<strong>代码实现版本</strong>（精简）两个版本：</p>
+
+                    <h4 style="margin: 1.5rem 0 0.75rem; color: var(--color-accent);">📄 论文附录版本 [Appendix A.3, p.27-28]
+                    </h4>
+
+                    <div class="prompt-split-view">
+                        <div class="prompt-column left">
+                            <pre><code class="language-markdown">[Role]
+You are an intelligent video task execution
+assistant (Video Act LLM), specialized in
+executing video generation, editing, and
+processing plans. You follow plans provided
+by the Plan Model while conducting intelligent
+thinking, calling, wait and feedback throughout
+the video production workflow.</code></pre>
+                        </div>
+                        <div class="prompt-column right">
+                            <div class="prompt-annotation">
+                                <div class="prompt-section-marker">▸ [Role] 角色定义</div>
+                                <p>定义为"视频任务执行助手"，核心职责是<strong>执行</strong>而非规划。强调四个关键行为：thinking → calling → wait →
+                                    feedback。</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="prompt-split-view">
+                        <div class="prompt-column left">
+                            <pre><code class="language-markdown">I. Tool Calling Protocol:
+
+1. MCP Tool Execution Format:
+All tools must be called using MCP format:
+&lt;use_mcp_tool&gt;
+&lt;server_name&gt;[server_name]&lt;/server_name&gt;
+&lt;tool_name&gt;[tool_name]&lt;/tool_name&gt;
+&lt;arguments&gt;
+{
+  "parameter_name": "parameter_value",
+  "another_parameter": "another_value"
+}
+&lt;/arguments&gt;
+&lt;/use_mcp_tool&gt;
+
+2. Tool Execution Workflow:
+- Think about step requirements and tool selection
+- Call the appropriate tool using MCP format
+
+3. Critical Execution Rules:
+- One tool per message: Never call multiple tools
+  simultaneously
+- Sequential execution: Each tool call must be
+  informed by previous results
+- Error handling: If tool fails, analyze error
+  and adjust approach</code></pre>
+                        </div>
+                        <div class="prompt-column right">
+                            <div class="prompt-annotation">
+                                <div class="prompt-section-marker">▸ [I. Tool Calling Protocol] 工具调用协议</div>
+                                <p><strong>MCP 格式</strong>：使用 XML 标签结构化工具调用，包含 server_name、tool_name、arguments 三要素。</p>
+                                <p style="margin-top:0.5rem"><strong>三条关键规则</strong>：</p>
+                                <p>① 单工具原则：每条消息只调用一个工具<br>
+                                    ② 顺序执行：后续调用依赖前序结果<br>
+                                    ③ 错误处理：失败时分析并调整策略</p>
+                                <p style="margin-top:0.5rem;font-size:0.8rem;color:#666">⚠️ 这与 Plan Agent 的
+                                    <code>tool_call_limit=15</code> 配合，防止无限循环
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="prompt-split-view">
+                        <div class="prompt-column left">
+                            <pre><code class="language-markdown">II. Video-Specific Execution Framework:
+
+1. Plan Reception and Video Task Understanding
+- Receive detailed video execution plans
+- Understand video generation constraints (~5s)
+- Identify visual consistency requirements
+- Recognize dependencies between video clips
+
+2. Video-Centric Step-by-Step Execution
+
+2.1 Pre-Execution Analysis (Thinking):
+&lt;thinking&gt;
+- Specified tool: generate_clip
+- Purpose of call: Generate a 5-second animation
+- Parameters to check:
+  - duration: 5 seconds
+  - style: "Modern Flat"
+  - scene_description: "City street at night..."
+  - resolution: "1920x1080"
+- Boundary conditions:
+  - Duration must be exactly 5 seconds
+  - File format is mp4
+&lt;/thinking&gt;
+Do not call the tool at this stage, only list
+and confirm the required parameters.</code></pre>
+                        </div>
+                        <div class="prompt-column right">
+                            <div class="prompt-annotation">
+                                <div class="prompt-section-marker">▸ [II. Execution Framework] 执行框架</div>
+                                <p><strong>Pre-Execution Analysis</strong>：执行前的思考阶段，使用 <code>&lt;thinking&gt;</code>
+                                    标签结构化推理过程。</p>
+                                <p style="margin-top:0.5rem">需要确认的内容：</p>
+                                <p>• 工具名称和调用目的<br>
+                                    • 参数列表和取值<br>
+                                    • 边界条件（时长、格式等）</p>
+                                <p style="margin-top:0.5rem;color:#059669;font-size:0.8rem">✓ "Do not call the tool at
+                                    this stage" — 显式分离思考与执行阶段</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="prompt-split-view">
+                        <div class="prompt-column left">
+                            <pre><code class="language-markdown">2.2 Tool Calls:
+Initiate a tool call strictly using MCP format:
+
+&lt;use_mcp_tool&gt;
+&lt;server_name&gt;video_gen_server&lt;/server_name&gt;
+&lt;tool_name&gt;generate_clip&lt;/tool_name&gt;
+&lt;arguments&gt;
+{
+  "duration": 5,
+  "style": "Modern Flat",
+  "scene_description": "City street at night
+    with neon lights flashing"
+}
+&lt;/arguments&gt;
+&lt;/use_mcp_tool&gt;
+
+After sending it, don't output anything more
+and end this STEP execution.</code></pre>
+                        </div>
+                        <div class="prompt-column right">
+                            <div class="prompt-annotation">
+                                <div class="prompt-section-marker">▸ [2.2 Tool Calls] 工具调用示例</div>
+                                <p>完整的 MCP 工具调用示例，展示如何生成一个 5 秒的视频片段。</p>
+                                <p style="margin-top:0.5rem"><strong>关键约束</strong>："After sending it, don't output
+                                    anything more" — 发送工具调用后立即结束当前步骤，等待执行结果返回。</p>
+                                <p style="margin-top:0.5rem;font-size:0.8rem;color:#666">这种设计确保了 Act Agent 的单步执行语义，与
+                                    Plan Agent 的状态机协调工作。</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h4 style="margin: 2rem 0 0.75rem; color: var(--color-success);">💻 代码实现版本 [univa_agent.py:202-216]
+                    </h4>
+
+                    <div class="prompt-split-view">
+                        <div class="prompt-column left">
+                            <pre><code class="language-markdown"># Intelligent Video Task Execution Assistant
+
+## Core Role Definition
+You are an intelligent video task execution
+assistant (Video Act LLM), specialized in
+executing video generation, editing, and
+processing plans. You follow plans provided
+by the Plan Model while conducting intelligent
+thinking, calling, wait and feedback throughout
+the video production workflow.
+
+## Output Format
+After received the tool execution result, you
+should output a JSON object with the format:
+{
+  "success": "True/False",
+  "message": "Like Image generated successfully.",
+  "content": "The content of the tool execution
+    result, such as the generated image URL.",
+  "output_path": "The output path of the tool
+    execution result, such as the generated
+    image file path."
+}</code></pre>
+                        </div>
+                        <div class="prompt-column right">
+                            <div class="prompt-annotation">
+                                <div class="prompt-section-marker">▸ 代码版本分析</div>
+                                <p><strong>精简版本</strong>：代码中的 Act Agent 提示词只保留了核心角色定义和输出格式，省略了论文中详细的 MCP 协议和执行框架。</p>
+                                <p style="margin-top:0.5rem"><strong>输出格式</strong>：要求返回结构化 JSON，包含四个字段：</p>
+                                <p>• <code>success</code>：执行是否成功<br>
+                                    • <code>message</code>：人类可读的结果描述<br>
+                                    • <code>content</code>：执行结果内容<br>
+                                    • <code>output_path</code>：输出文件路径</p>
+                            </div>
+                            <div class="prompt-annotation"
+                                style="margin-top:0.75rem; background: linear-gradient(to right, #dbeafe, #eff6ff); border-left-color: #2563eb;">
+                                <div class="prompt-section-marker" style="color: #1e40af;">▸ 版本差异说明</div>
+                                <p>论文版本更详细，包含完整的 MCP 协议规范和 thinking 示例；代码版本更精简，依赖 Agno 框架的内置工具调用机制，无需显式指定 MCP XML 格式。
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <p style="margin-top: 1rem;"><strong>Act Agent 执行上下文</strong>（每步调用时注入）：</p>
+                    <div class="prompt-split-view">
+                        <div class="prompt-column left">
+                            <pre><code class="language-python"># univa_agent.py:241-256
+input_context = f"""
+### User Request
+{question}
+
+### Whole Plan
+{plan['execution_plan']}
+
+### Completed Steps
+{execution_results}
+
+### Current Step
+{step}
+
+You can only perform the tasks specified
+in the current step.
+"""</code></pre>
+                        </div>
+                        <div class="prompt-column right">
+                            <div class="prompt-annotation">
+                                <div class="prompt-section-marker">▸ 运行时上下文注入</div>
+                                <p>每次执行步骤时，Act Agent 接收四部分上下文：</p>
+                                <p>① <strong>User Request</strong>：原始用户请求<br>
+                                    ② <strong>Whole Plan</strong>：完整执行计划<br>
+                                    ③ <strong>Completed Steps</strong>：已完成步骤的结果<br>
+                                    ④ <strong>Current Step</strong>：当前待执行步骤</p>
+                                <p style="margin-top:0.5rem;color:#d97706;font-size:0.8rem">⚠️ "You can only perform the
+                                    tasks specified in the current step" — 防止 Act Agent 越权执行其他步骤</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="highlight-box green">
+                        <strong>Plan vs Act Agent 职责分工</strong>
+                        <ul>
+                            <li><strong>Plan Agent</strong>：有历史上下文（10条），持久化到 SQLite，不调用工具，负责任务分解和重规划</li>
+                            <li><strong>Act Agent</strong>：调用 MCP 工具，<code>tool_call_limit=15</code>，无持久化，负责单步执行和结果反馈
+                            </li>
+                            <li><strong>信息流</strong>：Plan → Act（当前步骤）→ Act 执行 → Plan（更新状态）→ 循环</li>
+                        </ul>
+                    </div>
+                </div>
+            </details>
+
+            <h4>3.1.2 记忆机制（Memory Mechanism）</h4>
+            <p>原文指出，agentic video systems 的一个关键挑战是 "maintain context across long and multi-step
+                workflows"（跨长程多步骤工作流保持上下文）。UniVA 通过 <strong>three-level memory mechanism</strong>（三层记忆机制）来解决这一问题，与
+                Planner-Actor 循环配合工作。[Section 3.2.2, 第1段]</p>
+
+            <div class="figure">
+                <img src="../../assets/images/univa/figure-3-记忆增强框架展示-global-memoryuser.png" alt="记忆增强框架">
+                <p class="figure-caption">Figure 3: Memory-augmented framework（记忆增强框架）</p>
+            </div>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>记忆层</th>
+                            <th>存储内容</th>
+                            <th>作用（原文表述）</th>
+                            <th>出处</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Global Memory（全局记忆）</strong></td>
+                            <td>persistent knowledge and reusable resources（持久知识和可重用资源），如 precomputed embeddings、generic
+                                video facts、tool usage statistics</td>
+                            <td>provides background context and <strong>supports cross-task generalization</strong></td>
+                            <td>[Section 3.2.2, 第2段]</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Task Memory（任务记忆）</strong></td>
+                            <td>intermediate artifacts, tool outputs, and execution traces（中间产物、工具输出、执行轨迹）</td>
+                            <td><strong>ensures continuity across multiple steps</strong>，允许后续 sub-goals
+                                复用结果而无需重新计算；also enables traceability</td>
+                            <td>[Section 3.2.2, 第3段]</td>
+                        </tr>
+                        <tr>
+                            <td><strong>User Memory（用户记忆）</strong></td>
+                            <td>user-specific preferences and historical interactions（用户特定偏好和历史交互），如 favored
+                                styles、recurring edit patterns</td>
+                            <td><strong>enables adaptive behaviors</strong>，例如自动应用用户偏好的分辨率或编辑风格</td>
+                            <td>[Section 3.2.2, 第4段]</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p><strong>整体设计</strong>：Global Memory 和 User Memory 共同构成长期历史 <code>Hₜ</code> 的持久存储，为策略 <code>π</code>
+                提供丰富上下文。Task Memory 维护当前任务的动态状态 <code>sₜ</code> 及其中间产物。[Section 3.2.2, 第5段]</p>
+
+            <details>
+                <summary>🔍 <strong>可展开：三层记忆的代码实现</strong></summary>
+                <div class="details-content">
+                    <h4>记忆层与代码实现对应关系</h4>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>记忆层</th>
+                                    <th>实现方式</th>
+                                    <th>代码位置</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Global Memory</strong></td>
+                                    <td>通过 Plan Agent 的 System Prompt 注入工具使用规范</td>
+                                    <td><code>prompts/plan.txt</code></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Task Memory</strong></td>
+                                    <td>Session State 中的 <code>execution_history</code>，持久化到 SQLite</td>
+                                    <td><code>inject_execution_results()</code></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>User Memory</strong></td>
+                                    <td>RAG 检索机制，检索用户历史上传的参考图像等素材</td>
+                                    <td>RAG Retrieval Mechanism</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h4>Task Memory 核心代码</h4>
+                    <pre><code class="language-python"># papers_code/univa/univa/univa_agent.py:159-177
+def inject_execution_results(self, session_id, plan, execution_results: Dict[int, Any]) -> Dict:
+    """将执行结果注入记忆，供下一轮规划使用"""
+    try:
+        current_state = self.agent.get_session_state(session_id).get("execution_history", [])
+    except Exception:
+        current_state = []
+
+    current_state.append({
+        "plan": plan,
+        "execution_results": execution_results
+    })
+
+    self.agent.update_session_state(
+        session_state_updates={"execution_history": current_state},
+        session_id=session_id
+    )</code></pre>
+
+                    <h4>Plan Agent 如何使用记忆</h4>
+                    <pre><code class="language-python"># papers_code/univa/univa/univa_agent.py:128-140
+async def generate_plan(self, session_id, user_request: str) -> Optional[Dict]:
+    # 注入历史执行结果（Task Memory 体现）
+    execution_historys = self.agent.get_session_state(session_id).get("execution_history", None)
+    if execution_historys:
+        input_context += json.dumps(execution_historys, indent=2)
+
+    response = await self.agent.arun(
+        input=input_context,
+        stream=False,
+        session_id=session_id
+    )
+    return self.extract_plan_from_content(response.content)</code></pre>
+
+
+                </div>
+            </details>
+
+            <h3>3.2 工具交互（Tools Interaction）</h3>
+            <p>原文 Section 3.3 指出，agent 的能力最终取决于其可用的 action space，即工具集 <code>𝒯</code>。为实现最大广度（maximum breadth），UniVA 的
+                action space 被设计为 <strong>open and extensible</strong>（开放且可扩展）。[Section 3.3, 第1段]</p>
+
+            <h4>MCP 协议</h4>
+            <p>UniVA 通过 <strong>Model Context Protocol (MCP)</strong> <a href="#ref-mcp">[Anthropic, 2024]</a> 实现对
+                action space <code>𝒯</code> 的统一管理。MCP server module 作为 Actor 和各个 tool servers 之间的 <strong>unified
+                    gateway</strong>（统一网关）。[Section 3.3, 第2段]</p>
+
+            <p><strong>设计优势</strong>：</p>
+            <ul>
+                <li>MCP server 维护可用功能的 registry（注册表）</li>
+                <li>通过 standardized API 验证和执行调用</li>
+                <li>记录输出以实现 traceability（可追溯性）</li>
+                <li>添加或替换能力只需在 server 上注册，Planner 和 Actor 保持不变</li>
+                <li>实现 <strong>modular and extensible</strong>（模块化和可扩展）的系统</li>
+            </ul>
+            <p style="font-size:0.9rem">[Section 3.3, 第2段]</p>
+
+            <h4>MCP 工具分类框架</h4>
+
+            <div class="figure">
+                <img src="../../assets/images/univa/Figure24.png" alt="MCP 工具架构">
+                <p class="figure-caption">Figure 24 (Appendix): A three-level taxonomy of MCP tools（MCP 工具三层分类）</p>
+            </div>
+
+            <p>原文 Appendix A.2 将 MCP 工具按两个维度分类：</p>
+
+            <p><strong>维度一：操作粒度（Atom vs Workflow）</strong> [Appendix A.2, 第1段]</p>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>类型</th>
+                            <th>定义</th>
+                            <th>示例</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Atom（原子操作）</strong></td>
+                            <td>fundamental, single-purpose operation（基础、单一目的操作）</td>
+                            <td><code>text2video_gen</code>、<code>vision2text_gen</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Workflow（工作流）</strong></td>
+                            <td>higher-level function that composes multiple atomic tools（组合多个原子工具完成多步骤任务的高层函数）</td>
+                            <td><code>storyvideo_gen</code>（内含 Storyboard → 角色生成 → 关键帧 → 片段 → 合并）</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p><strong>维度二：功能领域</strong> [Appendix A.2, 各小节]</p>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>类别</th>
+                            <th>功能</th>
+                            <th>代表工具（部分）</th>
+                            <th>底层模型</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Video Tools</strong></td>
+                            <td>生成、编辑、跟踪、理解</td>
+                            <td><code>text2video_gen</code>, <code>style_transfer</code>,
+                                <code>referring_segmentation</code>, <code>vision2text_gen</code>
+                            </td>
+                            <td>Seedance, VACE, Runway, SAM2, InternVL3</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Non-Video Tools</strong></td>
+                            <td>音频生成、图像生成</td>
+                            <td><code>speech_gen</code>, <code>music_gen</code>, <code>text2image_generate</code></td>
+                            <td>MiniMax-Speech, ThinkSound, FLUX-Kontext</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Non-AI Tools</strong></td>
+                            <td>视频剪辑、格式转换、字幕添加</td>
+                            <td><code>merge_video</code>, <code>add_transition</code>, <code>add_subtitle</code></td>
+                            <td>-</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="highlight-box green">
+                <strong>扩展性说明</strong>：原文强调 "everything in the current version of UniVA is inherently extensible,
+                benefiting from the modular design of MCP"。每个功能——无论是 low-level atomic operation 还是 high-level
+                workflow——都可以 "seamlessly registered, replaced, or expanded without modifying the core architecture"，实现
+                <strong>plug-and-play</strong>（即插即用）。[Appendix A.2, Remark]
+            </div>
+
+            <h3>3.3 框架整体流程（Framework Walkthrough）</h3>
+            <p>原文 Section 3.4 描述了整体架构的工作流程。[Section 3.4, 第1段]</p>
+
+            <p><strong>流程概述</strong>：在任何任务中，Planner（策略 <code>π</code>）观察当前状态 <code>sₜ</code> 和目标 <code>G</code>
+                来制定计划，Actor 通过各种工具执行动作序列 <code>A=(a₁, ..., aₙ)</code>。Memory 记录每个动作的输出，持续更新历史 <code>Hₜ</code> 和状态
+                <code>sₜ</code> 供后续步骤使用。[Section 3.4, 第1段]
+            </p>
+
+            <p><strong>Figure 4 展示了框架的两种使用模式</strong>：</p>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>模式</th>
+                            <th>展示能力</th>
+                            <th>描述</th>
+                            <th>出处</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>One-prompt task（单提示任务，左图）</strong></td>
+                            <td><strong>depth</strong>（深度）</td>
+                            <td>agent 自主将单一复杂目标分解为连贯的多步骤生成工作流；示例：一次性应用 ink-painting style</td>
+                            <td>[Section 3.4, 第2段；Figure 4 caption]</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Multi-round task（多轮任务，右图）</strong></td>
+                            <td><strong>breadth</strong>（广度）</td>
+                            <td>多样化、可扩展的工具集 <code>𝒯</code>（通过 MCP 层实现）在交互式会话中协同链接；示例：依次执行 segmentation → background
+                                change → extension</td>
+                            <td>[Section 3.4, 第2段；Figure 4 caption]</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>3.4 设计原则（Design Principles）</h3>
+            <p>原文 Appendix A.1 列出了指导 UniVA 框架构建的五项设计原则：</p>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>原则</th>
+                            <th>核心内容</th>
+                            <th>出处</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>1. Unified & Modular Architecture（统一与模块化架构）</strong></td>
+                            <td>所有能力作为解耦的功能模块集成，通过统一 MCP 调用，支持 plug-and-play 方式更新或替换</td>
+                            <td>[Appendix A.1, 原则1]</td>
+                        </tr>
+                        <tr>
+                            <td><strong>2. Separation of Plan & Act（规划与执行分离）</strong></td>
+                            <td>严格的 Plan-Act 分离是 dual agent architecture 的核心，Planner 解释高层用户意图并分解为逻辑步骤序列，Executor
+                                通过调用合适工具执行每个步骤</td>
+                            <td>[Appendix A.1, 原则2]</td>
+                        </tr>
+                        <tr>
+                            <td><strong>3. Proactive, Goal-Oriented Autonomy（主动的目标导向自主性）</strong></td>
+                            <td>Planner 不仅是被动的任务分解器，而是具有 high degree of automation and proactive behavior；agent
+                                主动评估中间结果是否符合推断的用户目标，不符合时启动 self-reflection 以灵活调整计划</td>
+                            <td>[Appendix A.1, 原则3]</td>
+                        </tr>
+                        <tr>
+                            <td><strong>4. Hierarchical Memory for Immersive Interaction（分层记忆支持沉浸式交互）</strong></td>
+                            <td>多层记忆机制实现 iterative, multi-round interactions 和 deeply immersive creative experiences
+                            </td>
+                            <td>[Appendix A.1, 原则4]</td>
+                        </tr>
+                        <tr>
+                            <td><strong>5. Composition of Atomic Operations into Robust Workflows（原子操作组合为稳健工作流）</strong>
+                            </td>
+                            <td>所有复杂功能都建立在一组 fine-grained atomic operations 之上；Planner 可创造性组合原子操作解决新问题，对于常见高风险任务则组织为预定义
+                                workflow patterns 以确保稳健可预测的执行</td>
+                            <td>[Appendix A.1, 原则5]</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Section 5: Experiment Design -->
+        <section id="exp-design">
+            <div class="section-header">
+                <span class="section-number">04</span>
+                <h2 class="section-title">实验设计</h2>
+            </div>
+
+            <h3>4.1 实验目的</h3>
+            <p>原文 Section 5 开篇即明确实验设计目的是验证两个核心假设 [Section 5, 第1段]：</p>
+
+            <div class="highlight-box">
+                <p><strong>i)</strong> 统一智能体架构（unified agentic
+                    architecture）——功能模块如理解和生成深度集成——相比孤立的端到端模型具有<strong>显著性能优势</strong>（provides a significant
+                    performance advantage over isolated, end-to-end models）</p>
+            </div>
+
+            <div class="highlight-box">
+                <p><strong>ii)</strong> 双智能体 Plan-Act 框架与多组件记忆系统的组合（the combination of a dual-agent Plan-Act framework
+                    and a multi-component memory system）对于实现复杂视频任务所需的 <strong>robust planning</strong>（稳健规划）和
+                    <strong>persistent context</strong>（持久上下文）<strong>不可或缺</strong>
+                </p>
+            </div>
+
+            <h3>4.2 UniVA-Bench：首个智能体导向的视频基准</h3>
+
+            <h4>5.2.1 设计动机</h4>
+            <p>原文 Section 4.1 指出现有基准的问题 [Section 4.1, 第1段]：</p>
+            <div class="highlight-box yellow">
+                <p>现有基准大多<strong>孤立单一任务和单一模型</strong>（largely isolate single tasks and single
+                    models），这<strong>低估了</strong>长程多步骤视频生产的难度，以及对<strong>显式规划、记忆和工具编排</strong>（explicit planning,
+                    memory, and tool orchestration）的需求。</p>
+            </div>
+
+            <p><strong>UniVA-Bench 的定位</strong>：将评估焦点从孤立的单模型任务转向<strong>端到端、工具增强的视频智能</strong>（end-to-end,
+                tool-augmented video intelligence），使评估与真实用户工作流和实际视频智能体需求对齐。[Section 4.1, 第1段]</p>
+
+            <h4>5.2.2 双轨评估体系</h4>
+            <p>原文将基准组织为两个互补的评估轨道 [Section 4.1, 第2段]：</p>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>评估轨道</th>
+                            <th>英文名</th>
+                            <th>评估维度</th>
+                            <th>出处</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>功能模块轨道</strong></td>
+                            <td>Functional Modules</td>
+                            <td>各任务的任务性能（Understanding, Generation, Editing, Segmentation）</td>
+                            <td>[Section 4.1, 第2段]</td>
+                        </tr>
+                        <tr>
+                            <td><strong>智能体探测轨道</strong></td>
+                            <td>Agentic Probing</td>
+                            <td>规划质量、依赖满足度、重规划稳健性；记忆使用及其下游影响分析</td>
+                            <td>[Section 4.1, 第2段]</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>4.3 评估任务</h3>
+
+            <h4>5.3.1 功能模块任务</h4>
+            <p>原文 Section 4.2 定义了五类评估任务：</p>
+
+            <h5>① Understanding（长视频问答）</h5>
+            <p><strong>任务定义</strong> [Section 4.2, Understanding 段]：</p>
+            <div class="highlight-box blue">
+                <p>针对长视频的<strong>美学导向</strong>（aesthetics-oriented）和<strong>语义导向</strong>（semantics-oriented）问题，涵盖 shot
+                    transitions（镜头转换）、visual style（视觉风格）、narrative comprehension（叙事理解），以及标准的实体和动作语义。</p>
+            </div>
+
+            <p><strong>与现有设置的区别</strong>：不同于此前每个 QA 对绑定单个短片段的设置，UniVA-Bench
+                要求在<strong>单个长视频</strong>上回答<strong>多个相互关联的问题</strong>。</p>
+
+            <p><strong>数据构造</strong> [Appendix B.1, Understanding 段]：</p>
+            <ul>
+                <li>从 Video-MME 随机采样 10 个长视频</li>
+                <li>使用 Gemini 2.5 Pro 基于 Table 3 定义的 10 个维度生成多选 QA 对</li>
+                <li>每个视频对应 10 个问题，所有答案必须在单次推理中给出</li>
+            </ul>
+
+            <p><strong>问题维度（10 维度）</strong> [Appendix B.1, Table 3]：</p>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>层级</th>
+                            <th>维度</th>
+                            <th>说明</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td rowspan="6"><strong>Intra-frame（帧内）</strong></td>
+                            <td>Shot Size</td>
+                            <td>镜头大小（特写/中景/远景）</td>
+                        </tr>
+                        <tr>
+                            <td>Shot Angle</td>
+                            <td>镜头角度（俯拍/仰拍/平视）</td>
+                        </tr>
+                        <tr>
+                            <td>Shot Location</td>
+                            <td>拍摄位置</td>
+                        </tr>
+                        <tr>
+                            <td>Shot Subject</td>
+                            <td>镜头主体</td>
+                        </tr>
+                        <tr>
+                            <td>Shot Type</td>
+                            <td>构图类型</td>
+                        </tr>
+                        <tr>
+                            <td>Shot Color</td>
+                            <td>色彩/调色风格</td>
+                        </tr>
+                        <tr>
+                            <td rowspan="2"><strong>Intra-shot（镜头内）</strong></td>
+                            <td>Shot Motion</td>
+                            <td>镜头运动（推/拉/摇/移）</td>
+                        </tr>
+                        <tr>
+                            <td>Shot Speed</td>
+                            <td>镜头速度</td>
+                        </tr>
+                        <tr>
+                            <td rowspan="2"><strong>Inter-shot（镜头间）</strong></td>
+                            <td>Cut Type</td>
+                            <td>剪辑类型</td>
+                        </tr>
+                        <tr>
+                            <td>Transition</td>
+                            <td>转场方式</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h5>② Generation（视频生成）</h5>
+            <p><strong>任务定义</strong> [Section 4.2, Generation 段]：在多样的真实世界视频生成任务上评估智能体，分为三个子类型。</p>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>子任务</th>
+                            <th>英文名</th>
+                            <th>挑战描述</th>
+                            <th>出处</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>长文本生成视频</strong></td>
+                            <td>LongText2Video</td>
+                            <td>处理 long or noisy prompts，需要先生成 storyboard 进行规划</td>
+                            <td>[Section 4.2; Appendix B.1]</td>
+                        </tr>
+                        <tr>
+                            <td><strong>图像/实体生成视频</strong></td>
+                            <td>Image/Entities2Video</td>
+                            <td>使用 1-3 张参考图像，强制 identity preservation（身份保持）和 cross-scene coherence（跨场景连贯性）</td>
+                            <td>[Section 4.2; Appendix B.1]</td>
+                        </tr>
+                        <tr>
+                            <td><strong>视频到视频</strong></td>
+                            <td>Video2Video</td>
+                            <td>以源视频为条件，确保人物和对象的 referential stability（参照稳定性）</td>
+                            <td>[Section 4.2; Appendix B.1]</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p><strong>Video2Video 的三种对齐设置</strong> [Appendix B.1, Generation 段]：</p>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>设置</th>
+                            <th>英文名</th>
+                            <th>修改内容</th>
+                            <th>保持内容</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>故事对齐</strong></td>
+                            <td>Story Alignment</td>
+                            <td>风格</td>
+                            <td>故事线、角色、语义</td>
+                        </tr>
+                        <tr>
+                            <td><strong>风格对齐</strong></td>
+                            <td>Style Alignment</td>
+                            <td>故事线</td>
+                            <td>原视频风格、角色、语义</td>
+                        </tr>
+                        <tr>
+                            <td><strong>语义对齐</strong></td>
+                            <td>Semantic Alignment</td>
+                            <td>风格 + 故事线</td>
+                            <td>角色和其他语义元素（如生成视频续集）</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h5>③ Editing（长视频编辑）</h5>
+            <p><strong>任务定义</strong> [Section 4.2, Editing 段]：</p>
+            <div class="highlight-box blue">
+                <p>涉及多步骤编辑，如 <strong>cross-shot replacement</strong>（跨镜头替换）、<strong>attribute
+                        modification</strong>（属性修改）、<strong>style transfer</strong>（风格迁移），同时保持 <strong>narrative
+                        integrity</strong>（叙事完整性）和 <strong>referential consistency</strong>（参照一致性）。</p>
+            </div>
+
+            <p><strong>关键特点</strong>：有效完成需要<strong>推理与工具调用的结合</strong>（reasoning in combination with tool
+                invocation），例如：<code>ref-seg → inpaint/compose → merge</code>。</p>
+
+            <p><strong>数据构造</strong> [Appendix B.1, Editing 段]：从 SF20K 采样 10 个视频，手动策展编辑提示。</p>
+
+            <h5>④ Segmentation（长视频分割）</h5>
+            <p><strong>任务定义</strong> [Section 4.2, Segmentation 段]：</p>
+            <div class="highlight-box blue">
+                <p>针对包含多个实体和频繁遮挡的长片段设计，评估 <strong>temporal consistency</strong>（时间一致性）和在检测、分割镜头边界时的
+                    <strong>robustness</strong>（稳健性）。
+                </p>
+            </div>
+
+            <p><strong>数据构造</strong> [Appendix B.1, Segmentation 段]：从 DAVIS2017 随机拼接短片段，构造 10 个包含遮挡场景的分割任务实例。</p>
+
+            <h4>5.3.2 智能体探测任务（Agentic Probing Sets）</h4>
+            <p>原文 Section 4.2 最后一段定义了专门测试智能体能力的探测集 [Section 4.2, Agentic probing sets 段]：</p>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>探测集</th>
+                            <th>规模</th>
+                            <th>测试目标</th>
+                            <th>测试方法</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>规划能力测试</strong></td>
+                            <td>50 实例</td>
+                            <td>Plan-Act 架构 vs Single-Agent 架构的对比</td>
+                            <td>storyboard → user-intent 规划任务</td>
+                        </tr>
+                        <tr>
+                            <td><strong>指标评估集</strong></td>
+                            <td>标准流水线任务</td>
+                            <td>wPED、DepCov、ReplanQ 指标评估</td>
+                            <td>提供专家参考，注入失败场景</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p><strong>记忆分析维度</strong> [Section 4.2, Agentic probing sets 段]：</p>
+            <ul>
+                <li><strong>Trace Memory</strong>（轨迹记忆）：历史执行轨迹</li>
+                <li><strong>User Memory</strong>（用户记忆）：用户偏好</li>
+                <li><strong>Task Memory</strong>（任务记忆）：如 storyboard 等中间表示</li>
+            </ul>
+
+            <h3>4.4 评估协议（Evaluation Protocol）</h3>
+            <p>原文 Section 4.3 定义了三类指标体系 [Section 4.3, 第1段]：</p>
+
+            <h4>5.4.1 任务质量指标（Task-specific Quality）</h4>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>指标</th>
+                            <th>英文名</th>
+                            <th>评估维度</th>
+                            <th>适用任务</th>
+                            <th>出处</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>CLIP Score</strong></td>
+                            <td>Command Following</td>
+                            <td>用户指令与生成输出的文本-视频对齐程度</td>
+                            <td>Generation, Editing</td>
+                            <td>[Section 4.3; Appendix B.2]</td>
+                        </tr>
+                        <tr>
+                            <td><strong>DINO Score</strong></td>
+                            <td>Subject Consistency</td>
+                            <td>主体的视觉一致性（参考实体与生成帧之间的 DINO 特征相似度）</td>
+                            <td>Generation, Editing</td>
+                            <td>[Section 4.3; Appendix B.2]</td>
+                        </tr>
+                        <tr>
+                            <td><strong>J/F/J&F</strong></td>
+                            <td>Segmentation Quality</td>
+                            <td>区域质量（J-mean, IoU）和边界质量（F-mean）</td>
+                            <td>Segmentation</td>
+                            <td>[Section 4.3; Appendix B.2]</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Understanding Score</strong></td>
+                            <td>Normalized QA Accuracy</td>
+                            <td>长视频 QA 对的归一化准确率，涵盖语义和美学维度</td>
+                            <td>Understanding</td>
+                            <td>[Section 4.3; Appendix B.2]</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h4>5.4.2 偏好评估（MLLM as a Judge）</h4>
+            <p>原文引入 MLLM-as-a-Judge 作为主观指标的补充 [Section 4.3; Appendix B.2, MLLM as a judge 段]：</p>
+
+            <p><strong>评估方式</strong>：使用开源 Judge（InternVL-3-78B）和闭源
+                Judge（Gemini-2.5-pro）进行<strong>成对偏好判断</strong>（pairwise preference judgments）。</p>
+
+            <p><strong>评估流程</strong> [Appendix B.2, MLLM as a judge 段]：</p>
+            <ol>
+                <li>向 Judge 提供指令、相关参考和去偏字幕</li>
+                <li>通过<strong>多数投票</strong>聚合偏好，平局丢弃</li>
+                <li>报告平均偏好率，适用时包含显著性检验</li>
+            </ol>
+
+            <p><strong>评分维度（6 维度，1-5 分）</strong> [Appendix B.2, MLLM Prompt]：</p>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>维度</th>
+                            <th>英文名</th>
+                            <th>检查内容</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>C1</strong></td>
+                            <td>Semantic Content Accuracy</td>
+                            <td>对象类别和场景类型是否正确且稳定</td>
+                        </tr>
+                        <tr>
+                            <td><strong>C2</strong></td>
+                            <td>Multi-Object & Spatial Relations</td>
+                            <td>对象数量、排列、遮挡和空间关系</td>
+                        </tr>
+                        <tr>
+                            <td><strong>C3</strong></td>
+                            <td>Action / Behavior Accuracy</td>
+                            <td>指定动作/姿态是否清晰、连续</td>
+                        </tr>
+                        <tr>
+                            <td><strong>C4</strong></td>
+                            <td>Attribute Fidelity</td>
+                            <td>颜色、材质等属性是否正确且稳定</td>
+                        </tr>
+                        <tr>
+                            <td><strong>C5</strong></td>
+                            <td>Style Consistency</td>
+                            <td>视觉风格和镜头语法是否一致</td>
+                        </tr>
+                        <tr>
+                            <td><strong>C6</strong></td>
+                            <td>Overall Video-Text Consistency</td>
+                            <td>整体语义对齐程度（汇总维度，不重复计算细粒度问题）</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h4>5.4.3 智能体指标（Agentic Metrics）</h4>
+            <p>原文 Section 4.3 和 Appendix B.2 定义了三个专门评估规划能力的指标 [Appendix B.2, Agentic metrics 段]：</p>
+
+            <h5>① wPED（Weighted Plan Edit Distance）</h5>
+            <p><strong>一句话解释</strong>：衡量 Agent 的规划和专家规划有多像。</p>
+            <p><strong>通俗理解</strong>：假设专家的做法是"先切菜→再炒菜→最后装盘"，如果 Agent 的做法是"先切菜→再装盘→最后炒菜"，就需要"交换两步"才能变成专家做法。需要改的步骤越少，wPED
+                分数越高。</p>
+
+            <h5>② DepCov（Dependency Coverage）</h5>
+            <p><strong>一句话解释</strong>：衡量 Agent 是否遵守"先后顺序"的规则。</p>
+            <p><strong>通俗理解</strong>：有些事情有固定的先后顺序，比如"必须先生成视频才能编辑视频"、"必须先分割出人物才能换背景"。DepCov 检查 Agent
+                的计划是否违反了这些常识性的顺序规则。违反越少，分数越高。</p>
+
+            <h5>③ ReplanQ（Re-planning Quality）</h5>
+            <p><strong>一句话解释</strong>：衡量 Agent 出错后能否"小修小补"而不是"推倒重来"。</p>
+            <p><strong>通俗理解</strong>：假设 Agent 执行到第 3 步时失败了，好的 Agent 应该只调整第 3 步及之后的计划，而不是把整个计划全部重写。修改越少、恢复越快，ReplanQ
+                分数越高。</p>
+
+            <h3>4.5 实验配置</h3>
+
+            <h4>5.5.1 UniVA 配置</h4>
+            <p>原文 Appendix C.1 列出了 UniVA 的模块配置 [Appendix C.1, Table]：</p>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>模块</th>
+                            <th>使用模型</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Plan Agent</td>
+                            <td>Claude-sonnet-4</td>
+                        </tr>
+                        <tr>
+                            <td>Act Agent</td>
+                            <td>Claude-sonnet-4</td>
+                        </tr>
+                        <tr>
+                            <td>Video Generation</td>
+                            <td>Seedance-v4-480p</td>
+                        </tr>
+                        <tr>
+                            <td>Video Understanding</td>
+                            <td>InternVL3-38B</td>
+                        </tr>
+                        <tr>
+                            <td>Video Editing</td>
+                            <td>Runway Aleph</td>
+                        </tr>
+                        <tr>
+                            <td>Video Segmentation</td>
+                            <td>SAM-2, SA2VA</td>
+                        </tr>
+                        <tr>
+                            <td>Image Generation</td>
+                            <td>FLUX-Kontext</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h4>5.5.2 基线配置</h4>
+            <p><strong>Generation 任务</strong> [Appendix C.2, Generation 段]：</p>
+            <ul>
+                <li>统一输出分辨率为 480p，帧率 24fps</li>
+                <li>对于不支持多图像或视频条件输入的基线，实施标准化预处理：
+                    <ul>
+                        <li>Entities2Video：将多张参考图像合并为单张复合图像</li>
+                        <li>Video2Video：对纯文本基线，先用 Qwen2.5-VL-72B 生成视频描述，将描述前置于用户指令</li>
+                    </ul>
+                </li>
+                <li><strong>基线模型</strong>：LTX-Video、Seedance、Wan</li>
+            </ul>
+
+            <p><strong>Understanding 任务</strong> [Appendix C.2, Understanding 段]：</p>
+            <ul>
+                <li>帧率 1fps，最大 128 帧</li>
+                <li><strong>对比模型</strong>：GPT-4o、Gemini 2.5 Pro、InternVL3-38B、Qwen2.5-VL-72B</li>
+            </ul>
+
+            <p><strong>Editing 任务</strong> [Appendix C.2, Editing 段]：</p>
+            <ul>
+                <li><strong>基线模型</strong>：Vace</li>
+                <li><strong>基线流程</strong>：将视频切分为 5 秒片段 → 发送至编辑模型 → 合并编辑后片段</li>
+            </ul>
+
+            <p><strong>Segmentation 任务</strong> [Appendix C.2, Segmentation 段]：</p>
+            <ul>
+                <li><strong>基线模型</strong>：SA2VA</li>
+            </ul>
+
+            <h3>4.6 UniVA-Bench 任务示例</h3>
+            <p>原文 Figure 6 展示了 UniVA-Bench 四个主要任务类别的代表性示例 [Figure 6, Section 4]：</p>
+            <div class="highlight-box">
+                <p>"Representative examples from the four main task categories in UniVA-Bench: Understanding,
+                    Generation, Editing, and Segmentation."</p>
+            </div>
+
+            <div class="figure">
+                <img src="images/univa/benchmark_v1.png" alt="Figure 6: UniVA-Bench 任务示例">
+                <p class="figure-caption">Figure 6: UniVA-Bench 四个主要任务类别的代表性示例</p>
+            </div>
+        </section>
+
+        <!-- Section 6: Experiment Results -->
+        <section id="exp-results">
+            <div class="section-header">
+                <span class="section-number">05</span>
+                <h2 class="section-title">实验结果</h2>
+            </div>
+
+            <h3>5.1 功能模块测试</h3>
+
+            <h4>视频生成 [Table 1, p.9-10]</h4>
+            <div class="figure-ref">引用 Table 1：Generation 任务结果</div>
+
+            <div class="figure">
+                <img src="../../assets/images/univa/table-1-longtext2videoentities2video.png" alt="Table 1">
+                <p class="figure-caption">Table 1: LongText2Video 与 Entities2Video 任务结果</p>
+            </div>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>任务</th>
+                            <th>指标</th>
+                            <th>UniVA</th>
+                            <th>最佳基线</th>
+                            <th>提升</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>LongText2Video</td>
+                            <td>CLIP</td>
+                            <td><strong>0.2814</strong></td>
+                            <td>Wan <a href="#ref-wan">[Wan et al., 2025]</a>: 0.2028</td>
+                            <td><span class="metric up">39%</span></td>
+                        </tr>
+                        <tr>
+                            <td>LongText2Video</td>
+                            <td>MLLM Judge</td>
+                            <td><strong>3.333</strong></td>
+                            <td>Wan: 3.183</td>
+                            <td><span class="metric up">5%</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="highlight-box blue">
+                <strong>论文结论 [p.9, ¶2]</strong>："UniVA demonstrates superior performance in LongText2Video, achieving
+                CLIP Score of 0.2814 compared to Wan's 0.2028. This improvement is attributed to the Planner's ability
+                to extract core intent from noisy long text and generate more optimized prompts for the downstream
+                generation tools."
+            </div>
+
+            <h4>其他任务 [Table 2, p.10]</h4>
+            <div class="figure-ref">引用 Table 2a/2b/2c</div>
+
+            <div class="figure">
+                <img src="../../assets/images/univa/table-2-三个长视频任务对比understandingeditin.png" alt="Table 2">
+                <p class="figure-caption">Table 2: Understanding、Editing、Segmentation 任务对比</p>
+            </div>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>任务</th>
+                            <th>UniVA</th>
+                            <th>最佳基线</th>
+                            <th>提升</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Understanding (Acc)</td>
+                            <td><strong>0.76</strong></td>
+                            <td>InternVL3 <a href="#ref-internvl3">[Zhu et al., 2025]</a>: 0.75</td>
+                            <td><span class="metric up">1%</span></td>
+                        </tr>
+                        <tr>
+                            <td>Editing (MLLM)</td>
+                            <td><strong>3.635</strong></td>
+                            <td>VACE <a href="#ref-vace">[Jiang et al., 2025]</a>: 3.484</td>
+                            <td><span class="metric up">4%</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Segmentation (J&F)</strong></td>
+                            <td><strong>0.2467</strong></td>
+                            <td>SA2VA <a href="#ref-sa2va">[Yuan et al., 2025a]</a>: 0.1524</td>
+                            <td><span class="metric up">62%</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="highlight-box blue">
+                <strong>论文结论 [p.10, ¶1-3]</strong>：
+                <ul>
+                    <li><strong>Understanding</strong>："UniVA's task decomposition capability enables more detailed
+                        analysis" —— 任务分解能力使得智能体能够进行更细致的分析</li>
+                    <li><strong>Editing</strong>："UniVA leverages the Understanding module to perform 'probing' before
+                        editing, establishing persistent semantic context" —— 先用理解模块进行"探测"再编辑，建立持久语义上下文</li>
+                    <li><strong>Segmentation</strong>："UniVA can query the co-located Understanding module to resolve
+                        ambiguities that are impossible to solve at the pixel level" ——
+                        可以通过查询理解模块来解决像素级无法解决的歧义（如遮挡后的重识别）</li>
+                </ul>
+            </div>
+
+            <p><strong>关键发现</strong>：需要多步骤推理的任务（LongText2Video, Segmentation）提升显著 [p.9-10]</p>
+
+            <h3>5.2 Agentic Probing（消融实验）</h3>
+
+            <h4>Plan-Act vs Single-Agent [Fig. 8, p.10-11]</h4>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>架构</th>
+                            <th>Success Rate</th>
+                            <th>wPED</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Single-Agent</td>
+                            <td>20.0%</td>
+                            <td>0.050</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Plan-Act</strong></td>
+                            <td><strong>45.0%</strong></td>
+                            <td><strong>0.117</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p><strong>结论</strong>：Plan-Act 将成功率提升 <strong>125%</strong></p>
+
+            <h4>Memory 消融 [Fig. 9-11, p.11]</h4>
+            <div class="figure-ref">引用 Figure 9-11：Memory 消融实验结果</div>
+
+            <div class="figure">
+                <img src="../../assets/images/univa/Figure9-11.png" alt="消融实验">
+                <p class="figure-caption">Figure 9-11: Memory 消融实验结果</p>
+            </div>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>消融项</th>
+                            <th>结果</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>无 Global Memory</td>
+                            <td>多个实例 wPED=0（<strong>规划完全失败</strong>）</td>
+                        </tr>
+                        <tr>
+                            <td>无 User Memory</td>
+                            <td>无法正确检索用户参考图像</td>
+                        </tr>
+                        <tr>
+                            <td>无 Task Memory (Storyboard)</td>
+                            <td>生成质量显著下降</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <details>
+                <summary>🔍 <strong>可展开：为什么选择 Claude-sonnet-4？</strong></summary>
+                <div class="details-content">
+                    <div class="figure-ref">引用 Figure 7：不同 Planner LLM 对比</div>
+
+                    <div class="figure">
+                        <img src="../../assets/images/univa/figure-7-planner-llm-性能对比.png" alt="Planner LLM 对比">
+                        <p class="figure-caption">Figure 7: 不同 Planner LLM 性能对比</p>
+                    </div>
+
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>LLM</th>
+                                    <th>wPED</th>
+                                    <th>DepCov</th>
+                                    <th>ReplanQ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>GPT-4o</td>
+                                    <td>较高</td>
+                                    <td>中等</td>
+                                    <td>中等</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Claude-sonnet-4</strong></td>
+                                    <td>中等</td>
+                                    <td><strong>最高</strong></td>
+                                    <td><strong>最高</strong></td>
+                                </tr>
+                                <tr>
+                                    <td>Gemini 2.5 Pro</td>
+                                    <td>中等</td>
+                                    <td>中等</td>
+                                    <td>中等</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="highlight-box green">
+                        <strong>结论</strong>：Claude 在依赖关系建模和错误恢复上表现最佳，适合作为 Planner
+                    </div>
+                </div>
+            </details>
+        </section>
+
+        <!-- Section 6: Conclusion & Limitations -->
+        <section id="contribution">
+            <div class="section-header">
+                <span class="section-number">06</span>
+                <h2 class="section-title">结论与局限性</h2>
+            </div>
+
+            <h3>6.1 核心结论</h3>
+            <p>论文认为视频领域的进步需要<strong>范式转变</strong>：从开发孤立的单任务模型转向创建能够处理复杂协作工作流的集成系统。[Section 5, 第1段]</p>
+
+            <div class="highlight-box blue">
+                <strong>主要贡献</strong>：
+                <ul style="margin-bottom: 0;">
+                    <li>开发了功能强大且可扩展的 <strong>UniVA 平台</strong></li>
+                    <li>展示了其作为全能视频通才的<strong>涌现协同能力</strong>（emergent synergistic capabilities）</li>
+                    <li>发布 <strong>UniVA-Bench</strong> 以严格衡量此类进展</li>
+                </ul>
+            </div>
+
+            <h3>6.2 关键发现</h3>
+
+            <h4>发现一：广度验证</h4>
+            <p>实验验证了 UniVA 的<strong>广度</strong>（breadth）：在各类视频任务上展现出有竞争力的性能。[Section 5, 第2段]</p>
+
+            <h4>发现二：深度验证 — Agentic Synergy</h4>
+            <p>更重要的是，论文揭示了 UniVA 的<strong>深度</strong>（depth）：通过 <strong>"Agentic
+                    Synergy"（智能体协同）</strong>，即工具之间信息流的动态管理，UniVA 能够解决孤立模型难以处理的复杂一致性问题。[Section 5, 第2段]</p>
+
+            <div class="highlight-box">
+                <strong>核心洞见</strong>："This confirms that UniVA is not merely a collection of tools, but an
+                <strong>engine for generating emergent intelligence</strong>."<br>
+                <span style="font-size: 0.85rem;">（这证实了 UniVA 不仅仅是工具的集合，而是一个<strong>产生涌现智能的引擎</strong>。）[Section 5,
+                    第2段]</span>
+            </div>
+
+            <h3>6.3 局限性</h3>
+
+            <h4>DINO Score 权衡</h4>
+            <p>在 Entities2Video 任务中，专用模型（如 Seedance）在<strong>主体一致性</strong>（DINO Score）上表现更强，而 UniVA
+                在这方面仍有竞争力但非最优。[Section 4.3.1, Entities2Video 段]</p>
+
+            <div class="highlight-box yellow">
+                <strong>论文原文</strong>："This highlights a current <strong>trade-off</strong> where our agent prioritizes
+                overall instruction complexity and narrative coherence, a direction for future optimization."<br>
+                <span style="font-size: 0.85rem;">（这表明当前存在一个<strong>权衡</strong>：我们的 agent
+                    优先考虑整体指令复杂性和叙事连贯性，这是未来优化的方向。）[Section 4.3.1]</span>
+            </div>
+
+            <p><strong>具体表现</strong>：在 Entities2Video 任务中，UniVA 的 DINO Score（0.8796）略低于 Seedance（0.8800），但 CLIP Score 和
+                MLLM Judge 表现良好，说明系统更侧重于<strong>指令遵循</strong>而非帧级相似度。</p>
+        </section>
+
+        <!-- Section 8: Cases -->
+        <section id="cases">
+            <div class="section-header">
+                <span class="section-number">07</span>
+                <h2 class="section-title">Case 展示（论文原图）</h2>
+            </div>
+
+            <div class="highlight-box blue">
+                <strong>说明</strong>：以下 Case 均来自论文原文 Figure 1-12，展示 UniVA
+                的核心能力。图片路径：<code>papers/tex_source/UniVA-.../figures/</code>
+            </div>
+
+            <h3>7.1 Teaser: 整体能力展示</h3>
+            <div class="figure-ref">引用 Figure 1 (teaser_v5.pdf)</div>
+
+            <div class="figure">
+                <img src="images/univa/teaser_v5.png" alt="UniVA Teaser - 整体能力展示">
+                <p class="figure-caption">Figure 1: UniVA 整体能力展示 - 多轮对话协作创作</p>
+            </div>
+
+            <p><strong>展示内容</strong>：</p>
+            <ul>
+                <li>多轮对话协作创作</li>
+                <li>基于记忆的上下文推理</li>
+                <li>工具增强的规划能力</li>
+                <li>迭代式用户交互</li>
+            </ul>
+
+            <div class="highlight-box green">
+                <strong>关键点</strong>：UniVA 作为统一视频生产引擎，整合生成、编辑、理解模块，通过 MCP 协议确保扩展性。
+            </div>
+
+            <hr style="margin: 2rem 0; border: none; border-top: 1px dashed var(--color-border);">
+
+            <h3>7.2 Storyboard 驱动的故事视频生成</h3>
+            <div class="figure-ref">引用 Figure 3：记忆增强框架与 Storyboard 生成流程</div>
+
+            <div class="figure">
+                <img src="../../assets/images/univa/figure-3-记忆增强框架展示-global-memoryuser.png" alt="记忆增强框架与Storyboard生成">
+                <p class="figure-caption">Figure 3: 记忆增强框架 - Task Memory 协调 Tool Calling、Storyboard 创建和视频生成</p>
+            </div>
+
+            <p><strong>Storyboard 生成是 UniVA 核心 Workflow 工具 <code>storyvideo_gen</code> 的关键步骤</strong> [Section 3.3,
+                p.5-6]</p>
+
+            <p>如 Figure 3 所示，Task Memory 在 Act Agent 中协调整个视频生成流程：</p>
+            <ul>
+                <li><strong>Tool Calling</strong>：根据 System Prompt 和 Subtask 调用相应工具</li>
+                <li><strong>Storyboard</strong>：生成结构化的角色(Characters)、镜头设置(Shot Settings)和场景描述</li>
+                <li><strong>Keyframe Generation</strong>：基于 Storyboard 生成关键帧图像</li>
+                <li><strong>Clips Generation</strong>：将关键帧扩展为视频片段</li>
+                <li><strong>Video Merge</strong>：合并所有片段，输出最终视频及元信息</li>
+            </ul>
+
+            <hr style="margin: 2rem 0; border: none; border-top: 1px dashed var(--color-border);">
+
+            <h3>7.3 Generation Case 1: 陶艺制作过程（Sequential Process）</h3>
+            <div class="figure-ref">引用 Figure 7 (Picture1.pdf)</div>
+
+            <div class="figure">
+                <img src="images/univa/Picture1.png" alt="陶艺制作过程">
+                <p class="figure-caption">Figure 7: 陶艺制作过程 - 展示强时序一致性</p>
+            </div>
+
+            <p><strong>任务</strong>：生成完整的陶艺制作纪录片</p>
+
+            <p><strong>UniVA 表现</strong>：</p>
+            <ul>
+                <li>准确生成揉捏 → 塑形 → 上釉 → 烧制的顺序流程</li>
+                <li>陶碗从泥土到成品的渐进演化</li>
+                <li>展示强时序一致性和物体持久性</li>
+            </ul>
+
+            <hr style="margin: 2rem 0; border: none; border-top: 1px dashed var(--color-border);">
+
+            <h3>7.4 Generation Case 2: 跨场景角色一致性</h3>
+            <div class="figure-ref">引用 Figure 8 (Picture2.pdf)</div>
+
+            <div class="figure">
+                <img src="images/univa/Picture2.png" alt="跨场景角色一致性">
+                <p class="figure-caption">Figure 8: 跨场景角色一致性 - 长视频角色保持</p>
+            </div>
+
+            <p><strong>任务</strong>：生成主角穿越不同场景的多场景故事</p>
+
+            <p><strong>UniVA 表现</strong>：</p>
+            <ul>
+                <li>在夜间霓虹城市 vs 白天公园等截然不同场景中保持角色身份</li>
+                <li>面部特征、服装、情感基调跨场景一致</li>
+                <li>展示长视频角色保持能力</li>
+            </ul>
+
+            <hr style="margin: 2rem 0; border: none; border-top: 1px dashed var(--color-border);">
+
+            <h3>7.5 Generation Case 3: 复杂叙事生成</h3>
+            <div class="figure-ref">引用 Figure 9 (Picture3.pdf)</div>
+
+            <div class="figure">
+                <img src="images/univa/Picture3.png" alt="复杂叙事生成">
+                <p class="figure-caption">Figure 9: 复杂叙事生成 - 非线性故事级推理</p>
+            </div>
+
+            <p><strong>任务</strong>：根据抽象提示生成有情感的故事弧</p>
+
+            <p><strong>UniVA 表现</strong>：</p>
+            <ul>
+                <li>老人通过梦境回顾青春</li>
+                <li>无需显式时间标注，自动构建非线性叙事</li>
+                <li>展示故事级推理能力</li>
+            </ul>
+
+            <hr style="margin: 2rem 0; border: none; border-top: 1px dashed var(--color-border);">
+
+            <h3>7.6 Generation Case 4: 结构化广告制作</h3>
+            <div class="figure-ref">引用 Figure 10 (Picture6.pdf)</div>
+
+            <div class="figure">
+                <img src="images/univa/Picture6.png" alt="结构化广告制作">
+                <p class="figure-caption">Figure 10: 结构化广告制作 - 可控商业内容创作</p>
+            </div>
+
+            <p><strong>任务</strong>：生成 20 秒面包店广告视频</p>
+
+            <p><strong>UniVA 表现</strong>：</p>
+            <ul>
+                <li>按揉面团 → 顾客反应 → 品牌 Logo 的结构化顺序生成</li>
+                <li>遵循多阶段营销指令</li>
+                <li>展示可控商业内容创作能力</li>
+            </ul>
+
+            <hr style="margin: 2rem 0; border: none; border-top: 1px dashed var(--color-border);">
+
+            <h3>7.7 Video2Video Case 1: 背景故事扩展</h3>
+            <div class="figure-ref">引用 Figure 11 (Picture4.pdf)</div>
+
+            <div class="figure">
+                <img src="images/univa/Picture4.png" alt="背景故事扩展">
+                <p class="figure-caption">Figure 11: 背景故事扩展 - 叙事扩展和全局一致性</p>
+            </div>
+
+            <p><strong>任务</strong>：给定原视频，生成保持角色和风格的前传</p>
+
+            <p><strong>UniVA 表现</strong>：</p>
+            <ul>
+                <li>保持原角色动画风格</li>
+                <li>逻辑构建新的背景故事</li>
+                <li>展示叙事扩展和全局一致性</li>
+            </ul>
+
+            <hr style="margin: 2rem 0; border: none; border-top: 1px dashed var(--color-border);">
+
+            <h3>7.8 Video2Video Case 2: 风格迁移</h3>
+            <div class="figure-ref">引用 Figure 12 (Picture5.pdf)</div>
+
+            <div class="figure">
+                <img src="images/univa/Picture5.png" alt="风格迁移">
+                <p class="figure-caption">Figure 12: 风格迁移 - 中国水墨画风格</p>
+            </div>
+
+            <p><strong>任务</strong>：将实拍视频转换为"中国水墨画风格"</p>
+
+            <p><strong>UniVA 表现</strong>：</p>
+            <ul>
+                <li>精确保持原视频的运动轨迹、对象关系、场景布局</li>
+                <li>实现统一的水墨画艺术效果</li>
+                <li>展示结构与风格的解耦控制</li>
+            </ul>
+
+            <hr style="margin: 2rem 0; border: none; border-top: 1px dashed var(--color-border);">
+
+            <h3>7.9 LongText2Video: 长指令遵循</h3>
+            <div class="figure-ref">引用 Figure 13 (Picture7.pdf)</div>
+
+            <div class="figure">
+                <img src="images/univa/Picture7.png" alt="长指令遵循">
+                <p class="figure-caption">Figure 13: LongText2Video - 长指令遵循</p>
+            </div>
+
+            <p><strong>任务</strong>：根据用户的长篇指令生成视频</p>
+
+            <p><strong>UniVA 表现</strong>：</p>
+            <ul>
+                <li>准确遵循长指令</li>
+                <li>长视频中角色一致性保持</li>
+            </ul>
+
+            <hr style="margin: 2rem 0; border: none; border-top: 1px dashed var(--color-border);">
+
+            <h3>7.10 Multi-Camera: 多机位场景</h3>
+            <div class="figure-ref">引用 Figure 14 (Picture8.pdf)</div>
+
+            <div class="figure">
+                <img src="images/univa/Picture8.png" alt="多机位场景">
+                <p class="figure-caption">Figure 14: 多机位场景 - 专业级多机位长视频</p>
+            </div>
+
+            <p><strong>任务</strong>：理解并生成复杂的多机位场景转换</p>
+
+            <p><strong>UniVA 表现</strong>：</p>
+            <ul>
+                <li>处理多摄像机视角</li>
+                <li>生成专业级多机位长视频</li>
+            </ul>
+
+            <hr style="margin: 2rem 0; border: none; border-top: 1px dashed var(--color-border);">
+
+            <h3>7.11 Entities2Video: 多实体引用</h3>
+            <div class="figure-ref">引用 Figure 15 (Picture9.pdf)</div>
+
+            <div class="figure">
+                <img src="images/univa/Picture9.png" alt="多实体引用">
+                <p class="figure-caption">Figure 15: Entities2Video - 多实体身份保持</p>
+            </div>
+
+            <p><strong>任务</strong>：基于多个参考图像生成保持身份的视频</p>
+
+            <p><strong>UniVA 表现</strong>：</p>
+            <ul>
+                <li>从用户提供的多个实体图像中保持一致性</li>
+                <li>跨场景实体身份保持</li>
+            </ul>
+
+            <hr style="margin: 2rem 0; border: none; border-top: 1px dashed var(--color-border);">
+
+            <h3>7.12 Understanding → Generation: 分析到创作</h3>
+            <div class="figure-ref">引用 Figure 16 (Picture11.pdf)</div>
+
+            <div class="figure">
+                <img src="images/univa/Picture11.png" alt="分析到创作">
+                <p class="figure-caption">Figure 16: Understanding → Generation - 理解与生成模块协同</p>
+            </div>
+
+            <p><strong>任务</strong>：分析视频的角色和风格，然后无缝应用到新内容生成</p>
+
+            <p><strong>UniVA 表现</strong>：</p>
+            <ul>
+                <li>准确分析源视频的角色特征和视觉风格</li>
+                <li>将分析结果无缝应用到新内容生成</li>
+                <li>展示理解与生成模块的协同</li>
+            </ul>
+
+            <hr style="margin: 2rem 0; border: none; border-top: 1px dashed var(--color-border);">
+
+            <h3>7.13 Multi-round Editing: 多轮对话编辑</h3>
+            <div class="figure-ref">引用 Figure 17 (Picture12.pdf)</div>
+
+            <div class="figure">
+                <img src="images/univa/Picture12.png" alt="多轮对话编辑">
+                <p class="figure-caption">Figure 17: 多轮对话编辑 - 深度记忆上下文能力</p>
+            </div>
+
+            <p><strong>任务</strong>：通过多轮对话实现迭代编辑</p>
+
+            <h4>多轮交互</h4>
+            <div class="trajectory">
+                <div class="trajectory-step">
+                    <span class="trajectory-step-num">1</span>
+                    <span class="trajectory-step-content">Round 1: 分割主角 → segmentation</span>
+                </div>
+                <div class="trajectory-step">
+                    <span class="trajectory-step-num">2</span>
+                    <span class="trajectory-step-content">Round 2: 更换背景为雪景街道 → editing</span>
+                </div>
+                <div class="trajectory-step">
+                    <span class="trajectory-step-num">3</span>
+                    <span class="trajectory-step-content">Round 3: 延长视频，角色转身 → extension</span>
+                </div>
+            </div>
+
+            <div class="highlight-box blue">
+                <strong>关键点</strong>：
+                <ul>
+                    <li>Task Memory 维护多轮上下文</li>
+                    <li>支持服装更换等复杂编辑</li>
+                    <li>展示深度记忆上下文能力</li>
+                </ul>
+            </div>
+
+            <hr style="margin: 2rem 0; border: none; border-top: 1px dashed var(--color-border);">
+
+            <h3>7.14 Iterative Tool Calling: 迭代工具调用</h3>
+            <div class="figure-ref">引用 Figure 4 (task_v2.pdf)</div>
+
+            <div class="figure">
+                <img src="images/univa/task_v2.png" alt="迭代工具调用示例">
+                <p class="figure-caption">Figure 4: 迭代工具调用 - 单指令 vs 多轮任务</p>
+            </div>
+
+            <p><strong>展示内容</strong>：</p>
+            <ul>
+                <li><strong>左侧（单指令任务）</strong>：应用全局水墨画风格</li>
+                <li><strong>右侧（多轮任务）</strong>：分割 → 背景更换 → 视频延展的增量编辑</li>
+            </ul>
+
+            <div class="highlight-box green">
+                <strong>关键点</strong>：展示 UniVA 的工具链式调用和代表性功能组合。
+            </div>
+        </section>
+
+        <!-- Section 9: Thoughts -->
+        <section id="thoughts">
+            <div class="section-header">
+                <span class="section-number">08</span>
+                <h2 class="section-title">个人思考与启发</h2>
+            </div>
+
+            <h3>8.1 对我们研究的启发</h3>
+
+            <h4>Plan 时输出依赖关系</h4>
+            <p>在规划阶段需要显式输出步骤间的<strong>依赖关系</strong>，这样可以：</p>
+            <ul>
+                <li><strong>并行处理</strong>：无依赖的步骤可以同时执行，提升效率</li>
+                <li><strong>错误时及时调整策略</strong>：当某步骤失败时，能够准确判断哪些后续步骤受影响，避免无效执行</li>
+            </ul>
+            <div class="highlight-box blue">
+                <strong>Case: 披萨</strong><br>
+            </div>
+
+            <hr style="margin: 2rem 0; border: none; border-top: 1px dashed var(--color-border);">
+
+            <h4>Re-planning 机制</h4>
+            <p><strong>Re-planning 是必要机制</strong>，不仅用于出错纠正，更重要的是：</p>
+            <p>人在看到一个 Question 后的<strong>回答策略</strong>，在看到字幕内容或关键帧内容后会发生很大的改变。初始规划往往基于对问题的理解，但实际执行中获取的信息可能完全改变最优策略。</p>
+            <div class="highlight-box blue">
+                <strong>Case: Lunar</strong><br>
+            </div>
+
+            <hr style="margin: 2rem 0; border: none; border-top: 1px dashed var(--color-border);">
+
+            <h4>Workflow 预定义</h4>
+            <p>为不同类型的任务<strong>预定义部分处理步骤</strong>，因为针对整体的问题和针对片段的问题，处理步骤是不一样的：</p>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>问题类型</th>
+                            <th>Workflow</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>定位 + 回答问题</strong></td>
+                            <td>先时间定位 → 再针对片段回答</td>
+                        </tr>
+                        <tr>
+                            <td><strong>排序问题</strong></td>
+                            <td>先识别所有相关事件 → 再确定时序关系</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p>预定义 workflow 可以减少 Agent 的决策负担，提高执行效率和准确性。</p>
+            <div class="highlight-box blue">
+                <strong>Case: correct order</strong><br>
+            </div>
+
+            <hr style="margin: 2rem 0; border: none; border-top: 1px dashed var(--color-border);">
+
+        </section>
+
+        <!-- Appendix -->
+        <section id="appendix">
+            <div class="section-header">
+                <span class="section-number">附</span>
+                <h2 class="section-title">附录</h2>
+            </div>
+
+            <h3>A. 参考文献</h3>
+            <div class="details-content" style="font-size: 0.875rem;">
+                <h4>视频 Agent 核心工作</h4>
+                <p id="ref-videoagent"><strong>[Fan et al., 2024]</strong> Yue Fan, Xiaojian Ma, et al. <em>VideoAgent:
+                        A memory-augmented multimodal agent for video understanding.</em> In ECCV, pages 75–92, 2024. ——
+                    视频记忆增强问答</p>
+                <p id="ref-hugginggpt"><strong>[Shen et al., 2023]</strong> Yongliang Shen, Kaitao Song, et al.
+                    <em>HuggingGPT: Solving AI tasks with ChatGPT and its friends in Hugging Face.</em> In NeurIPS,
+                    36:38154-38180, 2023. —— LLM 调度通用 AI 任务
+                </p>
+                <p id="ref-vitron"><strong>[Fei et al., 2024]</strong> Hao Fei, Shengqiong Wu, et al. <em>VITRON: A
+                        unified pixel-level vision LLM for understanding, generating, segmenting, editing.</em> In
+                    NeurIPS, 2024. —— 像素级统一视觉 LLM</p>
+                <p id="ref-storyagent"><strong>[Hu et al., 2024]</strong> Panwen Hu, Jin Jiang, et al. <em>StoryAgent:
+                        Customized storytelling video generation via multi-agent collaboration.</em> In CoRR, 2024. ——
+                    多智能体协作故事视频生成</p>
+                <p id="ref-videomultiagents"><strong>[Kugo et al., 2025]</strong> Noriyuki Kugo, Xiang Li, et al.
+                    <em>VideoMultiAgents: A multi-agent framework for video question answering.</em> In CoRR, 2025. ——
+                    多智能体视频问答框架
+                </p>
+                <p id="ref-premind"><strong>[Wei et al., 2025]</strong> Kangda Wei, Zhengyu Zhou, et al. <em>PreMind:
+                        Multi-agent video understanding for advanced indexing of presentation-style videos.</em> In
+                    CoRR, 2025. —— 多智能体演示视频理解</p>
+
+                <h4>统一多模态模型</h4>
+                <p id="ref-show-o2"><strong>[Xie et al., 2025]</strong> Jinheng Xie, et al. <em>Show-o2: Improved native
+                        unified multimodal models.</em> arXiv:2506.15564, 2025. —— 统一多模态理解与生成</p>
+                <p id="ref-omni-video"><strong>[Tan et al., 2025]</strong> Zhiyu Tan, et al. <em>Omni-video:
+                        Democratizing unified video understanding and generation.</em> arXiv:2507.06119, 2025. ——
+                    统一视频理解与生成</p>
+                <p id="ref-vila-u"><strong>[Wu et al., 2024]</strong> VILA-U: A unified foundation model integrating
+                    visual understanding and generation. —— 视觉理解与生成统一基础模型</p>
+
+                <h4>视频处理与理解</h4>
+                <p id="ref-c3d"><strong>[Tran et al., 2015]</strong> Du Tran, Lubomir Bourdev, et al. <em>Learning
+                        spatiotemporal features with 3D convolutional networks.</em> In ICCV, 2015. —— 3D 卷积时空特征学习</p>
+                <p id="ref-vid2seq"><strong>[Yang et al., 2023]</strong> Antoine Yang, Arsha Nagrani, et al.
+                    <em>Vid2Seq: Large-scale pretraining of a visual language model for dense video captioning.</em> In
+                    CVPR, 2023. —— 大规模视觉语言模型预训练
+                </p>
+                <p id="ref-videollava"><strong>[Lin et al., 2024]</strong> Bin Lin, Yang Ye, et al. <em>Video-LLaVA:
+                        Learning united visual representation by alignment before projection.</em> In EMNLP, 2024. ——
+                    统一视觉表示学习</p>
+                <p id="ref-sam2"><strong>[Ravi et al., 2024]</strong> Nikhila Ravi, Valentin Gabeur, et al. <em>SAM 2:
+                        Segment anything in images and videos.</em> arXiv:2408.00714, 2024. —— 图像与视频通用分割</p>
+
+                <h4>视频生成与编辑</h4>
+                <p id="ref-imagen-video"><strong>[Ho et al., 2022]</strong> Jonathan Ho, William Chan, et al. <em>Imagen
+                        Video: High definition video generation with diffusion models.</em> arXiv:2210.02303, 2022. ——
+                    扩散模型高清视频生成</p>
+                <p id="ref-make-a-video"><strong>[Singer et al., 2022]</strong> Uriel Singer, Adam Polyak, et al.
+                    <em>Make-A-Video: Text-to-video generation without text-video data.</em> In ICLR, 2023. ——
+                    无文本-视频数据的视频生成
+                </p>
+                <p id="ref-wan"><strong>[Wan et al., 2025]</strong> Team Wan. <em>Wan: Open and advanced large-scale
+                        video generative models.</em> arXiv:2503.20314, 2025. —— 开源大规模视频生成</p>
+                <p id="ref-seedance"><strong>[Gao et al., 2025]</strong> Yu Gao, et al. <em>Seedance 1.0: Exploring the
+                        boundaries of video generation models.</em> arXiv:2506.09113, 2025. —— 视频生成模型边界探索</p>
+                <p id="ref-vace"><strong>[Jiang et al., 2025]</strong> Zeyinzi Jiang, et al. <em>VACE: All-in-one video
+                        creation and editing.</em> arXiv:2503.07598, 2025. —— 一体化视频创作与编辑</p>
+
+                <h4>评测基准</h4>
+                <p id="ref-video-mme"><strong>[Fu et al., 2025]</strong> Chaoyou Fu, et al. <em>Video-MME: The
+                        first-ever comprehensive evaluation benchmark of multi-modal LLMs in video analysis.</em> In
+                    CVPR, 2025. —— 多模态视频分析评测</p>
+                <p id="ref-opens2v"><strong>[Yuan et al., 2025b]</strong> Shenghai Yuan, et al. <em>Opens2v-nexus: A
+                        detailed benchmark for subject-to-video generation.</em> arXiv:2505.20292, 2025. —— 主体到视频生成基准
+                </p>
+                <p id="ref-sf20k"><strong>[Ghermi et al., 2024]</strong> Ridouane Ghermi, et al. <em>Long Story Short:
+                        Story-level video understanding from 20k short films.</em> arXiv:2406.10221, 2024. —— 短片故事理解</p>
+                <p id="ref-davis"><strong>[Perazzi et al., 2016]</strong> Federico Perazzi, et al. <em>A benchmark
+                        dataset and evaluation methodology for video object segmentation.</em> In CVPR, 2016. ——
+                    视频对象分割基准 (DAVIS)</p>
+
+                <h4>其他相关工作</h4>
+                <p id="ref-mcp"><strong>[Anthropic, 2024]</strong> Anthropic. <em>Introducing the Model Context
+                        Protocol.</em> https://www.anthropic.com/news/model-context-protocol, 2024. —— 模型上下文协议 (MCP)</p>
+                <p id="ref-internvl3"><strong>[Zhu et al., 2025]</strong> Jinguo Zhu, et al. <em>InternVL3: Exploring
+                        advanced training and test-time recipes for open-source multimodal models.</em>
+                    arXiv:2504.10479, 2025. —— 开源多模态模型训练方法</p>
+                <p id="ref-sa2va"><strong>[Yuan et al., 2025a]</strong> Haobo Yuan, et al. <em>SA2VA: Marrying SAM2 with
+                        LLaVA for dense grounded understanding.</em> arXiv:2501.04001, 2025. —— SAM2+LLaVA 密集理解</p>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>UniVA 论文讨论 | 基于 <a href="https://arxiv.org/abs/2511.08521" target="_blank">UniVA: Universal Video Agent
+                (arXiv:2511.08521)</a></p>
+        <p style="margin-top: 0.5rem;">
+            <a href="http://univa.online/" target="_blank">项目主页</a> ·
+            <a href="https://github.com/univa-agent/univa" target="_blank">GitHub</a>
+        </p>
+    </footer>
+
+    <script>
+        // Initialize KaTeX
+        document.addEventListener("DOMContentLoaded", function () {
+            renderMathInElement(document.body, {
+                delimiters: [
+                    { left: '$$', right: '$$', display: true },
+                    { left: '$', right: '$', display: false }
+                ],
+                throwOnError: false
+            });
+        });
+
+        // Highlight code
+        Prism.highlightAll();
+
+        // Active nav link on scroll
+        const sections = document.querySelectorAll('section[id]');
+        const navLinks = document.querySelectorAll('.nav a');
+
+        window.addEventListener('scroll', () => {
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (scrollY >= sectionTop - 100) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === '#' + current) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>
