@@ -421,10 +421,99 @@
             font-size: 1rem;
         }
 
+        .paper-full-name {
+            font-size: 0.85rem;
+            color: var(--color-text-secondary);
+            text-decoration: none;
+            margin-left: 0.5rem;
+            padding-left: 0.75rem;
+            border-left: 1px solid var(--color-border);
+            transition: color 0.2s;
+        }
+
+        .paper-full-name:hover {
+            color: var(--color-accent);
+            text-decoration: underline;
+        }
+
         .paper-info-grid {
             display: grid;
-            grid-template-columns: 180px 1fr 180px 120px 1.2fr;
+            grid-template-columns: 180px 1fr 180px 120px 1fr 150px;
             border-bottom: 1px solid var(--color-border);
+        }
+
+        /* 方法图缩略图 */
+        .paper-thumbnail {
+            max-height: 80px;
+            max-width: 100%;
+            width: auto;
+            object-fit: contain;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .paper-thumbnail:hover {
+            transform: scale(1.05);
+        }
+
+        .no-image {
+            color: var(--color-text-muted);
+            font-size: 0.8rem;
+        }
+
+        /* 图片 Modal 弹窗 */
+        .image-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1000;
+        }
+
+        .image-modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .image-modal-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+        }
+
+        .image-modal-content {
+            position: relative;
+            max-width: 90vw;
+            max-height: 90vh;
+        }
+
+        .image-modal-content img {
+            max-width: 90vw;
+            max-height: 90vh;
+            object-fit: contain;
+        }
+
+        .image-modal-close {
+            position: absolute;
+            top: -40px;
+            right: 0;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 2rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            line-height: 1;
+        }
+
+        .image-modal-close:hover {
+            color: #ccc;
         }
 
         .paper-info-cell {
@@ -1090,7 +1179,11 @@
             }
 
             .paper-info-cell:nth-child(5) {
-                grid-column: span 2;
+                grid-column: span 1;
+            }
+
+            .paper-info-cell:nth-child(6) {
+                grid-column: span 1;
             }
         }
 
@@ -1202,7 +1295,7 @@
             position: fixed;
             top: 50%;
             left: 0;
-            transform: translateY(-50%);
+            transform: translateY(-50%) translateX(calc(-100% + 20px));
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
             border: 1px solid var(--color-border);
@@ -1211,6 +1304,28 @@
             z-index: 100;
             padding: 0.75rem 0;
             box-shadow: 2px 0 20px rgba(0, 0, 0, 0.08);
+            transition: transform 0.3s ease;
+        }
+
+        .side-nav:hover {
+            transform: translateY(-50%) translateX(0);
+        }
+
+        /* 边缘提示箭头 */
+        .side-nav::after {
+            content: "›";
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 14px;
+            color: var(--color-text-muted);
+            opacity: 1;
+            transition: opacity 0.3s;
+        }
+
+        .side-nav:hover::after {
+            opacity: 0;
         }
 
         .side-nav-inner {
@@ -1222,6 +1337,7 @@
         .side-nav-item {
             display: block;
             padding: 0.5rem 1rem;
+            padding-right: 1.5rem;
             font-size: 0.8rem;
             font-weight: 500;
             color: var(--color-text-secondary);
@@ -1248,6 +1364,15 @@
 </head>
 
 <body>
+    <!-- Image Modal -->
+    <div class="image-modal" id="imageModal">
+        <div class="image-modal-overlay" onclick="closeImageModal()"></div>
+        <div class="image-modal-content">
+            <img id="modalImage" src="" alt="方法图">
+            <button class="image-modal-close" onclick="closeImageModal()">×</button>
+        </div>
+    </div>
+
     <!-- Side Navigation -->
     <nav class="side-nav" id="side-nav">
         <div class="side-nav-inner">
@@ -1283,10 +1408,12 @@
                     </div>
                     <div class="ability-skills">
                         <ul>
-                            <li>物体识别</li>
-                            <li>动作识别</li>
-                            <li>文字识别(OCR)</li>
-                            <li>场景理解</li>
+                            <li>物体识别 (Object Recognition)</li>
+                            <li>动作识别 (Action Recognition)</li>
+                            <li>文字识别 (OCR)</li>
+                            <li>属性识别 (Attribute Recognition)</li>
+                            <li>颜色识别 (Color Recognition)</li>
+                            <li>文本识别 (Text Recognition)</li>
                         </ul>
                     </div>
                     <div class="ability-examples">
@@ -1304,10 +1431,10 @@
                     </div>
                     <div class="ability-skills">
                         <ul>
-                            <li>时间指代对齐</li>
-                            <li>时间定位</li>
-                            <li>时间顺序理解</li>
-                            <li>事件检测</li>
+                            <li>时间定位 (Temporal Grounding)</li>
+                            <li>时间排序 (Temporal Ordering)</li>
+                            <li>动作计数 (Action Counting)</li>
+                            <li>事件计数 (Event Counting)</li>
                         </ul>
                     </div>
                     <div class="ability-examples">
@@ -1325,10 +1452,12 @@
                     </div>
                     <div class="ability-skills">
                         <ul>
-                            <li>算术推理</li>
-                            <li>逻辑推理</li>
-                            <li>数量比较</li>
-                            <li>序数推理</li>
+                            <li>算术推理 (Arithmetic Reasoning)</li>
+                            <li>计数 (Counting)</li>
+                            <li>数学推理 (Mathematical Reasoning)</li>
+                            <li>事件计数 (Event Counting)</li>
+                            <li>动作计数 (Action Counting)</li>
+                            <li>顺序理解 (Sequential Understanding)</li>
                         </ul>
                     </div>
                     <div class="ability-examples">
@@ -1346,10 +1475,12 @@
                     </div>
                     <div class="ability-skills">
                         <ul>
-                            <li>空间定位</li>
-                            <li>空间关系识别</li>
-                            <li>轨迹分析</li>
-                            <li>目标跟踪</li>
+                            <li>空间定位 (Spatial Localization)</li>
+                            <li>空间关系识别 (Spatial Relation Recognition)</li>
+                            <li>物体计数 (Object Counting)</li>
+                            <li>空间关系感知 (Spatial Relation Perception)</li>
+                            <li>空间推理 (Spatial Reasoning)</li>
+                            <li>物体跟踪 (Object Tracking)</li>
                         </ul>
                     </div>
                     <div class="ability-examples">
@@ -1367,10 +1498,10 @@
                     </div>
                     <div class="ability-skills">
                         <ul>
-                            <li>语音识别</li>
-                            <li>音频事件检测</li>
-                            <li>视听对齐</li>
-                            <li>视听关联</li>
+                            <li>语音识别 (Speech Recognition)</li>
+                            <li>视听对齐 (Audio-Visual Alignment)</li>
+                            <li>音频事件检测 (Audio Event Detection)</li>
+                            <li>视听关联 (Audio-Visual Association)</li>
                         </ul>
                     </div>
                     <div class="ability-examples">
@@ -1471,8 +1602,8 @@
             try {
                 // 并行加载主数据和 plan 数据
                 const [dataResponse, planResponse] = await Promise.all([
-                    fetch('data/ability-analysis.json'),
-                    fetch('data/ability-analysis-plan.json').catch(() => null)
+                    fetch('data/data.json'),
+                    fetch('data/understanding_plan_results.json').catch(() => null)
                 ]);
 
                 data = await dataResponse.json();
@@ -1529,6 +1660,7 @@
                 <div class="paper-header">
                     <span class="paper-icon">📄</span>
                     <span class="paper-name">${paper.name}</span>
+                    ${paper.fullName ? `<a href="${paper.paperUrl || '#'}" target="_blank" class="paper-full-name" title="查看论文">${paper.fullName}</a>` : ''}
                 </div>
                 <div class="paper-info-grid">
                     <div class="paper-info-cell">
@@ -1556,6 +1688,14 @@
                         <div class="paper-info-value">
                             ${paper.keyFindings ? `<strong>发现:</strong> ${paper.keyFindings}<br>` : ''}
                             ${paper.unsolvedProblems ? `<strong>未解决:</strong> ${paper.unsolvedProblems}` : ''}
+                        </div>
+                    </div>
+                    <div class="paper-info-cell">
+                        <div class="paper-info-label">方法图</div>
+                        <div class="paper-info-value">
+                            ${paper.overviewImage
+                                ? `<img class="paper-thumbnail" src="images/overview/${paper.overviewImage.split('/').pop()}" alt="${paper.name} 方法图" onclick="openImageModal(this.src)">`
+                                : '<span class="no-image">暂无图片</span>'}
                         </div>
                     </div>
                 </div>
@@ -2011,6 +2151,28 @@
 
         // Initialize side nav
         setupSideNav();
+
+        // 图片 Modal 功能
+        function openImageModal(src) {
+            const modal = document.getElementById('imageModal');
+            const modalImage = document.getElementById('modalImage');
+            modalImage.src = src;
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeImageModal() {
+            const modal = document.getElementById('imageModal');
+            modal.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        // ESC 键关闭 Modal
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeImageModal();
+            }
+        });
     </script>
 </body>
 

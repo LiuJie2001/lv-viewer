@@ -30,6 +30,8 @@
     {
       "id": "dvd",
       "name": "DVD",
+      "fullName": "Deep Video Discovery: Agentic Search with Tool Use for Long-form Video Understanding",
+      "paperUrl": "https://arxiv.org/abs/2505.18079",
       "problem": "长视频中上下文限制和信息检索困难，现有 Agent 工作流僵化",
       "methods": [
         "多粒度视频数据库（Global/Clip/Frame 三层）",
@@ -160,11 +162,14 @@
           "visual_perception"
         ]
       },
-      "unsolvedProblems": "Clip Search Trap，成本高"
+      "unsolvedProblems": "Clip Search Trap，成本高",
+      "overviewImage": "images/dvd.png"
     },
     {
       "id": "deepeyesv2",
       "name": "DeepEyesV2",
+      "fullName": "DeepEyesV2: Toward Agentic Multimodal Model",
+      "paperUrl": "https://arxiv.org/abs/2511.05271",
       "problem": "现有 MLLM 被动且缺乏验证手段，难以主动调用工具获取外部知识和进行精确计算",
       "methods": [
         "双阶段训练（Cold-Start SFT + Agentic RL）",
@@ -235,11 +240,14 @@
           "high_level_reasoning"
         ]
       },
-      "unsolvedProblems": "工具选择错误，推理延迟高"
+      "unsolvedProblems": "工具选择错误，推理延迟高",
+      "overviewImage": "images/deepeyesv2.png"
     },
     {
       "id": "haven",
       "name": "HAVEN",
+      "fullName": "Hierarchical Long Video Understanding with Audiovisual Entity Cohesion and Agentic Search",
+      "paperUrl": "https://arxiv.org/abs/2601.13719",
       "problem": "RAG 导致语义碎片化，缺乏实体长期一致性",
       "methods": [
         "视听实体凝聚（Speaker Diarization 作为跨场景锚点）",
@@ -418,11 +426,14 @@
           "visual_perception"
         ]
       },
-      "unsolvedProblems": "依赖 ASR，建库成本高"
+      "unsolvedProblems": "依赖 ASR，建库成本高",
+      "overviewImage": "images/haven.png"
     },
     {
       "id": "kimi_k25",
       "name": "Kimi K2.5",
+      "fullName": "Kimi K2.5: Visual Agentic Intelligence",
+      "paperUrl": "https://huggingface.co/moonshotai/Kimi-K2.5",
       "problem": "多模态训练的模态冲突，单 Agent 处理复杂任务的延迟瓶颈",
       "methods": [
         "Early Fusion + Zero-Vision SFT",
@@ -530,6 +541,8 @@
     {
       "id": "llm_in_sandbox",
       "name": "LLM-in-Sandbox",
+      "fullName": "LLM-in-Sandbox Elicits General Agentic Intelligence",
+      "paperUrl": "https://arxiv.org/abs/2601.16206",
       "problem": "如何激发 LLM 在非代码领域的通用 Agent 能力",
       "methods": [
         "提供代码沙箱的三大 “元能力”：外部资源访问、文件管理、代码执行",
@@ -606,11 +619,14 @@
           "high_level_reasoning"
         ]
       },
-      "unsolvedProblems": "安全风险，环境配置不稳定"
+      "unsolvedProblems": "安全风险，环境配置不稳定",
+      "overviewImage": "images/llm_in_sandbox.png"
     },
     {
       "id": "longshotagent",
       "name": "LongShOTAgent",
+      "fullName": "LongShOTBench: A Benchmark and Agentic Framework for Omni-Modal Reasoning and Tool Use in Long Videos",
+      "paperUrl": "https://arxiv.org/abs/2512.16978",
       "problem": "缺乏评估长视频全模态（视觉+音频+语音）理解和工具使用的 Benchmark",
       "methods": [
         "提出 LongShOTAgent（无训练框架）",
@@ -736,11 +752,14 @@
           "visual_perception"
         ]
       },
-      "unsolvedProblems": "推理延迟高，检索瓶颈"
+      "unsolvedProblems": "推理延迟高，检索瓶颈",
+      "overviewImage": "images/longshotagent.png"
     },
     {
       "id": "univa",
       "name": "UniVA",
+      "fullName": "UniVA: Universal Video Agent towards Open-Source Next-Generation Video Generalist",
+      "paperUrl": "https://arxiv.org/abs/2511.08521",
       "problem": "视频任务碎片化，端到端模型不灵活",
       "methods": [
         "Plan-Act 双智能体架构",
@@ -875,11 +894,14 @@
           "high_level_reasoning"
         ]
       },
-      "unsolvedProblems": "延迟高，DINO Score 权衡"
+      "unsolvedProblems": "延迟高，DINO Score 权衡",
+      "overviewImage": "images/univa.png"
     },
     {
       "id": "vital",
       "name": "VITAL",
+      "fullName": "Thinking With Videos: Multimodal Tool-Augmented Reinforcement Learning for Long Video Reasoning",
+      "paperUrl": "https://arxiv.org/abs/2508.04416",
       "problem": "现有 MLLM 仅依赖文本 CoT，缺乏跨模态交互，长视频推理时易产生幻觉",
       "methods": [
         "引入 Multimodal CoT，在推理链中插入视觉 tokens",
@@ -913,11 +935,14 @@
           "visual_perception"
         ]
       },
-      "unsolvedProblems": "缺乏空间定位，忽略音频"
+      "unsolvedProblems": "缺乏空间定位，忽略音频",
+      "overviewImage": "images/vital.png"
     },
     {
       "id": "video_star",
       "name": "Video-STAR",
+      "fullName": "Video-STAR: Reinforcing Open-Vocabulary Action Recognition with Tools",
+      "paperUrl": "https://arxiv.org/abs/2510.08480",
       "problem": "开放词汇动作识别中的跨模态幻觉和细粒度区分困难",
       "methods": [
         "上下文子动作分解",
@@ -984,11 +1009,14 @@
           "visual_perception"
         ]
       },
-      "unsolvedProblems": "推理延迟高，工具依赖"
+      "unsolvedProblems": "推理延迟高，工具依赖",
+      "overviewImage": "images/video_star.png"
     },
     {
       "id": "zoom_zero",
       "name": "Zoom-Zero",
+      "fullName": "Zoom-Zero: Reinforced Coarse-to-Fine Video Understanding via Temporal Zoom-In",
+      "paperUrl": "https://openreview.net/forum?id=zoom_zero_iclr2026",
       "problem": "时间定位与答案推理脱节，标准 GRPO 的信用分配模糊",
       "methods": [
         "Coarse-to-Fine Zoom-in 机制",
@@ -1037,6 +1065,8 @@
     {
       "id": "zoomv",
       "name": "ZoomV",
+      "fullName": "ZoomV: Temporal Zoom-In for Efficient Long Video Understanding",
+      "paperUrl": "https://arxiv.org/abs/2504.01407",
       "problem": "长视频处理中 “计算成本高” 与 “信息丢失” 的两难",
       "methods": [
         "TemporaLink：显式时间戳编码拼接到视觉特征",
@@ -1090,7 +1120,8 @@
           "high_level_reasoning"
         ]
       },
-      "unsolvedProblems": "搜索串行化，超参敏感"
+      "unsolvedProblems": "搜索串行化，超参敏感",
+      "overviewImage": "images/zoomv.png"
     }
   ],
   "cases": [
