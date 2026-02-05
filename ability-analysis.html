@@ -1196,10 +1196,102 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+
+        /* Side Navigation */
+        .side-nav {
+            position: fixed;
+            left: 1.5rem;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .side-nav-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.625rem 1rem;
+            background: white;
+            border: 1px solid var(--color-border);
+            border-radius: 2rem;
+            text-decoration: none;
+            color: var(--color-text-secondary);
+            font-size: 0.8rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+
+        .side-nav-item:hover {
+            border-color: var(--color-accent);
+            color: var(--color-accent);
+            transform: translateX(4px);
+            text-decoration: none;
+        }
+
+        .side-nav-item.active {
+            background: var(--color-accent);
+            border-color: var(--color-accent);
+            color: white;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+
+        .side-nav-icon {
+            font-size: 1rem;
+            width: 1.25rem;
+            text-align: center;
+        }
+
+        .side-nav-label {
+            opacity: 0;
+            max-width: 0;
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+
+        .side-nav:hover .side-nav-label {
+            opacity: 1;
+            max-width: 100px;
+        }
+
+        @media (min-width: 1200px) {
+            .main {
+                margin-left: 60px;
+            }
+        }
+
+        @media (max-width: 1199px) {
+            .side-nav {
+                display: none;
+            }
+        }
     </style>
 </head>
 
 <body>
+    <!-- Side Navigation -->
+    <nav class="side-nav" id="side-nav">
+        <a href="#ability-overview" class="side-nav-item active" data-section="ability-overview">
+            <span class="side-nav-icon">📊</span>
+            <span class="side-nav-label">能力概览</span>
+        </a>
+        <a href="#ability-filter" class="side-nav-item" data-section="ability-filter">
+            <span class="side-nav-icon">🔍</span>
+            <span class="side-nav-label">筛选</span>
+        </a>
+        <a href="#papers-section" class="side-nav-item" data-section="papers-section">
+            <span class="side-nav-icon">📄</span>
+            <span class="side-nav-label">论文</span>
+        </a>
+        <a href="#cases-section" class="side-nav-item" data-section="cases-section">
+            <span class="side-nav-icon">📋</span>
+            <span class="side-nav-label">Case</span>
+        </a>
+    </nav>
     <!-- Header -->
     <header class="header">
         <span class="header-tag">可视化分析</span>
@@ -1907,6 +1999,53 @@
             document.getElementById('paper-count').textContent = visiblePapers;
             document.getElementById('case-count').textContent = visibleCases;
         }
+
+        // Side Navigation - Scroll Spy
+        function setupSideNav() {
+            const sections = ['ability-overview', 'ability-filter', 'papers-section', 'cases-section'];
+            const navItems = document.querySelectorAll('.side-nav-item');
+
+            const observerOptions = {
+                root: null,
+                rootMargin: '-20% 0px -60% 0px',
+                threshold: 0
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const sectionId = entry.target.id;
+                        navItems.forEach(item => {
+                            item.classList.remove('active');
+                            if (item.dataset.section === sectionId) {
+                                item.classList.add('active');
+                            }
+                        });
+                    }
+                });
+            }, observerOptions);
+
+            sections.forEach(id => {
+                const section = document.getElementById(id);
+                if (section) {
+                    observer.observe(section);
+                }
+            });
+
+            navItems.forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const targetId = item.dataset.section;
+                    const target = document.getElementById(targetId);
+                    if (target) {
+                        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                });
+            });
+        }
+
+        // Initialize side nav
+        setupSideNav();
     </script>
 </body>
 
