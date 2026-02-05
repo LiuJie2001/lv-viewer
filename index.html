@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LV-Viewer - 长视频理解研究可视化</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans SC', -apple-system, sans-serif;
+            background: #f8f9fa;
+            min-height: 100vh;
+            color: #1a1a1a;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 4rem 2rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1rem;
+        }
+
+        .page-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .page-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-decoration: none;
+            color: inherit;
+            border: 1px solid #e5e5e5;
+            transition: all 0.2s ease;
+        }
+
+        .page-card:hover {
+            border-color: #2563eb;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .page-card h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #2563eb;
+        }
+
+        .page-card p {
+            color: #666;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .page-card .meta {
+            margin-top: 1rem;
+            font-size: 0.8rem;
+            color: #999;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 4rem;
+            color: #999;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>LV-Viewer</h1>
+            <p>长视频理解研究可视化工具集</p>
+        </header>
+
+        <div class="page-list">
+            <a href="ability-analysis.html" class="page-card">
+                <h2>能力分析可视化</h2>
+                <p>长视频理解能力分析与论文/Case 数据可视化，包含视觉感知、时序理解、推理、空间理解、音视频融合等五大能力维度的分析。</p>
+                <div class="meta">ability-analysis.html</div>
+            </a>
+
+            <!-- 未来新页面在此添加 -->
+        </div>
+
+        <footer class="footer">
+            Long Video Understanding Research
+        </footer>
+    </div>
+</body>
+</html>

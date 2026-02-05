@@ -1,0 +1,1470 @@
+{
+  "abilities": [
+    {
+      "id": "visual_perception",
+      "name": "视觉感知",
+      "color": "#4CAF50"
+    },
+    {
+      "id": "temporal_dynamics",
+      "name": "时间动态理解",
+      "color": "#2196F3"
+    },
+    {
+      "id": "spatial_object_dynamics",
+      "name": "空间与物体动态",
+      "color": "#FF9800"
+    },
+    {
+      "id": "audiovisual_joint",
+      "name": "视听联合理解",
+      "color": "#9C27B0"
+    },
+    {
+      "id": "high_level_reasoning",
+      "name": "高层推理",
+      "color": "#F44336"
+    }
+  ],
+  "papers": [
+    {
+      "id": "dvd",
+      "name": "DVD",
+      "problem": "长视频中上下文限制和信息检索困难，现有 Agent 工作流僵化",
+      "methods": [
+        "多粒度视频数据库（Global/Clip/Frame 三层）",
+        "Progressive Subject Registry（渐进式主体注册）",
+        "以搜索为中心的工具集（Global Browse/Clip Search/Frame Inspect）"
+      ],
+      "baseModel": "GPT-4.1（建库）+ OpenAI o3（推理）",
+      "trained": true,
+      "trainingMethod": "Training-free",
+      "keyFindings": "依赖强推理模型（o3）",
+      "tools": [
+        {
+          "name": "Preprocessor",
+          "implementation": "多模型组合",
+          "input": "原始视频",
+          "output": "多粒度视频数据库 $\\mathcal{D}$",
+          "purpose": "长视频无法直接输入模型",
+          "abilities": [
+            "temporal_dynamics",
+            "visual_perception"
+          ]
+        },
+        {
+          "name": "Preprocessor-Temporal Segmentation",
+          "implementation": "均匀分段",
+          "input": "原始视频",
+          "output": "5秒视频片段序列",
+          "purpose": "将长视频切分为可管理单元",
+          "abilities": [
+            "temporal_dynamics"
+          ]
+        },
+        {
+          "name": "Preprocessor-Captioning",
+          "implementation": "GPT-4.1 VLM",
+          "input": "视频帧（2fps）",
+          "output": "片段描述 Caption",
+          "purpose": "将视觉内容转为可检索文本",
+          "abilities": [
+            "high_level_reasoning",
+            "visual_perception"
+          ]
+        },
+        {
+          "name": "Preprocessor-Subject Registry",
+          "implementation": "GPT-4.1",
+          "input": "视频片段序列 + 历史主体",
+          "output": "结构化主体列表（ID, 外貌, 出现时间）",
+          "purpose": "长视频人物一致性追踪",
+          "abilities": [
+            "temporal_dynamics",
+            "spatial_object_dynamics",
+            "visual_perception"
+          ]
+        },
+        {
+          "name": "Preprocessor-Caption Embedding",
+          "implementation": "Text Encoder",
+          "input": "Clip Caption",
+          "output": "文本向量 $e_i$",
+          "purpose": "支持语义检索",
+          "abilities": [
+            "visual_perception"
+          ]
+        },
+        {
+          "name": "Preprocessor-Frame Decoding",
+          "implementation": "视频解码器",
+          "input": "视频片段",
+          "output": "720p 帧序列",
+          "purpose": "保留原始像素用于后续检查",
+          "abilities": [
+            "visual_perception"
+          ]
+        },
+        {
+          "name": "Preprocessor-ASR（可选）",
+          "implementation": "WhisperX",
+          "input": "音频",
+          "output": "语音转录",
+          "purpose": "辅助字幕增强理解",
+          "abilities": [
+            "audiovisual_joint"
+          ]
+        },
+        {
+          "name": "Global Browse",
+          "implementation": "LLM 摘要 + VLM 采样",
+          "input": "查询",
+          "output": "全局摘要 + 事件级描述",
+          "purpose": "快速获取 \"大局观\"",
+          "abilities": [
+            "temporal_dynamics",
+            "high_level_reasoning",
+            "visual_perception"
+          ]
+        },
+        {
+          "name": "Clip Search",
+          "implementation": "Embedding 检索",
+          "input": "文本查询",
+          "output": "Top-k 片段（文本 + 时间戳）",
+          "purpose": "定位相关事件的时间范围",
+          "abilities": [
+            "temporal_dynamics",
+            "visual_perception"
+          ]
+        },
+        {
+          "name": "Frame Inspect",
+          "implementation": "OpenAI o3（VLM 模式）",
+          "input": "时间范围 + 具体问题",
+          "output": "视觉回答",
+          "purpose": "核实细节，解决幻觉",
+          "abilities": [
+            "high_level_reasoning",
+            "visual_perception"
+          ]
+        }
+      ],
+      "memory": {
+        "contextHandling": "多粒度数据库",
+        "mechanism": "Subject Registry",
+        "keyDesign": "渐进式主体注册，维护实体一致性",
+        "abilities": [
+          "temporal_dynamics",
+          "spatial_object_dynamics",
+          "visual_perception"
+        ]
+      },
+      "unsolvedProblems": "Clip Search Trap，成本高"
+    },
+    {
+      "id": "deepeyesv2",
+      "name": "DeepEyesV2",
+      "problem": "现有 MLLM 被动且缺乏验证手段，难以主动调用工具获取外部知识和进行精确计算",
+      "methods": [
+        "双阶段训练（Cold-Start SFT + Agentic RL）",
+        "多工具集成（Python 代码执行 + 网络搜索）",
+        "使用 DAPO 算法进行强化学习"
+      ],
+      "baseModel": "Qwen2.5-VL-7B",
+      "trained": true,
+      "trainingMethod": "Cold-Start SFT + DAPO RL",
+      "keyFindings": "直接 RL 难以学习工具使用，需要 SFT 冷启动",
+      "tools": [
+        {
+          "name": "Image Crop",
+          "implementation": "Python PIL/OpenCV 代码",
+          "input": "图像 + 坐标",
+          "output": "裁剪后的图像",
+          "purpose": "细粒度视觉感知，关注局部区域",
+          "abilities": [
+            "visual_perception"
+          ]
+        },
+        {
+          "name": "Numerical Analysis",
+          "implementation": "Python NumPy/SciPy",
+          "input": "数值数据",
+          "output": "计算结果",
+          "purpose": "精确数学计算，避免 LLM 计算错误",
+          "abilities": [
+            "high_level_reasoning"
+          ]
+        },
+        {
+          "name": "Mark/Annotation",
+          "implementation": "Python 绘图库",
+          "input": "图像 + 标注指令",
+          "output": "标注后的图像",
+          "purpose": "可视化推理过程，标记关键区域",
+          "abilities": [
+            "spatial_object_dynamics"
+          ]
+        },
+        {
+          "name": "Google Lens",
+          "implementation": "Google Vision API",
+          "input": "图像",
+          "output": "图像搜索结果/识别信息",
+          "purpose": "外部知识获取，识别未知物体/场景",
+          "abilities": [
+            "visual_perception"
+          ]
+        },
+        {
+          "name": "Google Search",
+          "implementation": "Google Search API",
+          "input": "文本查询",
+          "output": "网页摘要",
+          "purpose": "获取实时/外部知识，减少幻觉",
+          "abilities": [
+            "high_level_reasoning"
+          ]
+        }
+      ],
+      "memory": {
+        "contextHandling": "工具输出追加到上下文",
+        "mechanism": "无显式 Memory",
+        "keyDesign": "迭代推理，每轮工具输出作为新观察",
+        "abilities": [
+          "high_level_reasoning"
+        ]
+      },
+      "unsolvedProblems": "工具选择错误，推理延迟高"
+    },
+    {
+      "id": "haven",
+      "name": "HAVEN",
+      "problem": "RAG 导致语义碎片化，缺乏实体长期一致性",
+      "methods": [
+        "视听实体凝聚（Speaker Diarization 作为跨场景锚点）",
+        "四层分层索引（Global-Scene-Segment-Entity）",
+        "多粒度工具（Scene Browse/Caption Search/Visual Search/Entity Search）"
+      ],
+      "baseModel": "GPT-4.1（建库）+ OpenAI o3（Agent）",
+      "trained": true,
+      "trainingMethod": "Training-free",
+      "keyFindings": "Speaker Diarization 关键",
+      "tools": [
+        {
+          "name": "Preprocessor",
+          "implementation": "多模型组合",
+          "input": "原始视频",
+          "output": "四层索引数据库",
+          "purpose": "长视频无法直接输入模型",
+          "abilities": [
+            "temporal_dynamics",
+            "audiovisual_joint",
+            "visual_perception"
+          ]
+        },
+        {
+          "name": "Preprocessor-ASR + Diarization",
+          "implementation": "WhisperX",
+          "input": "音频",
+          "output": "语音转录 + 说话人区分",
+          "purpose": "获取带说话人标签的文本",
+          "abilities": [
+            "audiovisual_joint"
+          ]
+        },
+        {
+          "name": "Preprocessor-Caption 生成",
+          "implementation": "GPT-4.1",
+          "input": "视频帧 + Speaker 信息",
+          "output": "融合 Speaker 信息的片段描述",
+          "purpose": "建立视听关联的文本表示",
+          "abilities": [
+            "audiovisual_joint",
+            "visual_perception"
+          ]
+        },
+        {
+          "name": "Preprocessor-Vision Embedding",
+          "implementation": "UNITE",
+          "input": "视频帧",
+          "output": "视觉特征向量",
+          "purpose": "支持视觉语义检索",
+          "abilities": [
+            "visual_perception"
+          ]
+        },
+        {
+          "name": "Preprocessor-Text Embedding",
+          "implementation": "Text Encoder",
+          "input": "Caption 文本",
+          "output": "文本向量",
+          "purpose": "支持文本语义检索",
+          "abilities": [
+            "visual_perception"
+          ]
+        },
+        {
+          "name": "Preprocessor-实体聚类",
+          "implementation": "Embedding 聚类 + LLM 规范化",
+          "input": "片段实体描述",
+          "output": "跨片段规范化实体库",
+          "purpose": "跨场景实体整合与 ID 一致性",
+          "abilities": [
+            "temporal_dynamics",
+            "spatial_object_dynamics",
+            "visual_perception"
+          ]
+        },
+        {
+          "name": "Preprocessor-场景聚合",
+          "implementation": "GPT-4.1",
+          "input": "连续片段",
+          "output": "场景级摘要",
+          "purpose": "语义相关片段合并为场景",
+          "abilities": [
+            "temporal_dynamics",
+            "high_level_reasoning"
+          ]
+        },
+        {
+          "name": "Preprocessor-全局摘要",
+          "implementation": "GPT-4.1",
+          "input": "场景摘要序列",
+          "output": "全视频综述",
+          "purpose": "提供视频宏观概览",
+          "abilities": [
+            "high_level_reasoning"
+          ]
+        },
+        {
+          "name": "Global Scene Browse（$T_{scene}$）",
+          "implementation": "LLM 聚合场景摘要",
+          "input": "无",
+          "output": "场景故事线",
+          "purpose": "粗粒度导航",
+          "abilities": [
+            "temporal_dynamics",
+            "high_level_reasoning",
+            "visual_perception"
+          ]
+        },
+        {
+          "name": "Segment Caption Search（$T_{caption}$）",
+          "implementation": "文本 Embedding 检索",
+          "input": "文本查询",
+          "output": "相关片段列表",
+          "purpose": "基于描述的细粒度检索",
+          "abilities": [
+            "temporal_dynamics",
+            "visual_perception"
+          ]
+        },
+        {
+          "name": "Segment Visual Search（$T_{visual}$）",
+          "implementation": "UNITE 视觉 Embedding",
+          "input": "视觉查询",
+          "output": "视觉相似片段",
+          "purpose": "捕捉文本描述遗漏的视觉细节",
+          "abilities": [
+            "temporal_dynamics",
+            "spatial_object_dynamics",
+            "visual_perception"
+          ]
+        },
+        {
+          "name": "Entity Search（$T_{entity}$）",
+          "implementation": "实体库匹配 + 重排序",
+          "input": "实体名称/描述",
+          "output": "实体出现的片段",
+          "purpose": "跨场景实体追踪",
+          "abilities": [
+            "temporal_dynamics",
+            "spatial_object_dynamics",
+            "visual_perception"
+          ]
+        },
+        {
+          "name": "Clip Caption Inspect",
+          "implementation": "文本检索",
+          "input": "片段 ID",
+          "output": "Caption 文本",
+          "purpose": "快速查看片段描述",
+          "abilities": [
+            "high_level_reasoning",
+            "visual_perception"
+          ]
+        },
+        {
+          "name": "Visual Inspect",
+          "implementation": "OpenAI o3（VLM）",
+          "input": "时间范围 + 问题",
+          "output": "视觉回答",
+          "purpose": "精细视觉验证",
+          "abilities": [
+            "high_level_reasoning",
+            "visual_perception"
+          ]
+        }
+      ],
+      "memory": {
+        "contextHandling": "四层分层索引",
+        "mechanism": "Entity 聚合+场景摘要",
+        "keyDesign": "Speaker 作为实体凝聚锚点",
+        "abilities": [
+          "temporal_dynamics",
+          "spatial_object_dynamics",
+          "audiovisual_joint",
+          "visual_perception"
+        ]
+      },
+      "unsolvedProblems": "依赖 ASR，建库成本高"
+    },
+    {
+      "id": "kimi_k25",
+      "name": "Kimi K2.5",
+      "problem": "多模态训练的模态冲突，单 Agent 处理复杂任务的延迟瓶颈",
+      "methods": [
+        "Early Fusion + Zero-Vision SFT",
+        "Agent Swarm：并行智能体强化学习（PARL）",
+        "MoonViT-3D 视频压缩（4× 时间压缩）"
+      ],
+      "baseModel": "MoE（32B 激活/1.04T 总参）",
+      "trained": true,
+      "trainingMethod": "Joint Multimodal RL + PARL",
+      "keyFindings": "Visual RL 可反哺文本能力",
+      "tools": [
+        {
+          "name": "IPython 代码执行",
+          "implementation": "IPython 环境",
+          "input": "Python 代码",
+          "output": "执行结果",
+          "purpose": "视觉操作的精确控制",
+          "abilities": [
+            "high_level_reasoning"
+          ]
+        },
+        {
+          "name": "IPython 代码执行-图像裁剪",
+          "implementation": "PIL/OpenCV",
+          "input": "坐标",
+          "output": "裁剪图像",
+          "purpose": "细粒度视觉感知",
+          "abilities": [
+            "visual_perception"
+          ]
+        },
+        {
+          "name": "IPython 代码执行-图像旋转",
+          "implementation": "PIL/OpenCV",
+          "input": "角度",
+          "output": "旋转图像",
+          "purpose": "视角变换",
+          "abilities": [
+            "spatial_object_dynamics"
+          ]
+        },
+        {
+          "name": "IPython 代码执行-二值化",
+          "implementation": "OpenCV",
+          "input": "阈值",
+          "output": "处理后图像",
+          "purpose": "文字/边缘增强",
+          "abilities": [
+            "visual_perception"
+          ]
+        },
+        {
+          "name": "IPython 代码执行-计数",
+          "implementation": "Python 脚本",
+          "input": "检测结果",
+          "output": "数量",
+          "purpose": "精确计数",
+          "abilities": [
+            "high_level_reasoning",
+            "visual_perception"
+          ]
+        },
+        {
+          "name": "Agent Swarm 工具",
+          "implementation": "冻结的子智能体",
+          "input": "子任务描述",
+          "output": "子任务结果",
+          "purpose": "复杂任务的并行分解",
+          "abilities": [
+            "high_level_reasoning"
+          ]
+        },
+        {
+          "name": "Agent Swarm 工具-create_subagent",
+          "implementation": "Orchestrator",
+          "input": "子智能体类型",
+          "output": "子智能体实例",
+          "purpose": "动态创建执行者",
+          "abilities": [
+            "high_level_reasoning"
+          ]
+        },
+        {
+          "name": "Agent Swarm 工具-assign_task",
+          "implementation": "Orchestrator",
+          "input": "任务 + 子智能体",
+          "output": "任务分配确认",
+          "purpose": "任务分发",
+          "abilities": [
+            "high_level_reasoning"
+          ]
+        }
+      ],
+      "memory": {
+        "contextHandling": "Context Window 内处理",
+        "mechanism": "隐式 Memory",
+        "keyDesign": "MoonViT-3D 压缩 4× 时间维度",
+        "abilities": [
+          "temporal_dynamics",
+          "visual_perception"
+        ]
+      },
+      "unsolvedProblems": "强序列依赖任务效果有限"
+    },
+    {
+      "id": "llm_in_sandbox",
+      "name": "LLM-in-Sandbox",
+      "problem": "如何激发 LLM 在非代码领域的通用 Agent 能力",
+      "methods": [
+        "提供代码沙箱的三大 “元能力”：外部资源访问、文件管理、代码执行",
+        "LLM-in-Sandbox-RL：用通用文本数据训练 Agent 探索能力",
+        "使用 GRPO++ 算法"
+      ],
+      "baseModel": "Qwen3-Coder-30B/Qwen3-4B/Claude-4.5-Think/GPT-5",
+      "trained": true,
+      "trainingMethod": "GRPO++ RL",
+      "keyFindings": "通用数据可激发 Agent 泛化能力",
+      "tools": [
+        {
+          "name": "execute_bash",
+          "implementation": "Docker Ubuntu 容器",
+          "input": "任意 Bash 命令",
+          "output": "命令执行结果",
+          "purpose": "核心工具：提供完整计算机能力",
+          "abilities": []
+        },
+        {
+          "name": "execute_bash-代码执行",
+          "implementation": "Python/任意语言解释器",
+          "input": "代码",
+          "output": "运行结果",
+          "purpose": "精确计算、数据处理",
+          "abilities": []
+        },
+        {
+          "name": "execute_bash-文件操作",
+          "implementation": "标准文件系统",
+          "input": "文件路径",
+          "output": "文件内容/写入确认",
+          "purpose": "处理超长上下文（存入文件按需读取）",
+          "abilities": []
+        },
+        {
+          "name": "execute_bash-网络访问",
+          "implementation": "curl/wget/pip",
+          "input": "URL/包名",
+          "output": "下载内容/安装确认",
+          "purpose": "获取外部资源、安装依赖",
+          "abilities": []
+        },
+        {
+          "name": "execute_bash-工具安装",
+          "implementation": "pip/apt-get",
+          "input": "包名",
+          "output": "安装结果",
+          "purpose": "按需配置环境",
+          "abilities": []
+        },
+        {
+          "name": "str_replace_editor",
+          "implementation": "文本编辑器",
+          "input": "文件路径 + 编辑指令",
+          "output": "编辑后的文件",
+          "purpose": "文件查看、创建、修改",
+          "abilities": []
+        },
+        {
+          "name": "submit",
+          "implementation": "结果收集器",
+          "input": "最终答案",
+          "output": "任务完成标记",
+          "purpose": "提交任务结果",
+          "abilities": []
+        }
+      ],
+      "memory": {
+        "contextHandling": "文件系统作为外部 Memory",
+        "mechanism": "沙箱文件系统",
+        "keyDesign": "将长上下文存入文件，按需读取（8× token 节省）",
+        "abilities": [
+          "high_level_reasoning"
+        ]
+      },
+      "unsolvedProblems": "安全风险，环境配置不稳定"
+    },
+    {
+      "id": "longshotagent",
+      "name": "LongShOTAgent",
+      "problem": "缺乏评估长视频全模态（视觉+音频+语音）理解和工具使用的 Benchmark",
+      "methods": [
+        "提出 LongShOTAgent（无训练框架）",
+        "Orchestrator + Search Tool + Refiner Tool",
+        "基于 Rubrics 的分层评分"
+      ],
+      "baseModel": "Qwen2.5-VL + Audio-Flamingo",
+      "trained": true,
+      "trainingMethod": "Training-free",
+      "keyFindings": "模块化 Agent 可缩小开源与闭源差距",
+      "tools": [
+        {
+          "name": "Preprocessor",
+          "implementation": "多模型组合",
+          "input": "原始视频",
+          "output": "结构化元数据 + Embeddings",
+          "purpose": "长视频无法直接输入模型",
+          "abilities": [
+            "audiovisual_joint",
+            "visual_perception"
+          ]
+        },
+        {
+          "name": "Preprocessor-Shot Detection",
+          "implementation": "镜头分割算法",
+          "input": "视频",
+          "output": "镜头边界",
+          "purpose": "视频分段",
+          "abilities": [
+            "temporal_dynamics"
+          ]
+        },
+        {
+          "name": "Preprocessor-OCR",
+          "implementation": "OCR 模型",
+          "input": "视频帧",
+          "output": "文字内容",
+          "purpose": "提取画面中的文字",
+          "abilities": [
+            "visual_perception"
+          ]
+        },
+        {
+          "name": "Preprocessor-Vision Embedding",
+          "implementation": "SigLIP",
+          "input": "视频帧",
+          "output": "视觉向量",
+          "purpose": "支持语义检索",
+          "abilities": [
+            "visual_perception"
+          ]
+        },
+        {
+          "name": "Preprocessor-Speech Transcription",
+          "implementation": "轻量 ASR",
+          "input": "音频",
+          "output": "粗略文本",
+          "purpose": "快速语音预处理",
+          "abilities": [
+            "audiovisual_joint"
+          ]
+        },
+        {
+          "name": "Search Tool",
+          "implementation": "向量相似度检索",
+          "input": "查询文本",
+          "output": "Top-k 相关片段",
+          "purpose": "从海量片段中定位相关内容",
+          "abilities": [
+            "temporal_dynamics",
+            "visual_perception"
+          ]
+        },
+        {
+          "name": "Refiner Tool",
+          "implementation": "专用强模型组合",
+          "input": "关键片段",
+          "output": "高精度分析结果",
+          "purpose": "深入分析检索到的片段",
+          "abilities": [
+            "high_level_reasoning",
+            "visual_perception"
+          ]
+        },
+        {
+          "name": "Refiner Tool-ASR",
+          "implementation": "Whisper-large-v3",
+          "input": "音频片段",
+          "output": "精确转录",
+          "purpose": "高精度语音识别",
+          "abilities": [
+            "audiovisual_joint"
+          ]
+        },
+        {
+          "name": "Refiner Tool-Audio Caption",
+          "implementation": "Audio-Flamingo-3",
+          "input": "音频片段",
+          "output": "环境音描述",
+          "purpose": "理解非语音音频（如音乐、掌声）",
+          "abilities": [
+            "audiovisual_joint"
+          ]
+        },
+        {
+          "name": "Refiner Tool-Visual QA",
+          "implementation": "Qwen2.5-VL-32B",
+          "input": "视频帧 + 问题",
+          "output": "视觉回答",
+          "purpose": "视觉细节理解",
+          "abilities": [
+            "high_level_reasoning",
+            "visual_perception"
+          ]
+        }
+      ],
+      "memory": {
+        "contextHandling": "向量数据库",
+        "mechanism": "Preprocessor 建立向量库",
+        "keyDesign": "基于 SigLIP Embedding 的检索",
+        "abilities": [
+          "temporal_dynamics",
+          "visual_perception"
+        ]
+      },
+      "unsolvedProblems": "推理延迟高，检索瓶颈"
+    },
+    {
+      "id": "univa",
+      "name": "UniVA",
+      "problem": "视频任务碎片化，端到端模型不灵活",
+      "methods": [
+        "Plan-Act 双智能体架构",
+        "三层分层记忆（Global/Task/User Memory）",
+        "MCP 协议 即插即用工具"
+      ],
+      "baseModel": "Claude-sonnet-4（Plan/Act Agent）+ 各专用模型",
+      "trained": true,
+      "trainingMethod": "Training-free",
+      "keyFindings": "Plan-Act 分离优于单 Agent",
+      "tools": [
+        {
+          "name": "Video Gen-text2video_gen",
+          "implementation": "Seedance-v4 API",
+          "input": "文本提示",
+          "output": "~5秒视频",
+          "purpose": "文本到视频生成",
+          "abilities": []
+        },
+        {
+          "name": "Video Gen-image2video_gen",
+          "implementation": "Seedance-v4 API",
+          "input": "图像 + 文本",
+          "output": "~5秒视频",
+          "purpose": "图像驱动视频生成",
+          "abilities": []
+        },
+        {
+          "name": "Video Gen-video_extension",
+          "implementation": "Seedance-v4 API",
+          "input": "视频末帧 + 文本",
+          "output": "延续视频",
+          "purpose": "视频时长扩展",
+          "abilities": []
+        },
+        {
+          "name": "Video Gen-storyvideo_gen（Workflow）",
+          "implementation": "多工具组合",
+          "input": "长文本",
+          "output": "完整故事视频",
+          "purpose": "复杂叙事视频生成",
+          "abilities": []
+        },
+        {
+          "name": "Video Edit-depth_modify",
+          "implementation": "VACE / Runway Aleph",
+          "input": "视频 + 深度指令",
+          "output": "编辑后视频",
+          "purpose": "基于深度的前景/背景编辑",
+          "abilities": []
+        },
+        {
+          "name": "Video Edit-style_transfer",
+          "implementation": "VACE",
+          "input": "视频 + 风格参考",
+          "output": "风格化视频",
+          "purpose": "视频风格迁移",
+          "abilities": []
+        },
+        {
+          "name": "Video Edit-repainting",
+          "implementation": "VACE",
+          "input": "视频 + mask + 描述",
+          "output": "局部重绘视频",
+          "purpose": "对象替换/修复",
+          "abilities": []
+        },
+        {
+          "name": "Video Understanding-vision2text_gen",
+          "implementation": "InternVL3-38B",
+          "input": "视频/图像 + 问题",
+          "output": "文本描述/答案",
+          "purpose": "视觉内容理解",
+          "abilities": [
+            "high_level_reasoning",
+            "visual_perception"
+          ]
+        },
+        {
+          "name": "Video Understanding-video_timestamp_analysis",
+          "implementation": "InternVL3 + 后处理",
+          "input": "视频 + 查询",
+          "output": "时间戳列表",
+          "purpose": "时间定位",
+          "abilities": [
+            "temporal_dynamics"
+          ]
+        },
+        {
+          "name": "Video Tracking-video_referring_segmentation",
+          "implementation": "SAM-2 / SA2VA",
+          "input": "视频 + 文本描述",
+          "output": "分割 mask",
+          "purpose": "实例分割追踪",
+          "abilities": [
+            "temporal_dynamics",
+            "spatial_object_dynamics",
+            "visual_perception"
+          ]
+        },
+        {
+          "name": "Image Gen-text2image_generate",
+          "implementation": "FLUX-Kontext API",
+          "input": "文本提示",
+          "output": "图像",
+          "purpose": "图像生成",
+          "abilities": []
+        },
+        {
+          "name": "Audio Gen-speech_gen",
+          "implementation": "MiniMax-Speech",
+          "input": "文本",
+          "output": "语音音频",
+          "purpose": "语音合成",
+          "abilities": []
+        },
+        {
+          "name": "Audio Gen-music_gen",
+          "implementation": "音乐生成模型",
+          "input": "描述",
+          "output": "音乐",
+          "purpose": "背景音乐生成",
+          "abilities": []
+        }
+      ],
+      "memory": {
+        "contextHandling": "三层分层记忆",
+        "mechanism": "Global/Task/User Memory",
+        "keyDesign": "Global=专家轨迹，Task=中间产物，User=用户偏好",
+        "abilities": [
+          "temporal_dynamics",
+          "high_level_reasoning"
+        ]
+      },
+      "unsolvedProblems": "延迟高，DINO Score 权衡"
+    },
+    {
+      "id": "vital",
+      "name": "VITAL",
+      "problem": "现有 MLLM 仅依赖文本 CoT，缺乏跨模态交互，长视频推理时易产生幻觉",
+      "methods": [
+        "引入 Multimodal CoT，在推理链中插入视觉 tokens",
+        "Video Clipping 工具按需密集采样",
+        "DGRPO 算法平衡多任务（QA vs Grounding）训练"
+      ],
+      "baseModel": "Qwen2.5-VL-7B",
+      "trained": true,
+      "trainingMethod": "4阶段（SFT→RL→Tool SFT→Tool RL）",
+      "keyFindings": "DGRPO 算法有效平衡多任务",
+      "tools": [
+        {
+          "name": "Video Clipping",
+          "implementation": "视频解码器 + Vision Encoder",
+          "input": "时间戳 [start, end]",
+          "output": "密集采样的 visual tokens",
+          "purpose": "稀疏采样导致的细节丢失",
+          "abilities": [
+            "temporal_dynamics",
+            "visual_perception"
+          ]
+        }
+      ],
+      "memory": {
+        "contextHandling": "Multimodal CoT",
+        "mechanism": "隐式 Memory（推理历史）",
+        "keyDesign": "视觉 tokens 直接插入推理链",
+        "abilities": [
+          "temporal_dynamics",
+          "high_level_reasoning",
+          "visual_perception"
+        ]
+      },
+      "unsolvedProblems": "缺乏空间定位，忽略音频"
+    },
+    {
+      "id": "video_star",
+      "name": "Video-STAR",
+      "problem": "开放词汇动作识别中的跨模态幻觉和细粒度区分困难",
+      "methods": [
+        "上下文子动作分解",
+        "工具库（YOLO 检测、姿态估计、RAG 文本检索）",
+        "层级奖励函数（准确性 + 格式 + 工具使用 + 子动作匹配）"
+      ],
+      "baseModel": "Qwen2.5-VL-3B/7B",
+      "trained": true,
+      "trainingMethod": "SFT + GRPO",
+      "keyFindings": "子动作分解需要 RL 对齐",
+      "tools": [
+        {
+          "name": "Human Detection（$T_d$）",
+          "implementation": "YOLO 11（无锚框检测）",
+          "input": "视频帧",
+          "output": "人体边界框",
+          "purpose": "背景干扰，定位人物",
+          "abilities": [
+            "temporal_dynamics",
+            "spatial_object_dynamics",
+            "visual_perception"
+          ]
+        },
+        {
+          "name": "Pose Estimation（$T_p$）",
+          "implementation": "YOLO 11（关键点检测）",
+          "input": "视频帧",
+          "output": "17 个骨骼关键点",
+          "purpose": "细粒度运动分析",
+          "abilities": [
+            "spatial_object_dynamics",
+            "visual_perception"
+          ]
+        },
+        {
+          "name": "Action Explanation（$T_a$）",
+          "implementation": "Qwen API + RAG",
+          "input": "动作名称",
+          "output": "动作定义 + 过渡阶段描述",
+          "purpose": "语义理解，区分相似动作",
+          "abilities": [
+            "high_level_reasoning",
+            "visual_perception"
+          ]
+        },
+        {
+          "name": "Video Description（$T_v$）",
+          "implementation": "VLM（Qwen2.5-VL）",
+          "input": "显著帧",
+          "output": "时空描述",
+          "purpose": "消除多阶段动作歧义",
+          "abilities": [
+            "temporal_dynamics",
+            "visual_perception"
+          ]
+        }
+      ],
+      "memory": {
+        "contextHandling": "工具输出整合",
+        "mechanism": "无显式 Memory",
+        "keyDesign": "两阶段推理（工具选择→最终预测）",
+        "abilities": [
+          "high_level_reasoning",
+          "visual_perception"
+        ]
+      },
+      "unsolvedProblems": "推理延迟高，工具依赖"
+    },
+    {
+      "id": "zoom_zero",
+      "name": "Zoom-Zero",
+      "problem": "时间定位与答案推理脱节，标准 GRPO 的信用分配模糊",
+      "methods": [
+        "Coarse-to-Fine Zoom-in 机制",
+        "Zoom-in Accuracy Reward（用放大后的正确性奖励定位质量）",
+        "TokenAdv（Token 级别信用分配）"
+      ],
+      "baseModel": "Qwen2.5-VL-7B",
+      "trained": true,
+      "trainingMethod": "GRPO + TokenAdv",
+      "keyFindings": "TokenAdv 解决多目标信用分配问题",
+      "tools": [
+        {
+          "name": "Coarse Pass",
+          "implementation": "Qwen2.5-VL（低 token 分辨率）",
+          "input": "完整视频（压缩）",
+          "output": "初步答案 + `<glue>` 时间戳",
+          "purpose": "全局理解和粗略定位",
+          "abilities": [
+            "temporal_dynamics",
+            "visual_perception"
+          ]
+        },
+        {
+          "name": "Zoom-in Verification",
+          "implementation": "Qwen2.5-VL（高 token 分辨率）",
+          "input": "裁剪后的视频片段",
+          "output": "验证后的最终答案",
+          "purpose": "验证定位是否包含正确视觉证据",
+          "abilities": [
+            "high_level_reasoning",
+            "visual_perception"
+          ]
+        }
+      ],
+      "memory": {
+        "contextHandling": "两阶段上下文",
+        "mechanism": "无显式 Memory",
+        "keyDesign": "Coarse pass 预测用于 Fine pass 输入",
+        "abilities": [
+          "temporal_dynamics",
+          "high_level_reasoning"
+        ]
+      },
+      "unsolvedProblems": "Coarse Pass 失败无法恢复"
+    },
+    {
+      "id": "zoomv",
+      "name": "ZoomV",
+      "problem": "长视频处理中 “计算成本高” 与 “信息丢失” 的两难",
+      "methods": [
+        "TemporaLink：显式时间戳编码拼接到视觉特征",
+        "TemporaLight：基于自我反思的置信度打分",
+        "层级化从粗到细搜索"
+      ],
+      "baseModel": "LLaVA-Video/InternVL2.5/Qwen2.5-VL",
+      "trained": true,
+      "trainingMethod": "仅 LoRA 微调 TemporaLink（8小时）",
+      "keyFindings": "简单的时间编码可激活潜在能力",
+      "tools": [
+        {
+          "name": "TemporaLink",
+          "implementation": "时间编码器 $\\mathcal{T}$（可训练）",
+          "input": "时间戳文本",
+          "output": "时间 embedding",
+          "purpose": "LLM 对数字/时间不敏感",
+          "abilities": [
+            "temporal_dynamics"
+          ]
+        },
+        {
+          "name": "TemporaLight（Yes/No）",
+          "implementation": "LVLM 自身",
+          "input": "候选窗口 + 问题",
+          "output": "\"Yes\" 的概率 $c$",
+          "purpose": "判断检索窗口是否正确",
+          "abilities": [
+            "temporal_dynamics",
+            "high_level_reasoning"
+          ]
+        },
+        {
+          "name": "TemporaLight（MC）",
+          "implementation": "LVLM 自身",
+          "input": "候选窗口 + 选项",
+          "output": "选项最大概率作为置信度",
+          "purpose": "多选题场景下的置信度估计",
+          "abilities": [
+            "temporal_dynamics",
+            "high_level_reasoning"
+          ]
+        }
+      ],
+      "memory": {
+        "contextHandling": "KV Cache 优化",
+        "mechanism": "无显式 Memory，用 Prefix Cache",
+        "keyDesign": "层级搜索共享前缀，加速反思",
+        "abilities": [
+          "temporal_dynamics",
+          "high_level_reasoning"
+        ]
+      },
+      "unsolvedProblems": "搜索串行化，超参敏感"
+    }
+  ],
+  "cases": [
+    {
+      "id": "videomme_145_1",
+      "benchmark": "videomme",
+      "sampleId": "145-1",
+      "videoId": "gvtvz-keDmE",
+      "domain": "Sports Competition",
+      "subCategory": "Basketball",
+      "taskType": "Action Recognition",
+      "taskTypeDesc": "动作识别: 识别视频中的人类动作或活动",
+      "durationGroup": "short (<2分钟)",
+      "videoDuration": null,
+      "difficulty": null,
+      "topicCategory": null,
+      "videoType": null,
+      "temporalReference": null,
+      "question": "What does the rabbit do while the man is flying up to dunk?",
+      "options": [
+        "A. Left the basketball court.",
+        "B. Making a stick.",
+        "C. Do wood carving.",
+        "D. Making a pencil."
+      ],
+      "answer": "D",
+      "subtitle": "donkey baby\nonly one more point and i win\nnot in my\nhouse exciting game isn't it folks\nno more mr nice dunk\n[Music]\nyou lose",
+      "videoPath": "/root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/gvtvz-keDmE.mp4",
+      "videoDownloadLink": "http://10.206.123.77:8906/Video-MME/videos/gvtvz-keDmE.mp4",
+      "youtubeLink": "https://www.youtube.com/watch?v=gvtvz-keDmE",
+      "humanReasoningSteps": "找到和篮球场投篮的相关片段，找到男人扣篮的片段，找到男人起跳时时间，往前往后找到包含兔子的片段，通过画面/语音分析兔子在干什么。",
+      "abilities": [
+        "visual_perception",
+        "temporal_dynamics"
+      ]
+    },
+    {
+      "id": "videomme_434_3",
+      "benchmark": "videomme",
+      "sampleId": "434-3",
+      "videoId": "0FM64MrRuZE",
+      "domain": "Sports Competition",
+      "subCategory": "Esports",
+      "taskType": "Object Recognition",
+      "taskTypeDesc": "物体识别: 识别视频中出现的物体",
+      "durationGroup": "medium (4-15分钟)",
+      "videoDuration": null,
+      "difficulty": null,
+      "topicCategory": null,
+      "videoType": null,
+      "temporalReference": null,
+      "question": "Which position is Vayne in this video?",
+      "options": [
+        "A. Jungle.",
+        "B. Support.",
+        "C. Mid.",
+        "D. Top."
+      ],
+      "answer": "D",
+      "subtitle": null,
+      "videoPath": "/root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/0FM64MrRuZE.mp4",
+      "videoDownloadLink": "http://10.206.123.77:8906/Video-MME/videos/0FM64MrRuZE.mp4",
+      "youtubeLink": "https://www.youtube.com/watch?v=0FM64MrRuZE",
+      "humanReasoningSteps": "通过 OCR 或者音频的内容找到 Vayne，和他出现的片段，然后观察他的背景",
+      "abilities": [
+        "visual_perception",
+        "temporal_dynamics",
+        "spatial_object_dynamics"
+      ]
+    },
+    {
+      "id": "videomme_384_3",
+      "benchmark": "videomme",
+      "sampleId": "384-3",
+      "videoId": "ECgVLceb_LE",
+      "domain": "Knowledge",
+      "subCategory": "Technology",
+      "taskType": "Attribute Perception",
+      "taskTypeDesc": "属性感知: 识别物体或场景的详细属性",
+      "durationGroup": "medium (4-15分钟)",
+      "videoDuration": null,
+      "difficulty": null,
+      "topicCategory": null,
+      "videoType": null,
+      "temporalReference": null,
+      "question": "What color are the seats in the car?",
+      "options": [
+        "A. Black.",
+        "B. White.",
+        "C. Dark blue.",
+        "D. Light blue."
+      ],
+      "answer": "C",
+      "subtitle": "check this\nout ready this is the xang aot eeve toll\nflying\n[Music]\ncar\n[Music]\nthere it is you got to dodge\nhim okay so yeah that's just to show you\nthat the propellers work let's get over\nto the others oh my God going to how to\nget a free haircut a couple years ago I\nfilmed the X2 by the same group xang\narrow and they just made kind of the\nnewer version that's a fully flying car\nthey want this on the road by 2030 and\nthey've already done tests let's kind of\ngo step by step starting with the carbon\nfiber propellers see that\nlightweight this side has green lights\nthe other side has red\nlights that lets people around you\nunderstand what side of the vehicle\nthey're looking at xang in the back\nkind of three-dimensional glass letters\nlooks very nice I love the brake light\ntoo with this triangle what's cool about\nthis piece is that you don't see this\nwhen it's actually unfolded when it's\nunfolded all of this hies into this\ngigantic panel I asked them how long\nthis car is they told me it's a little\nover 6 M but no specific length yet this\nis not entirely finalized but that's\nwhat they're trying to get to by\n2030\nWheels they look pretty cool now not too\nfunctional in terms of anything kind of\nuh aerodynamic but they do look pretty\nnice but what I like is the cockpit\nbecause this is both a car and a drone\nkind of thing look at that see the\nsteering wheel that'll now fold inward\nso you can switch between drive mode and\nfly mode designed for low altitude\nflying the look and function are both\ndrone inspired with rotary Wings it\ntakes off and lands vertically just like\na owner\nhelicopter my favorite feature in\ndriving mode the wings are fully\nconcealed so it looks like any other car\non the road so with no steering wheel\nhow do you fly this thing it's actually\nwhat looks like a gear selector that's\nactually a joystick you'll see you have\nlittle arrows in there you can just kind\nof pull that back and forward so any of\nyou guys that play video games could\nprobably fly this thing also the\ndashboard is a full glass piece it's\nsee-through all of that is for\nvisibility when you're flying in the air\nyou want to be able to see things the\nchassis is also see-through so you look\nat the floor panels that's just glass so\nwhen you're flying right over people's\nheads you can see people running away\nsee that switch back to drive mod\nwhenever you\nland and that'll pop up there you\ngo ready to roll all right side view\ncameras because in the future we don't\nneed\nmirrors and over at the front let's go\nthis way and this is lethal by the way\nin the middle the illuminated X is\nactually beneath the paint it's not like\na badge it's actually underneath the\npaint which is pretty interesting and\nagain it's got that kind of like spine\ngoing down the middle gigantic intakes\nby the way linear lights everywhere\nkeeps the car looking angular\naerodynamic feels good but what's\ninteresting is the price because when\nyou see something like this you see a\nflying super car how much is this going\nto cost it's like you'd imagine it would\ncost like I don't know a lot in\nLamborghini svj levels right\nso for now they don't have an official\nfixed price but they do have a level\nestimated price that's going to sign\naround\n$142,000 by 2030 that depends on the\nmarket that can change you know if if\nthe market changes well they can bump it\nup but imagine being able to buy all of\nthis for\n$142,000 that's as much as like an\nexpensive\nBMW I don't know about you but if I'm\npicking an S-Class or a flying superc\ncar I'm picking the fler now you might\nbe thinking this looks great but surely\nit doesn't work well actually xang aot\nhas already run successful tests with\nthe same propellers and equivalent car\nweight of the aot EO flying car so this\nthing can actually fly whether this\ncrazy concept will ever be made road\nlegal though remains to be seen xang is\nalso already working on the next big\nthing a groundbreaking land aircraft\ncarrier modular flying car it's a\ntwo-piece vehicle that can detach and\neither fly or drive on the ground the\nunique design of this six-wheeler houses\na flying vehicle inside seamlessly\nswitching from land to\nair anyways the xang aot eeve toll what\ndo you guys think how cool is this\n[Music]\ncar",
+      "videoPath": "/root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/ECgVLceb_LE.mp4",
+      "videoDownloadLink": "http://10.206.123.77:8906/Video-MME/videos/ECgVLceb_LE.mp4",
+      "youtubeLink": "https://www.youtube.com/watch?v=ECgVLceb_LE",
+      "humanReasoningSteps": "通过音频内容或者画面找到车辆，然后定位到展示到车辆内饰的片段，分析座椅颜色",
+      "abilities": [
+        "visual_perception"
+      ]
+    },
+    {
+      "id": "videomme_154_2",
+      "benchmark": "videomme",
+      "sampleId": "154-2",
+      "videoId": "1tidNDIpKSY",
+      "domain": "Sports Competition",
+      "subCategory": "Football",
+      "taskType": "Spatial Perception",
+      "taskTypeDesc": "空间感知: 理解物体之间的空间关系",
+      "durationGroup": "short (<2分钟)",
+      "videoDuration": null,
+      "difficulty": null,
+      "topicCategory": null,
+      "videoType": null,
+      "temporalReference": null,
+      "question": "Which of the following options best describes the scene in the background behind the man?",
+      "options": [
+        "A. A soccer field.",
+        "B. A basketball court.",
+        "C. An athletic track.",
+        "D. A baseball diamond."
+      ],
+      "answer": "A",
+      "subtitle": "[Music]\nso here we are for the biggest\nannouncement in the history of\nannouncements where will the final of\nthe\n2026 FIFA World Cup be\nplayed the winner is New York New\n[Applause]\nJersey\n[Applause]\nnot",
+      "videoPath": "/root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/1tidNDIpKSY.mp4",
+      "videoDownloadLink": "http://10.206.123.77:8906/Video-MME/videos/1tidNDIpKSY.mp4",
+      "youtubeLink": "https://www.youtube.com/watch?v=1tidNDIpKSY",
+      "humanReasoningSteps": "找到男人出现的片段，分析他的背景属于什么",
+      "abilities": [
+        "visual_perception"
+      ]
+    },
+    {
+      "id": "videomme_451_2",
+      "benchmark": "videomme",
+      "sampleId": "451-2",
+      "videoId": "Mxkg3qLIPC8",
+      "domain": "Sports Competition",
+      "subCategory": "Football",
+      "taskType": "Temporal Perception",
+      "taskTypeDesc": "时间感知: 感知事件发生的顺序、频率或持续时间",
+      "durationGroup": "medium (4-15分钟)",
+      "videoDuration": null,
+      "difficulty": null,
+      "topicCategory": null,
+      "videoType": null,
+      "temporalReference": null,
+      "question": "What happens next when the score is 2-1?",
+      "options": [
+        "A. The match will proceed without any significant events.",
+        "B. Kylian Mbappé will score again shortly after.",
+        "C. Argentina will increase their lead with another goal.",
+        "D. The game will end with Argentina winning in regular time."
+      ],
+      "answer": "B",
+      "subtitle": "[Music]\nthank you\n[Applause]\nthis has been Messi's tournament he's\nscored in every single match in The\nKnockout stages can he do it in the\nfinal killing mbappe five goals did not\nscore in the last match will this be his\nplay that little slit pass taking the\nMidfield out of play the group hopes it\naway but right to McAllister Alvarez's\ntouch that will work for Di Maria and\nBailey comes to meet him\n[Applause]\ncontainer down deep in the French and Di\nMaria just skips past dembele gets in\nfront takes the contact says thank you\nvery much 100 penalty\nopponents have made two\nthis is what\nout the first half of the first half\nplayed in the World Cup final\nhow many billions of eyeballs are\nwatching these two men 12 yards apart\n[Applause]\njust cool calm and Slots it the other\nway waits for Larice to go to the right\ncold as ice\n[Music]\nAlvarez On The Run Alex\nwas\n[Applause]\nthat touch right there just into the\npack the weight the awareness there of\nMcAllister knowing that he has the Run\nof Di Maria and then not overcooking it\nconcedes the early penalty as I said as\nhe barely had a touch in the game and\nGiroux as well wow\nthank you\nmembers of the 86 winning team here as\nwell all the speed from column one easy\ndrag\n12 minutes to go he feels the contact\nall over the back of his legs it's a\npenalty\nTina's\ngot to do it Martinez goes the right way\ndoes get fingertips on it but at the\npace of it takes it into the back of the\nnet comes back across goal\nhow to find him Buffet now he'll steer\nit back inside Toronto\nMartinez with hands to it but the power\nand the execution from killing and Bape\nthe French had been down and out and\nthey have risen back\ncome on trying to get around the outside\nand he has the bottom line come on\ntripped up\nadvantage in his Advantage it's Robbie\nall saved get it covered up Veron\ndefending him back into the middle to\nPaul Lionel Messi Lina Messi\n[Applause]\nand it's gonna come out for a quarter\ncome on crowded off the Acuna Latorre\nMartinez wants it through one of all\n[Applause]\nmade TL message way offside lifted four\nlatora Martinez is going to get to that\none knocked it down for Messi it's an\n[Applause]\nwe'll have to wait and see on the replay\nthe ball absolutely crosses the line\ninitially okay Messi's offside that\ndoesn't matter latora Martinez on side\nlays it off it's the second one here\nwhen the ball comes off his foot oh boy\nthat's close I think he's on it's a goal\nit's a goal\nnow the 118th minute\nthis final konate launches\nFrance will shoot first\n[Music]\nand Martinez got a piece of it\n[Applause]\nrolls it in\nsaved\n[Applause]\nQuincy scores\nand he missed\nyes\nthey call them one he delivers\n[Applause]",
+      "videoPath": "/root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/Mxkg3qLIPC8.mp4",
+      "videoDownloadLink": "http://10.206.123.77:8906/Video-MME/videos/Mxkg3qLIPC8.mp4",
+      "youtubeLink": "https://www.youtube.com/watch?v=Mxkg3qLIPC8",
+      "humanReasoningSteps": "通过音频内容或者画面内容找到比分信息，定位到比分为 2-1 的时候，然后从这个时间点往后搜索，从音频和画面中提取发生了什么事件，然后找到最匹配的答案",
+      "abilities": [
+        "audiovisual_joint",
+        "temporal_dynamics"
+      ]
+    },
+    {
+      "id": "videomme_840_3",
+      "benchmark": "videomme",
+      "sampleId": "840-3",
+      "videoId": "y9Fne3oUwX4",
+      "domain": "Life Record",
+      "subCategory": "Food",
+      "taskType": "OCR Problems",
+      "taskTypeDesc": "OCR问题: 提取和理解视频帧中的文本信息",
+      "durationGroup": "long (30-60分钟)",
+      "videoDuration": null,
+      "difficulty": null,
+      "topicCategory": null,
+      "videoType": null,
+      "temporalReference": null,
+      "question": "As one team enjoys pizza, how many tasks has the other team completed?",
+      "options": [
+        "A. 11.",
+        "B. 15.",
+        "C. 12.",
+        "D. 26."
+      ],
+      "answer": "A",
+      "subtitle": "[Music]\n[Laughter]\n[Music]\nwelcome to\nanother sidemen race we're combining one\nof our favorite things to do on the\nchannel one of your favorite things to\nwatch\nwe're eating today\nbut today we have to eat a different\nfood for every\nletter in the alphabet we're going to be\nsplitting into two teams\nwe have three and a half hours or so to\ntry and eat a food for every different\nletter of the alphabet\nnow the rules are that you can't go to\nthe same place twice if you go to a\ntescos\nor nando's you can't go there again and\nget something else it has to be one\nthing\neveryone on the team has to eat the\nentirety\nof their item yep yeah okay oh\n[ __ ] you have to eat all these oh [ __ ]\noh no\nyou can't just take a bite out of an\napple so you have to if you choose a big\ndish to get your letter ticked off you\ngotta\nyou gotta do the whole thing jesus\nthere are two teams the first team is\ngoing to consist of simon yes\ntoby harry and jj\nwe are the other two i've got don's that\ndon't eat bro what do you think\num the blacks and the whites oh that's\nsure jess check your\n[Music]\noh\nfirst thing apple should you go there\nwhat's that that bakery right there oh\nright there what would that be for eight\nthere'll be apples in the beach\nrun a marathon today connie's not\nexcited\nconnor's not excited are you still\nmaintaining perfect form for running\nyeah you're still maintaining\nbakery for an apple\nsomething's starting with air you might\nget like some sort of thing over there\nthat's time\nit can turn over or pastry yeah you\nnever know let's have a little look oh\nthey're actually running i think\neveryone\neverything is just gonna be apple\neverything big acting\nshould we not do apples just to like\nwell what what is what else is there\nthey've gone to that they've gone to\nthat like supermarket thing yeah\nokay so where are you saying to go i\nsaid we go over there\nbut straight ahead yeah we've got to eat\nthe hardest\noh let's pick a small one decent wonder\nwhat color do you want\nright just one little apple someone\npicked the best apple what are these\nlabs it doesn't matter i'm getting\ndo we is have to eat a whole app or do\nwe have to finish an apple i guess we\nall have to eat a whole apple are we\ngoing here or that one\nwell or that one anything beginning with\na this place doesn't look like us but\napples\ni'm hanging behind where we got ice\ncream what's this\nno apples like i can actually that's\nwhat happens\nright the fruit oh okay oh okay okay\nthey love salad balls what they've got\nbananas but not apples\noh man i can't eat banana man huh i\ncan't eat a banana why are you banana i\ncan't eat banana why can't you banana\nokay whatever i've been on what are you\neating an apple there bro\nright first of the day we've got an\napple each also we've got an invisalign\nplayer\ninvisalign very little player that's\nfine i don't want to eat apples oh look\nthey're over there\nwhy they're copying us man i said we cut\ni said we get out of here and they're\njust copying our homework\noh\nit's not the race again we're one step\nwe're one step behind them already but\nthey won\ngood point well\noh wow i'll play guys what played\nsmashed it\n[ __ ] well pick the smallest one you can\nfind smallest apple\nmy my apple's a bit dented no screw it\nthis is a good apple apple pay ha ha\nso bananas off the table for you right\nwe're not done\nit makes me like thought we can have\nbread there's a bakery\nall right the bakery's back there by the\nlondon eye let's go all right i bet\nthat's what no they've gone over there\nokay cool look how shiny it goes\nright if you want to go hard you can get\na burger here what [ __ ]\nno better than biscuits no\nkeep moving keep moving coffee could be\nbiscuits or soy\nyou guys enjoying this i'll see you\n[Music]\napple this turns them on what\nit actually does though well yeah let's\nget some mms\nlet's go remember we have to finish all\nthe biscuits so how do you eat your\napples let's get a small pack of\nbiscuits because i'm\nwatching myself lads i hurt myself\neating that happen\nmy mouth hurts my mouth hurts really now\nor we just look that's we get seven\nsalted caramel ones the pocky's got a\nbanana\nit's a [ __ ] biscuit what is a cookie\ni could do a banana banana cookie\nbanana\n[Laughter]\nwhere can you buy a slice of bread\nbakery what you buy a single slice\ni hope so well brioche oh that's a shell\nthat is\nthat's a big old shot sit that big brain\ni like our way of doing this though\ni like our slow you know slow and steady\ncomposure yeah rather than just\nscurrying around looking for stuff i\nthink would be sound\nforget a baguette we got okay\npieces please that could deep throat\nthis whole thing yeah i reckon i could i\ncould have backed mine easy look\nthat's good\n[Laughter]\ni reckon they're probably you'll see by\nnow because we just we're we're sat here\nhucking up bananas\noh no it would be fun trying to do this\nhill today but i want a chocolate\nbargain\nyeah yeah come on because i've had an\napple and a banana\noh gag reflex\ni have asked for easy by the way i said\nbaguette with chicken count for b and he\nsaid counts of bread so yeah\ndairy milk right surely grab me one of\nthose yeah nice okay\nwe are on c so just to clear up on the\nrules it has to be a unique item so for\nexample\nfor a steak you couldn't use a ribeye\nsteak for r or a wagyu state for w those\nare both steaks it's like the most\nsimple form\nlike this is lsw because it's whisper\nit's just chocolate it's c\nthat's four baguettes that is\nit's four baguettes so we're eating the\nentirety of four baguettes\n[Laughter]\noh you're mad you're nuts or you're\nmoving a yacht\nall right london pigeons are on crud\ndeep crow\nno it's not we're not deep throwing\nevery food\nright there's a bakery right there yeah\ndonut shortly\ni've been training twice a day in\nlockdown to these lads feed him with\nchocolate doughnuts\nyou love it you love it some healthy\nfood for\noh yeah that's great forget honey\nsour dough no no doughnuts like that um\nbreakfast and chip thing oh there was\nthat little bakery thing there wasn't\nthere when we walked apart initially\nyeah\nthey're not like a pastry dog cake no\ndonuts\nhey what did the group of boys just buy\nfrom you there was a group of lads here\nwhat did they do cake\noh that one's bigger okay that's not on\nb begins with d right\nwhat he's doing\nwelcome to london this is yeah we're so\nprepared for this webinar see how like\nwe\nwe always have fun when the sun's out\nright this was like 90 percent of the\ntime\nit's [ __ ] foul my [ __ ] teeth hurt\nlance there's an apple in it\nyeah how do you hurt that cheese melt\ndoes that count that's bread\ntrue crush on oh it could be cheese as\nwell there's cheese in it well yeah for\nsea we can just do\ncheese you can eat a whole block of\ncheese yeah yeah you can get like a\nlittle\nyou can get a little uh finger baby bowl\noh what\na baby bell's a shout out baby bro\nexactly i feel there's not an awful lot\nof like shops and stuff around it oh god\noh the rain i should have brought a\njacket oh we do love to live in london\nit's a beautiful city it's going good\nthe second wave is here\noh this is this is al this is our\nbrother\nthis is al you want to get chris from a\nshitty place and save mns for later\nthough don't you can we go in boots\nor booze to shout crisps crisps what do\nyou want man chocolate yeah chocolate\nchocolate\neasy i'm gonna go whisper i'm gonna go\nuh some cheeses\nnot the minstrels jj that's a tied up\nfor the books all right we've made it\nnorth of the river we've got a few more\noptions here we got\ncorner shop subway costa starbucks we\nthink we'll have a lot more like here\nwe need donuts or dates i [ __ ] hate\ndates i won't be able to finish days i\nhate one just one\nyou can eat one we literally set rules\nthat we have to finish them\nyeah one one one fruit d d d\nso donuts is what i can think of i found\na stop that's a huge dub you know yeah\nthat's niche and then niche product\negg egg you're thinking\nyeah oh\narabian delights bro i really like choco\ndates man like give\noh self-wrapped as well\nhow is it i'm not happy with it okay\nnot great all right\nit's raining man them man's out here in\nthe rain don't know\nfire in the rain man's out in the rain\nhuh matt's gonna do pain\ndon't give a [ __ ] about all of your\nstupid mane\nwhat my name's ksi i'm a really nice guy\ni sought toes why\nnice hey yeah\nlet's pull it out wait we can find\nanother wasabi\n[Music]\nthank you thank you we'll find another\nwasabi i'm not gonna lie\ni'm kind of full oh we're in trouble\nwe're in big trouble but we'll see\nwell we're on d now i finished\ni mean you want to be on d clearly you\ncan't say that to me\ni'm thinking a donut no i feel sick\nabout my donut we've got an itsu right\nhere\nshout out japanese food taken over\nlondon oh my god\nthey've got so much they have to have\nedamame there's no way\ndog treat one that's it yeah but what\nhappened to the finish of everything\nthough\nwhat do you love about it you have to\nfinish everybody\nd\ndonut he just said that\nhe's not joking either um dates they're\nquite grim though i don't like it\nthey make\nlet's just walk this way and see if we\nsee anything as well\nuh f fries fries bro frankfurters\nfish yeah any brick yeah\nfish wait two three you've got a little\nsushi\na little too clear it's a good fish good\njust we can't get in here though\nno somewhere else we've got the bowl\nagain\ngo down to wasabi yeah look at that i'm\nnot enjoying this me though that's what\ni'm wrong\nlike you feel my respect\nbut how are we stuck on dates\na dumpling a dewberry a date like toby\nsaid\na what berry a dupe oh\ndumplings can we go into like a\nrestaurant and just get dumplings that's\nall right i'll get some fish\nin wasabi if we get a salmon the ghiri\nis there that's all the time\nbut they're usually always yeah i mean\nyou eat a salmon one each eminence would\ndo a bag\ni've asked the judge i said countless d\nif salmon counts as fish he says no\nthat counts as s so we then clarify and\nsay okay does fries count as\nf or p for potato and he said oh no it\nis\nfries f it's f so again leon\nget some fries they don't do dough balls\nlovely english weather\nyou can't beat it we'll just go nothing\nbetter than this\ncan you see this yeah [ __ ] it\nhold on what\nthey must do dough balls bro it's an\nitalian you're saying they do doubles\nright\nthere's no doubles i don't know c they\ndon't they don't do doubles\nno balls no doughboys donuts\noh christmas well they do doughnuts i\ndon't know oh yeah\noh i'm just gonna eat [ __ ] all day mate\ni'm gonna feel so bad\ngive it a push go on commit to it\noh\nfries even if you order small\nfries in five guys they're gonna fill\nthe [ __ ] bag ah true so\nlet's do it anyway you know what i'm not\nimpressed\nwho's in a writer i think we're doing\nall right we were on a heater until just\nnow yeah\nthat's our first roadblock i think\nthere's more to f than we realized for\nkasha\nfig dig let's actually make the [ __ ]\nvideo enjoyable because you a lot of\nlisting things that i just want to go\nlive\nyeah let's just get fries man i'm gonna\neat big i don't want to eat [ __ ] for\ncatcher i don't want to\neat none of this bullets i'm gonna eat a\n[ __ ] fruit it's pissing down with\nrain and you want me to be\nfig you know what mcdonald's i'll have\nfries oh\nmcdonald's fries yeah what are you\nthinking mcdonald's right is that one\ndown there\nright there can we have edibles for eat\nthat would actually count you know\nbecause there's a food\n[Music]\nall right so what we have in here we're\ngetting four doughnuts\nnice what donut do you want i'm gonna\nget a small chicken look how small that\njam doughnut is that's perfect yeah\nall right what do you want uh i'll take\na little pink sprinkly one please man\nokay four doughnuts all right all right\ni'm going to the toilet\njust something you're so generous you've\npulled it off and let's make you pay for\nit\n[Laughter]\ni don't think we're doing well guys do\nyou not think really i think we're i\nthink we're\nsmashing it bro we're on d well we're on\ne\nin like 30 minutes that's pretty good\nwhen you put it like that we're quite\nslow\nbefore it you know this is the dead\nstone i've ever eaten\nthis is flat what's for e what we're\ngoing for egg\neggplant enough no\negg yeah i'm stuck an egg i'm stuck an\negg\ncome on man here we go time to take off\nthese are small fries what the hell are\nwe in america no i reckon though like\nyou look good oh my god\noh my god no no no\nno\nhe regrets that\ni'm back\ni thought you meant that pizza place\nwhat\nwe're gonna get right now i'm not going\ntwo miles that way\nthat way there's one up there's one just\none left yeah yeah one literally there\nhow welcome others oh no no no no\nno no no no no no\nno no no no no that was [ __ ] good\nthat's impressive do you want to go and\nget a tub of grapes for us while we\nfinish these\ni'll go and get some okay microphone\nmanaging go send them three two one\ndumplings look there's one here edamame\nit is on here\nit's right there yeah easy all right\nlet's get it all right is there anything\nelse on there look\nberry fruit salad but look great\n[Laughter]\ni think they're quite nice what loud do\nyou reckon they're on right now\nw i think they're far in i mean i mean\nthey're finished if i'm being honest\nfinished\nno you've been dragging them along as i\nthink we've had a better day\ni don't think they've had a beer\nwhoa can we pick up on the fact that how\nhot how harry\nholds the glass where is it come on\nhow would you pick up this look at that\nthat's how he picked up the glass\nboys\n[Laughter]\n[Music]\n240 yards let's go we've got ice cream\njelly\njelly that's good i reckon ice cream\npretty generally ice cream\nor jam jelly's good he'll allow ice\ncream get a little tub\ngun i finished mine go on\nhow many are there great but we're just\n[ __ ] yeah yeah or six fine ones\nactually you know what we're the [ __ ]\nsidemen bro we're rich honey roast honey\nroasted honey\n[ __ ] simon bro i'm not getting the\n[ __ ] i'm getting honey let's go\nspiders\npesto's finest\ni'm done with my wallet today please pay\nfor the [ __ ] house\n[Laughter]\npay for the [ __ ] hands [ __ ]\neverything's so good\neven the chips card presented too early\nyou're too eager i'm still [ __ ]\nchecking things in that's why you did\nall right so what are we saying we need\nto go\nget f\nlet's\n[Music]\nit's all breaking apart it's too fast\ni can see how you were big you know\nit makes sense now isn't it like you see\nhim [ __ ] good hamlet's just [ __ ]\neating oh\nyou smashed it oh mate that was such a\nbig big bird mine definitely counts for\na social hat\ni feel like i'm being degraded why ice\ncream\ni ice cream yeah down there somewhere\nthank you thank you\nwait just i bet we just ah say just\nleave until they kick him out\noh my god i have an hour left all right\nlet's go\namarino ice cream yard oh he's smashed\nthat to be fair\nhe's scoped it out he knows how to scope\nout his food from long road\nexactly oh mango let's go oh chocolate\nlet's say chocolate and chips or\nchocolate chips one scoop mango ice\ncream\ndab do that i'm trying to decide which\none i want i'm back\nall right kfc fries fries fries fries\nsurprise fries urgency lads energy crew\nwhere's my energy crew at [ __ ]\nbuildings\noh all right tell me where's the nearest\nkfc\nwhy are you asking me because you just\ntold me a minute ago\n[Laughter]\ni might get a chocolate hazelnut to be\nhonest oh\nchocolate hazelnut yeah\ni'm better than you bro get off cameras\nbro\ntv wave bro freestyle yeah because look\noh\nhe said get off the cam big man he's got\nthis yeah one player please would be for\nq\nthat's oh that's okay though quinoa\nquinoa\nquinoa quiche quiche okay\ni know you're going to hate me but\n[ __ ] [ __ ] oh my god\ni'll get it in the next\nhey kfc were you just having real\nbritannia\nlook it says it there fries begins with\nthe f\nnice bang it regular yeah four of them\nhad to order oh\nyeah yeah yeah yeah yeah we ain't\nhelping the charity\nget that there we go\nnice one maybe i'll save the penny save\nthe pennies odds on brain freeze\nchallenge first to get a brain freeze\nwins i got one after one scoop\nwhy can't i have him i yeah\nunless you wanted iceberg lettuce mate\nnot gonna like i like iceberg lettuce\nyou ever had it with squashies\nare you cooked can't be a real thing\nwell you're wrong oh i've got brain\nfreeze\nthat's not that's wrong but you are\nwrong oh\nit's all about perspectives are you\nhappy of yourself\nare you happy with yourself you know\nwhat i'm [ __ ] chuffed because i'm on\nto the next one\nwaiting for me and i eat i hate this\nlong time i can't do english\ni eat this long time i eat this long\ntime\nwe have fries this is sauces\ngang [ __ ] these fighters are half decent\nwell thanks lads oh\nyou got the box this is just burn your\nmouth jesus correct okay well the next\nthing we're finding is\ng no hey hey\nyeah that's how the alphabet works is it\nwait a a b c d\ne f h yeah oh no groups\ngreat great what do you call\nan inappropriate purple fruit\nyou got the side then too far this is\nwhat i mean bro and we've got the\nfinancial advisor right\nthen what are they doing they've got\nharry and jj oh shout out josh always\nhelping us financially yes that's the\nbest\nit's just about me quickly now\nwell i'm full\nthat's the bridge there in it so we have\n20 20 letters lit left wow that's so\npoor we've been done so poor well look\nwe can rattle off a few and get some\ngrapes\nyep yep then what and then a hamburger\nthen ice then ice and then jelly\nand jelly and then kale thank you we got\nkale at yours right i got curl\njj's got kale okay we'll go to yours and\nthen what on the way to yours we'll\norder\nthe next number for the next letter\noh it's mark l we're going to order l uh\njello\njelly cherry i want joey jellyfish where\ncan we get jelly\njelly's like an og dick you get a lot of\n[ __ ] you know like\nthese [ __ ] amateurs jesus christ it's\nthree o'clock by the time you're done\nwith this\nall right simon yeah can we get a time\ncheck please\nthe time is hold\nboys we have 45 minutes left how many\nhow many have we ticked off\nwe've done six ah i think we should i\nthink we peg it\nactually oh no\nmy ankle\nsimon's bad ankle ah wait the donuts\ncome back up already\nwelcome to my crib show you how i live i\ndon't see deletion\nand guess what you're going to see a\nbeachy just\nlisten in peace my\n[Music]\nhe's just got scars he's an old man he\nthought\noh boris [ __ ] you\nwhat the [ __ ] are you doing oh i'm\n[ __ ] up no grapes in there\npossibly brando can't be ashamed of you\nharry\nthere's there's nothing on the shelf and\na grape we need like a\nyeah it's a prep prep yeah a good\npretzel don't hold it that's g\nthere's a five guys there hamburger what\nmate i don't know if i could stop like a\nwhole five gauze hamburger jesus christ\ncan you get the smallest one\nwhat bro even then a little bit jelly\nbabies\nlet's walk out there\nfull of jam there we go freezies online\njeremy dodgers [ __ ]\nno oh\nthere's a mcdonald's up there you can\njust get a little happy meal hamburger\nthere's a mcdonald's there yeah all\nright cool easy easy easy\njam pot jam pop i'm not gonna find it or\nwe don't eat condoms\nwe need to go to the supermarket we need\na supermarket you've taken this quite\nfrankly yeah\nlet's go superman right i see what\nsupermarkets no jam no jello\nwhat supermarket will be going to be\nbecause we've literally used them no\nthere'll be there'll be one more we got\nlike uh\n[ __ ] so you'd be testing it oh it's not\nlooking good\nthere might be a fruit pot look for the\nfruit pot harry's already left oh\nno no how long does it find grapes\nnothing i was gonna say granola bar but\nhe can't have that can he no there's\nnuts in it\nwell peanuts kingdom of sweets any sweet\nbeginning with g\ngelatin message freezy he might let us\nhave it because we're losing so badly\nno but i found a gay club\ni don't was that heaven yeah\nhow far it's\n400 meters that's fast that's a whole\nlap of a truck well\nit's it's all we got bro yeah look we go\nsainsbury's\ngrapes we're doing those hamburgers\nall right we'll see you after where\nthey'll have them man they've got you\nno they're normally with the sandwiches\nin that so have you eaten a fruit in\nyour life but there's a fruit bag here\nwith a grape in\ni mean yeah there's grapes yeah a great\nfeature yeah\nor three there's exactly four in here\nhappy days there we go\nboys boys\nwell per 100 grams for 66 grams of sugar\nso\nif we that's it's 340 grams of whole 50\ngrams so we'd have like 80 grams of\nsugar each we did it my friends are\nmaking me\n[ __ ] jab my friends are making me\n[ __ ] eat jam\na whole tub of jam all right\nwe've done g we had those grapes yeah h\nhamburger\noh what was it called a hamburger by the\nway\nyeah but there's literally just tell me\nthere's ketchup in there there's ketchup\nyeah\noh thank you it's literally just the\nmeat mate i'll take it i'll take it\nwhat's next i ice any bar\nthis way yeah yeah oh no\nnot that way this way\nboss man from the shop gave us spoons so\nit was kind of like you know it's one of\nthose\nthere's going to be stars bro he must\nthink we're freaks we've gone into his\ncorner shop\nwe've asked for three spoons and we\nbought a jar of jam\none heaped spoon of jam each could be\nheaped right heat\nheaps heaps of gelatin\n[Laughter]\nwe're wrong that's the heat though\nthat's the heat\n[Music]\noh it's [ __ ] oh he's so more\nit's sick\nhe doesn't want to go back you shouldn't\nhave you shouldn't have stopped um\nhim who liked to eat with me because\nhe's been here\nspent so long dieting now look at him\nhe's relapsed he's set on the streets of\nlondon\nplastic\neaters of london 100 grams 66. yeah it's\nall sugar yeah it is yeah that's it all\nright come on we move what are we on\nokay kangaroo yes can we order four\nphantoms and be like can we just just\ngive us a glass of ice\nand then we eat the glass let's give it\na bite let's give it a crack let's give\nit a little look\nright kale okay kale i like kale\nkiwi oh no cause we can't cut it up\ncow's good we'll be able to get a glass\nof ice as well\ndinner boys you've got us all on apple\njuice gang toby congratulations come on\ncome on\nno no no no no no no no no you stay away\ni think it's fair to say we're hitting\nour first brick wall\nwe've got to k and we don't have a clue\nand we're jammed out\nyeah we're in a jam could say we're in a\njam kale\nlike where do you find kale in london\nyeah oh\nyou eating good today bro oh my chess\n[Music]\nwould you eat ice cream bro oh no\nno it's alright\nthere we go that looks lovely doesn't it\nyeah we'll just grab the leaf eats in\nmonths\ni'm holding a tree i'm i'm holding a\ntree share it\ndo it oh\nwhat [ __ ] how'd you slap ice cream all\nright that's i done\nlook like i'm some kind of freak where\nwe are\nwe are free just walking around with a\ntree you know at the start this video\nwas like a good laugh\nand now it's just sad it wants a tree\nall right give me a give me a\ni'll take a branch i want some of this\nlet go of my tail it takes from nothing\nman i've actually seen a tree\noh no i'm not happy this is nice\nare you not meant to wash this first\nyeah\nthere is a pandemic round no it's\nlighter than like\noh it's a tree bro let it grow bro\nbro what's wrong with this dance\ncome back here\neasy enough we're doing an extra half an\nhour aren't we yeah so we got\nso if we get jelly then we can get to\nours and do k yeah\nwe could do k yours come on my friend\nhow's it going\ni mean if we make it to k i think that's\nrespectable that's almost halfway yeah\nthat's good that's good that's good\nall right hey jkl lemon lime\nlobster\nit's got to be a little shop down there\nsomewhere in there lollipop he said yes\nl for lollipop\nlollipop lollipops i want one of these\nfor the culture peach peach\n[Music]\nthis is the whole vibe bro\n[Music]\num um\nmango\nthis is supposed to be a color changing\nwell that's\nthat's mad that's all sorts of math not\nyour pop gang\ni've got a big one it's got a small one\nand even one's out of date\ndust on it that sat there all\nlocked down i sat there no one's touched\nit dust\nactual dust on my lollipop\ni don't like jelly even maybe not my\njelly the game's the game these are very\neasy though\nout here but you used to eat like 10 of\nthese a day yeah i\nate so much i got sick of it we're bully\nwobbly jelly i'm gonna go for a\nstrawberry three strawberries and a\nraspberry\nthe old strawberry going you just wanted\nto\nwe skipped the letter l because we don't\ntake hours\nyou fell over you tried to hide it\n[Laughter]\nmango meningitis\ni've got some munchies\ncome on jelly game\noh my god [ __ ] it\nmarshmallow yeah oh wow oh you have\nsmashed that\nthat you've got i don't know why i shout\nout mini store\nnot marshmallows\n[Laughter]\ndon't ruin\noh\nfrom jay onwards apart from the kale\nblip\nall we've done is each circle assignment\nsunday\nn no no i want a nut\n[Laughter]\non get top dance i was sat outside the\ncamera and this guy gave me the\noh yeah there we go guys can we change\nour team to cringe\nno this turn up bro we're about to go\nget some nuts in\nin west end foods bro and look look\ndon's got lights in his shop oh\nit's another season what nut do you want\nwhat nuts i like the cashew\nthis paw is just pour a third in oh\n[Laughter]\noh it's a lot of nut you said a lot of\nthird each right oh come on\nhe nutted my hand\nit's knotted in your hand\nhe said i'll count o for ropes cool\njay's done\nhi jk k k ksi lick me\nno no okay we could go back and get kale\ni think we do that let's do that that's\nquite far away now we'll go yours we'll\nchill out\nwhat are you doing saying right we\ntalked about this yeah let's go\ntaxi what's with how fast it is long to\nwalk\nyou know eat natural fruit and nut bar\ncrunchy oh no no no\ncafe nero whatever\nwell we're at k\nyeah we have some kale yay\noh this crunchy is i picked up nothing\nthere oh no\nthere we go guys we did it we completed\nthe alphabear\nthat's not even halfway we didn't even\ni feel like you would have loved this\nvideo back in the day i feel like in\n2017\nfood pissed you know what you know it's\nsugar crash we've all had a sugar crash\nsee this is really tasty it's so rich\nthough everything is so rich in sugar\nand flavor\ni'm breaking that and you want me to go\nto pizza\nonce last though\nwe're on pea i want to keep up we're on\np\nthe boys are defeated now i feel like\nwe're walking\ni'm heavy heavy there's there's about 15\ndifferent foods that should not be\ntogether and they're\ninside us right now why do we do eating\nvideos i don't know bro\nwhy why do you guys watch eating videos\nso much every time we're like\nat the end of an eating video we say\nwe're never doing an eating video like\nthat yeah\nand then it gets millions of views in\nthis video don't bang bro i'm i'm\nswitching at you\nyou love [ __ ] pagan no but if it\ndoesn't bang we can stop\neating for content i hate eating\nhowever like i said we have intel\nand apparently they're lagging behind us\nwe're taking this time now\nto sit and just digest look it's\nsomething that's\nplanning out our next we got cues quinoa\nquinn was good well another carbohydrate\nwe've had a lot of everything man it\nlooks like decent pizza\ni don't want it all of these foods i\nwould have enjoyed on their own but not\none after the other after the next\nfour years get that one here\nwho is that get out of bog who was that\njesus what are you using\nhe's a woman\noh this is when i was studying at uni i\nhad no money so i couldn't afford\nanything\nbut oh i don't feel like that\nis everything a watermelon [ __ ] two\nframes\nper second\n[Laughter]\neverything we've done today because you\ndon't want the keys one of quesadillas\nmake it easy for us yeah but how are we\ngoing to get guys to deal we've got 20\nminutes\nbecause if pew wasn't hard enough\nthe chipotle that we've walked to is\nclosed how long do we have until end\ntime\n20 minutes 20 minutes it's going to have\nto be\nkey thing it's going to have to be\nkeyschlad look if we secure q2a\nkeyshaw quinoa simon ain't eating them\ndo you know what this brain is logging\nout now\num are you guys after any extra time or\ndo you want to go meet us now\nno we are we're we're good mate ah\nokay well we're good we're good as well\nuh we will come and meet you\nyeah okay we will be at trafalgar square\nwe will all right cancer\nit may sound very very very silly that\nthe boys cannot find something with cute\nhowever we went to chipotle shark we\nwouldn't have made the other one\nso we've sat it off because who's had to\nthrow\nand i hope that they can't make it but i\ndon't think they're they're past q and\nif they are past queue fair play you\nknow what four of them\nand fair play what what you've lost what\nwe've just done is who've just driven\nall the way to yours to eat a bit of\nkale\nand then we've left again um i think\nwell we'll just go there we'll keep our\ncards close to our chest okay\nand we'll just go through one by one and\nthen i think when it's decay we just\nwe'll just keep making let's just not\nthink\nwe failed horribly okay\nah feels good to be a winner\nthey said there'll be two minutes\nthey've been 10.\n[Music]\nwell we've been we've thrown it since\nabout five past four yeah we haven't\ngot nothing right it's it's pizza we've\ndone nothing yeah and also\nwe've figured out that in the three\nhours here they are they're coming now\nthey look satisfied\nthey're doing this they're doing this\nthey're challenging this they're doing\nchats\nharry that didn't look too confident oh\nbro it says confidence i could have a\nlittle bit more confidence\nthere we go oh [ __ ] just a bit more\nconfidence a bit more chess\nyou weren't good already man come on\nyou're right we're winners over here bro\nokay so you made your way through the\nalphabet so we should we just go through\nthe list one letter\nthe first question i want to hear is did\nyou complete it oh god no\noh okay well then all right there we go\nsee you later we'll go home\nbelieve in bruce good luck all right so\ndid you complete it lads\nno that's no let's let's start we didn't\nwe didn't we didn't work\nnice hey what did you get hey i started\nmy life\nyeah yeah yeah i had a good market like\nthat all right b\nwhat you got what did we get we had some\nuh we had breakfast baguette baguette\nbread yeah yeah yeah\nwe got we had a banana healthy okay two\ntwo of our five a day\nyeah instant see we went chocolate nice\nand crazy yeah\nwhat chocolate you have a job get a\nwhisper and two dairy milks\ni had a whisper he eat well he had two\nchocolate bars\nthat's hungry what\n[Laughter]\num\nwas it cold no no it just tasted\n[Music]\nmcdonald's okay\nonce again\nhamburg hamburger which we've checked we\nchecked we checked\nvery fast beef i can't do that no\nwe checked hot dog and he said that's a\nsausage in a bun\n[Applause]\num i we had ice we ate ice we ate ice we\ngot it checked\nwe got it yes and we actually wanted to\nwe actually want to see reaction as well\nwe ate ice cream as well yeah oh yeah\neven chew up mate\noh\nwhere did you get yours from we actually\nhad some houses\nwe went\n[Laughter]\nweirdly for ice when you had a nice flat\na lot\nmango mango mango marshmallows\noh good one\num\noranges obviously oh\nwe thought about granola earlier but he\ncan't have that either\np p pears make classic pears classic\npears\nslice\n[Laughter]\nis\n[Music]\ntake a seat\n[Laughter]\ndid\n[Laughter]\npineapple\ni was listening to jesus\ncongratulations we worked out we\naveraged the food every 14 minutes but\nwe're just eating on the go\nyeah we've been on smoke for a while you\nmay think that we won but i think we\nactually lost\n[Laughter]\nthanks for watching everyone sorry about\nthe 10 mail\n[Music]\nyou",
+      "videoPath": "/root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/y9Fne3oUwX4.mp4",
+      "videoDownloadLink": "http://10.206.123.77:8906/Video-MME/videos/y9Fne3oUwX4.mp4",
+      "youtubeLink": "https://www.youtube.com/watch?v=y9Fne3oUwX4",
+      "humanReasoningSteps": "定位到有人在吃披萨的画面，分辨出他们是哪一支队伍，然后通过上下文的音频或画面信息，找到另外一支队伍完成的任务数量。如果此时没有精确的数量，只有数量的变化，就要往前去找这一队在哪些片段中出现了完成任务数量的变化，然后最后做一个推理。",
+      "abilities": [
+        "visual_perception",
+        "temporal_dynamics",
+        "audiovisual_joint",
+        "high_level_reasoning"
+      ]
+    },
+    {
+      "id": "videomme_278_1",
+      "benchmark": "videomme",
+      "sampleId": "278-1",
+      "videoId": "fQVhppRP4Wo",
+      "domain": "Life Record",
+      "subCategory": "Pet & Animal",
+      "taskType": "Counting Problem",
+      "taskTypeDesc": "计数问题: 统计特定物体或动作出现的次数",
+      "durationGroup": "short (<2分钟)",
+      "videoDuration": null,
+      "difficulty": null,
+      "topicCategory": null,
+      "videoType": null,
+      "temporalReference": null,
+      "question": "How many foxes appear in this video?",
+      "options": [
+        "A. 1.",
+        "B. 2.",
+        "C. 3.",
+        "D. 4."
+      ],
+      "answer": "B",
+      "subtitle": "oh my gosh hi foxes you want me come say\nhi you want me to come say hi yes hi\nDixie Dixie\n[Music]\nOh Dixie\nyeah fan again he wants to go for a wk\nokay",
+      "videoPath": "/root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/fQVhppRP4Wo.mp4",
+      "videoDownloadLink": "http://10.206.123.77:8906/Video-MME/videos/fQVhppRP4Wo.mp4",
+      "youtubeLink": "https://www.youtube.com/watch?v=fQVhppRP4Wo",
+      "humanReasoningSteps": "定位到有狐狸出现的片段，需要区分狐狸的身份，避免重复计数，然后算出总数",
+      "abilities": [
+        "visual_perception",
+        "high_level_reasoning"
+      ]
+    },
+    {
+      "id": "videomme_317_3",
+      "benchmark": "videomme",
+      "sampleId": "317-3",
+      "videoId": "Bkheu99K5lY",
+      "domain": "Knowledge",
+      "subCategory": "Literature & Art",
+      "taskType": "Temporal Reasoning",
+      "taskTypeDesc": "时间推理: 推断事件之间的因果或逻辑时间关系",
+      "durationGroup": "medium (4-15分钟)",
+      "videoDuration": null,
+      "difficulty": null,
+      "topicCategory": null,
+      "videoType": null,
+      "temporalReference": null,
+      "question": "What's the correct order of the following events?\n1. Creating basic background.\n2. Add a few flowers to the painting.\n3. Building up the texture of the painting even more.\n4. Drawing the pads of the water lilies.",
+      "options": [
+        "A. 4, 1, 2, 3.",
+        "B. 2, 4, 1, 3.",
+        "C. 1, 4, 2, 3.",
+        "D. 1, 4, 3, 2."
+      ],
+      "answer": "C",
+      "subtitle": "[Music]\nso\n[Music]\nhey guys welcome back to another episode\nof arjuna thursday where we get creative\nevery single thursday here on this\nchannel\nand today i'm going to show you how to\npaint an acrylic painting inspired by\nclaude monet and especially the lilies\nlet's start with the base first\nhere we're going to need a few drops of\ngreen and blue colored acrylic paint for\nthis step i added a few drops of blue\nand green colored acrylic paint onto the\ntop and bottom part of the paper and\nthen blended the dots together leaving\nthe center empty\nhere we're going to mostly mix the paint\ndirectly on the painting to follow the\nartist's technique this way we get a lot\nof different shades but it will also\nallow us to play around with the paint\neven more\nnext you want to add a little bit of\nwhite acrylic paint to the center of the\npainting and then blend it with the rest\nusing the same brush\nwe just want to keep the middle part\nslightly brighter than the rest\nmonet was known for using thick paint\nstraight from the tube and that's what\nwe want to recreate\nonce you created this rather messy base\nadd a tiny amount of white colored\nacrylic paint to the center again and\nthen start dabbing on the white paint\nall over the first layer of the painting\nwhile keeping some parts still\ndarker here i'm using a flat brush to\ndistribute the paint more evenly while\nstill building up a nice texture which\nis going to be important for the overall\npainting later\ni also mix a little bit of yellow and\ngreen colored paint to make it into a\nnice bright green shade and repeat this\nstep\nhere we just want to create a nice loose\nbackground of different shades of blue\nand green and also a little bit of white\nbut you can also see a little bit of\npurple in his lily paintings so we can\nmix a little bit of red and blue acrylic\npaint and slightly mute these colors by\nusing a little bit of white acrylic\npaint so the color doesn't look too\nvibrant\nas you can see we now have a little bit\nof green and blue colored areas on top\nand the bottom for the lilies and a\nslightly gray colored middle part for\nthe water that we created with purple\nand white acrylic paint\nand now it's time to create the areas\nwhere we will add the lilies\nin when these paintings of the lilies\nyou can see a light area floating over\nthe water\nand this is what we want to recreate by\nusing a little bit of white acrylic\npaint\ni added the paint by dabbing it onto the\nupper and right area of the paper and\nthen i started adding blue and green\ncolored areas on top of these areas but\nstill keeping the white areas around it\nhere we really just want to create an\nimpression of lilies as monadic\nhe used thick and short brushstrokes to\ncapture the essence of the subject to\ncreate an impression rather than\nfocusing on developing the details\nfrom time to time i also added a little\nbit of yellow to brighten up the greens\nand also to create a variety of lilies\nbut remember not to give up when you\nfeel like the painting looks like\nnothing at this stage it really looks\nrather weird and messy and it makes no\nsense but we just need to work through\nit\na painting gets its final form by\nbuilding up layers of paint one by one\nnot by creating a perfect piece in one\ngo just keep adding the paint and play\naround with it\nand now we can move on to the bottom\npart of the painting and create a few\nlily pads\nhere again i dabbed on some blue and\ngreen colored paint to create an\nimpression of the pads but for the rest\ni painted some of the pads one by one\nnext to each other\ntry to mix different shades of green and\nblue and use a little bit of white to\ncreate even more shades\nimpressionist art is created by quickly\napplied brush strokes and thick paint so\ndon't think too much when you add more\nand more dots of paint in different\nshades of blue and green\nas i said earlier the impressionism\nwants to capture the illusion of\nmovement and spontaneous moments by not\nfocusing on any details only the\nfleeting glance is the main focus or\nalso just a quick impression\nfor the release in front i applied the\npaint rather randomly as well but still\ntry to create the overall shape of the\nplant\nyou can add a few flowers to the pads\nbut also make some lilies float around\nin the water to make the painting look\nmore interesting\nto create even more dimension you can\nmix some blue and green colored paint to\ncreate a darker shade of color and then\napply it right below the lily pads to\ncreate a shadow below them\nokay now let's move on to building up\nthe texture of the painting even more\nmix a little bit of green and yellow\ncolored paint and carefully apply to\nsome areas of the painting\nwe really just want to slightly brush it\nover not paint the paper\nfrom here all we need to do is keep\nbrushing a little bit of paint over a\nfew areas\ni used more blue acrylic paint on the\nlower part added a little bit more\nhighlights on the lily pads and just\nlook around to see if there's anything i\nwould like to change\nokay now let's remove the tape for now\nby the way because i got questions or\nacrylic paintings i use the tape just to\ncreate a nice frame around the painting\nand i usually use just washi tape\nso this is how it looks so far\nnow we want to add an even more dreamy\neffect to the painting\nuse a tiny amount of white acrylic paint\nand again a dry brush and then start\nbrushing the paint all over the water\npart\nif you notice the paint doesn't move\naround anymore dip the brush into some\nwater and remove the excess water with a\ntissue paper\nnow you can keep distributing a soft\nlayer of paint all over the painting\nagain this way we create a really nice\nsmoky or even cloudy effect on the water\nmaking it look really dreamy\n[Music]\nfor the whole painting it's important to\nnot use a super wet brush also try to\nuse the paint straight from the tube and\nmix it on the canvas or paper to really\ncreate this quick fleeting glance of the\nmoment that was prominent in monets and\nin the impressionists art\nand this is the final result\ndoes it remind you of claude monet's\nlily paintings what do you guys think\nlet me know in the comments below what\nother artists or paintings i should try\nto recreate next\ni really hope you liked this video and\nfound it helpful if you did make sure to\ngive this video a thumbs up it will mean\na lot to me and if you're new here don't\nforget to subscribe and to click on the\nbell button to get notified when i\nupload a new video on thursdays and on\nsaturdays if you need more inspiration\non what to paint you can check out my\nplaylist right here thank you so much\nfor watching guys have a wonderful day\nand i will see you soon bye",
+      "videoPath": "/root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/Bkheu99K5lY.mp4",
+      "videoDownloadLink": "http://10.206.123.77:8906/Video-MME/videos/Bkheu99K5lY.mp4",
+      "youtubeLink": "https://www.youtube.com/watch?v=Bkheu99K5lY",
+      "humanReasoningSteps": "首先找到四个事件中的重点：\n1. Background\n2. Add Flowers\n3. Texture\n4. Water Lilies 和 Pads\n\n通过音频或者画面的检索，定位到包含这些关键点的片段，然后判断是否准确地匹配到了这个事件。最后记录所有事件出现的时间点，并进行排序。",
+      "abilities": [
+        "audiovisual_joint",
+        "visual_perception",
+        "temporal_dynamics",
+        "high_level_reasoning"
+      ]
+    },
+    {
+      "id": "videomme_043_1",
+      "benchmark": "videomme",
+      "sampleId": "043-1",
+      "videoId": "9jjTGpWmc5U",
+      "domain": "Knowledge",
+      "subCategory": "Astronomy",
+      "taskType": "Spatial Reasoning",
+      "taskTypeDesc": "空间推理: 基于空间位置变化进行推理",
+      "durationGroup": "short (<2分钟)",
+      "videoDuration": null,
+      "difficulty": null,
+      "topicCategory": null,
+      "videoType": null,
+      "temporalReference": null,
+      "question": "Why does the roof object fly?",
+      "options": [
+        "A. There was an explosion.",
+        "B. Thrown into the air by a child.",
+        "C. Tied to a balloon.",
+        "D. Lunar approach."
+      ],
+      "answer": "D",
+      "subtitle": "[Music]\nwhoa\nguys look at the moon\noh my god this is definitely not normal\nit's getting bigger i think it's getting\ncloser\n[Music]\nwe have to go in now\ni better hold on\nin breaking news the governor has just\nordered the mass evacuation of the\nentire west coast\nhi guys this video is based on moonfall\nan epic sci-fi disaster film with some\ngroundbreaking bfx and a very mysterious\nstory about the moon this is a film made\nfor the big screen so make sure to watch\nit in a theater more info in the\ndescription below see you guys soon in a\nnew video bye",
+      "videoPath": "/root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/9jjTGpWmc5U.mp4",
+      "videoDownloadLink": "http://10.206.123.77:8906/Video-MME/videos/9jjTGpWmc5U.mp4",
+      "youtubeLink": "https://www.youtube.com/watch?v=9jjTGpWmc5U",
+      "humanReasoningSteps": "定位到屋顶起飞的片段，然后检索片段前后出现的音频和画面内容，判断正在发生什么。如果线索不够，需要继续找到其他的、能够解释这个现象的片段，并分析原因。",
+      "abilities": [
+        "temporal_dynamics",
+        "visual_perception",
+        "spatial_object_dynamics",
+        "high_level_reasoning",
+        "audiovisual_joint"
+      ]
+    },
+    {
+      "id": "videomme_027_3",
+      "benchmark": "videomme",
+      "sampleId": "027-3",
+      "videoId": "tS4a6I4-Yjo",
+      "domain": "Knowledge",
+      "subCategory": "Biology & Medicine",
+      "taskType": "Action Reasoning",
+      "taskTypeDesc": "动作推理: 推断动作背后的意图、目的或结果",
+      "durationGroup": "short (<2分钟)",
+      "videoDuration": null,
+      "difficulty": null,
+      "topicCategory": null,
+      "videoType": null,
+      "temporalReference": null,
+      "question": "Which of the following statements can be inferred from the video?",
+      "options": [
+        "A. The patient is undergoing an ECG.",
+        "B. The patient is undergoing a CT scan.",
+        "C. The healthcare worker is teaching a medical student.",
+        "D. The healthcare worker is conducting a medical experiment."
+      ],
+      "answer": "B",
+      "subtitle": "a CT scan helps your doctor make a\ndiagnosis decide about what treatment\nyou need or find out if your treatment\nis working\nthis type of scan takes a series of\nx-rays and uses a computer to put them\ntogether come back to see you before\nyour scan you may need to drink either\nhalf a liter of water or a type of dye\ncalled a contrast medium this helps to\nmake the scan clearer sharp scratch\nbefore most scans you have a small tube\nput into your vein which connects to a\ndrip containing the dye again this helps\nto show up the inside of your body more\nclearly on the scan lead you lie up on\nthe bed on your back head on the pillow\nseek that empty during the scan the bed\nmoves in and out of the scanner you may\nfind it a bit noisy so shout if you have\nany problems just going to connect you\nup as the drip goes in you'll probably\nget a metallic taste in your mouth feel\nwarm and you might think you are passing\nwater you're not these feelings pass\nquickly you can open your eyes now I'm\ngoing to be doing the scan shortly\nalright the radiographer controls the\nscan from a separate room table moving\nthe CT machine takes pictures of your\nbody from different angles and builds up\na series of cross-sections this creates\na very detailed picture of the part of\nyour body being scanned most scans take\njust a few minutes okay that's all\nfinished the whole thing takes about 90\nminutes and you usually get the results\nwithin a couple of weeks",
+      "videoPath": "/root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/tS4a6I4-Yjo.mp4",
+      "videoDownloadLink": "http://10.206.123.77:8906/Video-MME/videos/tS4a6I4-Yjo.mp4",
+      "youtubeLink": "https://www.youtube.com/watch?v=tS4a6I4-Yjo",
+      "humanReasoningSteps": "找到患者在经历检查的片段，通过 ocr 或者音频或者常识判断出是什么检查；找工作人员的片段，找到工作人员与人交流的片段，判断是否是在教学生；找工作人员和实验室场景，找到工作人员在做实验的片段。最终通过相关片段的内容推理出选项",
+      "abilities": [
+        "audiovisual_joint",
+        "temporal_dynamics",
+        "high_level_reasoning",
+        "visual_perception"
+      ]
+    },
+    {
+      "id": "videomme_688_3",
+      "benchmark": "videomme",
+      "sampleId": "688-3",
+      "videoId": "j0J-favyUeQ",
+      "domain": "Knowledge",
+      "subCategory": "Technology",
+      "taskType": "Object Reasoning",
+      "taskTypeDesc": "物体推理: 推断物体的功能、隐含意义或状态变化",
+      "durationGroup": "long (30-60分钟)",
+      "videoDuration": null,
+      "difficulty": null,
+      "topicCategory": null,
+      "videoType": null,
+      "temporalReference": null,
+      "question": "What tech product presented in the video is not a combination of software and hardware?",
+      "options": [
+        "A. Spotify.",
+        "B. MSG Shpere.",
+        "C. LED wristbands.",
+        "D. Tap-to-pay."
+      ],
+      "answer": "A",
+      "subtitle": "behind the technology that consumers\nknow and\nexperience lies one simple question how\ndoes it work from sophisticated software\nthat gets us from point A to point B to\nalgorithms that suggest a specific song\nalong the way we explore the engineering\nand science of technology that catches\nour eye and speak to key players that\nmake it all\nhappen let's start here with how Google\nremapped the\nworld if you need to get somewhere let's\nsay a new building put it into maps and\nGoogle gives you a root in seconds but\nbehind that seemingly simple answer is a\ncomplex system of data collected from\nusers satellites cars even camels today\nmore than 1 billion people use Google\nMaps every month and in 17 years it's\nevolved from a desktop application to a\nmassive mobile platform that that\ncontinuously updates information about a\nlocation we have over 150 million people\naround the world that are contributing\ninformation with 50 million updates a\nday coming from the community from the\npublic sector so think of the map as\nbeing alive but the amount of data it\ncollects has also attracted criticism\nfrom privacy experts here's how in\nGoogle's quest to remap the world it had\nto revolutionize the technology we used\nto see it this is the tech behind Google\n[Music]\nMaps you can search for a place like an\naddress an intersection almost anything\nwhen it comes to digital mapping Google\nwasn't the first on the scene or even\nthe second but when Maps launched in the\nmid 2000s it had technology many people\nhad never seen before I remember the day\nthat Google Maps launched with satellite\nimagery in the browser everybody just\nwent and looked at their own house Craig\nis a professor in the department of\ngeography at Hoffer University who\nstudies datadriven\ngeotechnology no one had ever seen their\nown house in satellite imagery much less\nin color satellite imagery before this\nwas a new view on the world map success\nwas partly due to Acquisitions it made\nearly on like we to Technologies and\nKeyhole that made mapping more\naccessible to Consumers by buying\nKeyhole they got the software that it\ntook to have a easy ready to use\nsatellite image reviewer on a global\nscale where two Technologies provided\nthem a much better user interface than\nwas available elsewhere and by combining\nthose with just the sheer amount of\ncapital at Google allowed them to spend\nin ways and develop those further that\nyou didn't see before Maps expanded its\nTech quickly opening it up to developers\nintegrating street view and launching\nAndroid and iOS apps early on but how\nexactly did all of this come together to\nget you from point A to point B\nChristopher Phillips the current head of\nGoogle's Geo division gave us an inside\nlook on the Google campus the\nfoundational piece was to have a real\nworld model the digital truth of what's\ngoing on in the real world including\nwhere streets are let's take a look at a\nreal route in San Francisco that Chris\nwalked us through let's say I'm in the\nSan Francisco Ferry Building the farmers\nmarket and I need to get to San\nFrancisco International Airport to get\nthat real world model Chris was talking\nabout Google starts with satellite and\naerial imagery to create an accurate map\nthis is layered together with data from\nstreet view to do this they use a\nprocess called photogrammetry using this\nNG GPS data they can pinpoint the right\ncoordinates for the image if we take a\nquick detour off our route to France you\ncan see what the layering process looks\nlike using the arc to Triumph think of\nit as a big jigsaw puzzle where we can\nput these images together and we\nunderstand the distance between images\nand where they sit with the actual\nlocation the GPS location Google keeps a\nrange of the cameras that have been used\nover time to capture imagery at the\nstreet view Garage on it campus in\nCalifornia it all started with a 500 lb\ncamera that was forklift onto a van you\nmay have seen a street view car at some\npoint with a 360° camera on top some\nversions are equipped with liar sensors\nwhich measure the distance from the\ncamera to objects around it they're also\nequipped with GPS to get an accurate\nlocation for exactly where the camera is\npositioned but to reach more remote\nplaces they've adapted cameras to fit\nthe terrain Google has put cameras on\nbackpacks to get to places that cars\ncan't go they've also used\nTransportation like bikes and\nsnowmobiles in some rarer cases Google\nhas gotten images from Camels divers and\neven astronauts their newest camera can\nbe detached from Cars to be carried\naround we graduate to our most recent\nwhich is a 15 lb very lightweight and\nthat can be powered off of a phone\nversus a large Computing unit that's in\nthe car this imagery isn't just for\nlooking at it actually helps keep their\nMaps up to date by detecting changes\nsince the last time images were taken we\nare not just capturing what a place\nlooks like but we can detect that a\nbusiness might have changed we can\ndetect new signs there's now a stop sign\nhere or a traffic light here so\nunderstanding new physical attributes of\nthe real world is what we've been able\nto derive once they have all the\ninformation they need to figure out what\nthe map looks like Google layers on info\nabout traffic routs and businesses to do\nthis they get data from local\nmunicipalities public Bus and Train\nschedules and businesses themselves this\nis footage from 2013 of the software\nGoogle still uses to edit Maps a\ncombination of machine learning and map\noperators edit the public data like Road\nnetworks to match exactly what you see\non the layered imagery since 2013 Google\nsays they've been able to automate most\nof this process so for Chris's route\nfrom San Francisco's fery building to\nthe airport right now I can see that\nit's going to take 21 minutes in order\nto predict how long it takes to get\nsomewhere or how busy a place is Google\nrelies on reviews contributed\ninformation and anonymized location data\nand uses algorithms to comb through\nhistorical traffic patterns it looks at\ncurrent trends based on your Anonymous\nlocation aggregated with millions of\nother users so we can overlay the trend\nwith the current activity to then create\na prediction the company also uses your\napproximate location and its mapping\ntools to Target ads and advertise\nbusinesses which is one of the ways the\nplatform makes money we have the ability\nfor businesses to actually promote\nthemselves on the map so whether you're\nsearching for a place to go and if it's\nrelevant to the people who are in that\narea we can show that as one of the\nresults so far Google has mapped more\nthan 250 countries and territories but\nas it's added more data and ingrained\nitself in our lives and culture users\nand Regulators have pushed back and\ndemanded guard rails privacy is a big\nissue with any kind of geographic\ntechnology and Google Maps is only so\nmuch more so because Google Maps is down\nto an individual street address down to\nindividual people when we connect it to\nthings like your Gmail account or your\nwallet uh or your Wi-Fi network Google\nhas been criticized and in some cases\ntaken to court for things like the\namount of data it collects street view\nimages showing private property and\ngrabbing data from unsecured Wi-Fi\nnetworks with street view cars Google\nsays the data from you that it uses to\ninform traffic and busyness is\nanonymized we use a technology treatment\ncalled differential privacy differential\nprivacy allows us to separate you and\nyour activity from what we aggregate\nfrom millions of people as signals to\nderive insights around like busyness and\nhow long the walk or the drive may take\nbut some data that is used to tailor\nyour personal map like noting that\nyou've been to a location before isn't\nthey say that that data is not sold or\nshared with third parties Google also\nsays that it gives users privacy\ncontrols like toggling location history\non or off searching in incognito mode\nand auto deleting location data we're\nalways improving how we manage the\ninformation we capture to protect\npeople's privacy and make sure that we\nonly have the critical amount of data to\nhelp power the most useful products with\nits advances in technology its\nadvertising priorities and even its\ncriticism Google Maps has helped change\nthe way we navigate the world the\nbiggest Improvement that Google Maps has\nmade is making Geographic information\nmuch more accessible to a very large\nnumber of people the biggest downside\nthere's some thing paying much closer\nattention to the inrees of every\nmovement you make when you carry your\nphone Google says the future of maps\naims to be more comprehensive and\nimmersive we're taking technology where\nwe can combine and fuse together\nsatellite imagery aerial imagery street\nview imagery user contribution to create\na photorealistic view of what it might\nfeel like to check out a park what's the\nvibe of it what's the vibe of it on a\ndifferent day immersive view is Google's\nnext step in using their database of\ninformation and imagery to map the world\nif you go to a big arena concert like\nTaylor Swift's Aras tour or watch your\nbasketball team score a buzzer beating\nthree pointer in the\nplayoffs or attend a K-pop show Light Up\nSticks and wristbands will likely be a\npart of the experience turning the\naudience into part of the show with\nsynchronized light displays at the touch\nof a but so how do these small devices\ncreate these huge immersive visuals it's\nfunny because often times people think\nlike there's a GPS in each of the\ndevices or like there's a lot of like AI\nadvanced technology but we we really\nlike the old school technology and just\nbe creative with it you know this is the\ntech\nbehind LED\nwristbands montreal-based pixmob is a\nleading company in event led technology\npixmob won't comment on whether or not\nthey're involved in the ays tour but\nthey have done previous Taylor Swift\ntours as well as Coldplay The Weekend\nBad Bunny we do most of the major tours\nuh in North America we work a lot with\nNBA\nNHL and to do that they use two\ndifferent Technologies let's start off\nwith the simplest RF wristbands that\nreceive a radio frequency communicating\nthe precise timing and colors for each\nband the two white squares here all the\ntwo LEDs and here you have the small\ncomputer that controls those LEDs and\nthen you have that other black thing\nthat receiv receives radio frequency and\ngives it to the computer and then the\ncomputer will light up the LEDs based on\nthe RF commands that it received this is\nwhat pixmob used for game five of the\nncks Heat\nseries when fans went to their seats at\nMadison Square Garden they found one of\nthese RF wristbands waiting for them\neach one pre-programmed to be a part of\na different group so a wristband in this\nsection for instance is programmed to be\nin group one for one effect group two\nfor\nanother up near the entertainment\ncontrol room operator AAL serves as the\nconductor when one of the programmed\neffects is activated different groups\nlight up in sync to create different\npatterns within the\nstadium or she can manually play with\nthem based on the moment flashy NYX\ncolors\norange blue orange blue it's really fun\nto kind of see the the crowd get into it\nand be excited you're having them be\npart of the show which is which is\nspecial the signal emits from this\nreally small box we have a very simple\ntransmitter it's like the size of a\ntissue box that we can connect to a\nlightboard we like that technology\nbecause you can literally travel with\nthe whole control system in your\nsuitcase RF technology is what most\nother wearable LED companies use too\nlike zyo bands who do everything from\nEurovision to corporate events but the\nmore advanced wristbands like what you\nsee at the superbow or Lady Gaga use\ninfrared technology so the same thing\nthat you use to turn on your TV it's\nkind of like technology that is like 50\nyears old it's really old school Tech\nbut we've managed to tr twist it in a\nway that makes it quite new and magical\nuh because we use infrared we can send\ndata to specific location\nso to you or to the person next to you\nand it doesn't have to be the same data\nso that's how we create those\nspecialized effects as we call them\nwhere we can almost turn a crowd into\nlike a video canvas these signals come\nfrom robotic transmitters placed all\nover an arena you can see it here at a\nColdplay concert last year these\ntransmitters were placed on sound towers\nand the stage here's what that looked\nlike in pix mob's visualizer which is\nhow it designs what the shows will look\nlike and and what the wristbands the\ncompany calls them pixels will do these\ntwo lines are basically the center of\neach of the\ntransmitters so even if we have two\ntransmitters right now doing the swipe\nit still looks like one Wave by simply\nadding you know more of these moving EDS\nin this in a setup like this we could do\nmore complex animation when pixmob wants\nto display a shape like say these Hearts\nit just puts on a mask like this to\nshine the infrared signal through it if\nyou're under the infrared beam and it\ntells you to go red then you go red and\nthen as the beam moves away from you\nthen you go back to whatever color you\nwere or black or whatever like that so\nit's really like the the wristbands are\nquite stupid in a sense but we like it\nthat way you know uh and all the the\nkind of smarts uh of of the technology\nis really in the\ntransmitters audience concert lighting\nreally started in Korea with K-pop bands\nback in the '90s and they get quite\ncreative now too and those light sticks\naren't handed out as part of of the\nevent they're MOS that fans will\nsometimes spend more than $100 on they\nwork a bit differently you download an\napp put in your seating information and\nconnect the light via Bluetooth it's how\nthey can be very detailed in their Arena\nsiiz designs fans call it an\nocean but whether it's Bluetooth RF or\ninfrared the experience of these\nwearable pieces of Technology are only\ngetting more detailed to make every fan\nfeel like part of the\nshow with 500 million monthly users\nSpotify is the world's largest music\nstreaming service Spotify is the home of\naudio it's known for its personalized\nplaylists made with its recommendation\nalgorithm think about users as this raw\nmaterial and then on top of the data\nlayer we're able to build shared models\nbut relying so much on artificial\nintelligence has also drawn criticism\nfrom some industry experts worried about\nalgorithmic bias here's how Spotify uses\nAI to personalize users experiences on\nthe platform this is the tech behind\nSpotify in the early 2000s many people\nfound music recommendations through top\ncharts and early streaming platforms\nlike Pandora and Last FM with the Last\nFM app from the App Store you can listen\nto Great bands so when Spotify entered\nthe scene in 2008 it's not so much that\nthey were the first people to start\nusing analytics to recommend music but\nit was the way in which they combin\nvarious computational techniques in\norder to make their recommendations feel\nmore lifelike Thomas hardson studies\nalgorithms and artificial intelligence\nwith a focus on how new technology from\nmusic streaming companies impact artists\nfans who listen to discover weekly and\ndaily mix the way that they talk about\nthem is in very humanlike terms discover\nweekly you\nmagnificent you've done it again in 2014\nSpotify acquired music analytics firm\nthe echonest which Blended machine\nlearning and natural language processing\nto build a database of songs and artists\nSpotify says this technology marked an\nimportant step in the evolution of its\nrecommendation system so how does that\nsystem work it starts with a process\ncalled collaborative filtering\ncollaborative filtering looks at the\npattern across all of this data and\ntries to understand when do tracks\nhappen to be playlisted together very\noften you can think of it as building a\na map of music and podcast that map\nlooks something like this each point\nrepresents a different track in\nspotify's catalog and the location of\neach point is determined by\ncollaborative filtering which means that\nthese tracks go together according to\nthe way users have playlisted them and\nlisten to them so if these two songs are\nfrequently playlisted together they will\nbe close to each other in this map\nwhereas if these songs are never\nplaylisted together they will be farther\napart in the map but recommendations\nbased purely on collaborative filtering\naren't perfect for example during the\nholidays Mariah carries All I Want For\nChristmas Is You might get playlisted\nmore frequently with silent night even\nthough this sounds like a pop\n[Music]\nsong and this sounds like a Christmas\n[Music]\ncarol if Spotify only generated\nrecommendations based on proximity then\nusers who like Mariah Carey might get\nrecommended Silent Night when they\naren't interested in Christmas carols to\nprevent this Spotify adds another layer\nof analysis called content-based\nfiltering this algorithm gathers\nmetadata like the release date and label\nand executes a raw audio analysis it\nuses metrics like danceability and\nloudness to describe the Sonic\ncharacteristics of the track these are\nthe results for Uptown Funk which sounds\nlike\n[Music]\nthis and has a danceability score of\n0.856 on a scale of 0 to 1\nthe algorithm also dissects each track's\ntemporal structure here's a visual\nrepresentation of that for anti-hero by\nTaylor Swift these are the beads the\nbars and the\nsections content-based filtering also\ntakes into account a tracks cultural\ncontext which means studying the lyrics\nand analyzing the adjectives used to\ndescribe the track in articles and blogs\nthese filtering techniques are not\nunique to Spotify but industry experts\nsay what sets the platform apart is the\namount of user data has and the products\nit creates from it Spotify says its\ncontent-based filtering technology has\nevolved over the years and now includes\nmore advanced proprietary facing\nfeatures but Hodson says the danger with\nalgorithms is that they could reinforce\nexisting biases this could mean that a\nparticular catalog of music has more\nmale artists than female artists one of\nthe dangers with machine learning is\nthat as listeners start to engage with\nthat catalog those biases become\nmagnified and that this creates what's\ncalled a kind of feedback loop Spotify\nsays its research teams evaluate and\nmitigate against potential algorithmic\ninequities and harms and strive for\ntransparency about its impact another\ncriticism is that the algorithm isn't\noptimized for new artists because\nthere's no user data this is known as\nthe cold start problem Sultan says this\nis where human editors play a\nsignificant role in delivering\nrecommendations they're possibly some of\nthe best people in the world that trying\nto understand new releases and culture\nand what's relevant but Hodgson says the\nbigger concern is that certain metrics\nused in the platform's audio analysis\nmight be culturally biased in other\nparts of the world they have musical\nsystems and musical cultures that are\nentirely different like this North\nIndian classical track for\nexample spotify's algorithm labels its\nkey signature as E minor which Hodson\nsays is inappropriate for this musical\ntradition however it's still the the\ncase that the music that is emerging\nfrom South Asia is being understood\nalgorithmically under you know the West\nthan equal temperament scale Spotify\nsays the audio analysis is one small\npart of the overall system which takes\ninto account many factors before making\na\nrecommendation some industry experts\nalso point to issues with how the system\nunderstands metadata for classical music\nfor example the metadata for a\nchaikovsky track can include not just\nthe name of the work and the artist but\nalso the movement Opus number and\nconductor spotify's algorithm isn't\noptimized for that Apple music which has\nemerged in recent years as a competitor\nto Spotify released a new app in March\nthat the company says is designed to\nsolve this\n[Music]\nproblem Spotify says it doesn't comment\non a competitor's marketing campaigns in\nFebruary the streaming service joined\nthe recent Buzz around generative AI I'm\nX and from this moment on I'm going to\nbe your own personal AI DJ on Spotify\nthe DJ gives the algorithm a human voice\nand offers listeners additional context\naround a\nrecommendation up next I know you've\nbeen on a summer song kick lately Sultan\nsays the company is also exploring\nreinforcement learning a technique that\nwould allow the recommendation system to\nlearn automatically based on feedback it\nwill help with the diversity of their\nrecommendation it will help with the\nlonger term retention and we're trying\nto push the state of the art in each of\nthose introducing new technologies new\ncapabilities and bringing new\nexperiences go through checkout tap your\ncard and there you paid in less than 2\nseconds it's faster than hold\non this and safer than this that quick\nexchange is thanks in large part to\nthese just a few little wires that make\ncontactless payments possible here's a\nlook inside the tech that makes those\npayments both quick and secure and why\ntap to pay has taken so long to gain\nTraction in the US this is the tech\nbehind tap to\npay at the heart of tab toay is a\ntechnology called NFC or nearfield\ncommunication which itself is a specific\nform of RFID or radio frequency\nidentification you might be familiar\nwith it as a way to unlock your hotel\nroom for example NFC relies on those\nlittle wires\nwhich are actually antennas the antenna\nkind of looks like um a racetrack and\nit's sort of a coil of different wires\nand that's what's used to basically\ntransmit the radio frequency um on both\nsides this is Mike mclennen he's the\ngeneral manager of hardware at Square a\ncompany that makes card readers and he\ncracked one open to show us exactly how\na tapto pay transaction Works reminds me\na lot of opening oysters card readers\nalso have those antennas this is the NC\nan antenna so this is the magic of what\nmakes NFC transactions work and you can\nsee once we pull it off um how thin the\nNFC antenna is the card and the reader\nare what he calls passive and active\nconnections the reader is active because\nit has power and can initiate radio\ncommunication on its own and the card is\npassive because it doesn't have power\nand needs to be near an active source to\ninitiate that communication tapping your\nphone works the same way because your\nphone emulates the passive C\nwhat's happening right now is the coil\nin here is active and it's looking for a\ncard basically anywhere within this sort\nof region up here it's doing that using\na radio frequency specific to NFC\ndevices which only works at a very short\nrange a maximum of about 4 cm and when\nthe reader finds the card it requests\nthe information needed for payment that\ninformation is stored here in your cards\nchip one thing it stores is what's known\nas static data meaning meaning\ninformation that's the same every time\nyou use your card that's things like the\naccount number and expiration date it's\nwhat's sent from your card's magnetic\nstripe when you swipe but your chip\ndoesn't just send that static data when\nyou tap it also sends something called a\ncryptogram a unique string of numbers\nthe issuers use to verify that your card\nis valid what the card is doing is it's\ncollecting information from the reader\nabout the transaction about the reader\nspecifically and it's combining that\nwith the card information um using its\ncryptographic key to create a unique\nnumber for that transaction that's what\nmakes it really hard to replicate a card\nfraudulently is because the card needs\nto have a cryptographic key that lets\nthem generate that like secret\ncode that information is fed through\nthis the payment board which sorts to\nthe data that it needs from the card and\nputs it all into an encrypted package\nthat package then gets sent off to to\nthe main board which then sends that on\nto the our servers which then send it on\nto the networks like Visa Mastercard MX\nwhich then send it on to the issuer and\nthen back with the approval message once\nyou get to this board it's all encrypted\nand protected information and so\nanything beyond uh this will have a a\nhigh degree of security involved in it\nall of that happens in just a few\nseconds faster than inserting your chip\nso when you insert a chip card into a\nreader there's a few back and force in\nthat communication uh whereas in contact\nlist there's just fewer back and forth\nit was just built as a more efficient\nmore streamlined only the bare\nnecessities kind of uh information being\npassed back and forth card networks and\nSecurity Experts say that this is also\nmore secure than other ways you can use\nyour card unlike swiping your static\ndata is better protected during that\ncommunication and because it doesn't\nhave contact with the reader it's not\nsusceptible to malware that can affect\nchip insert transactions on rare\noccasions this tapto pay technology has\ntaken off in the last few years in part\nbecause of the push for contactless\nduring the pandemic Square says such\npayments tripled between the beginning\nof 2020 and the end of 2022 while other\ncountries like the UK have had\ncontactless integrated into public\ntransportation for years it's taken the\nus more than a decade to get here for a\nwhole new way to pay MasterCard\nintroduces pay pass us first started\nissuing tapto pay cards in the 2000s\nPeter rudiger is a Wall Street Journal\nreporter who covers payments and\nfinancial technology different banks\nthought it was a cool new technology and\nthought their consumers would really\nflock to it didn't really work out just\nbecause there were few businesses that\nwere set up to accept tap to pay us\nretailers have been slow to replace\nPayment Systems in part because they're\nexpensive to change in 2022 about 55% of\nmerchants said they accepted tap to pay\npay with others saying they were\nplanning on implementing it consumer\nbehaviors are also difficult to change\nand the switch to contactless didn't\nfeel urgent it's just often been\ndescribed as a solution in search of a\nproblem yes it might be convenient and\nyes it might be safe but that's not\nusually enough for people to switch\ntheir\nbehavior the tech still has room to grow\nand the push to integrate it into more\nparts of everyday life is working in its\nfavor in New York for example Subway r\nERS can now tap to pay at turn Styles so\nyou have this big push to get tap to pay\ninto more transportation systems and get\npeople used to using it you know every\nday and if you're going to use tap to\npay to get on and off the subway at\nleast twice a day maybe you'll also use\nit for your coffee your lunch uh your\ndrinks at least that's the idea that the\ncredit card companies hope uh happens\nsquare and other companies have also\nrecently released the functionality to\nuse the NFC antenna in your phone as the\nactive connection essentially putting a\nreader in your pocket which could make\nit easier for small retailers to accept\ncard payments this is showing you where\nit wants you to tap and so the NFC\nantenna on your phone is right behind\nthis and so when I te take my NFC\nenabled credit card and I hold it over\nthere done transaction complete here's a\nsoundwave and here's his inverse combine\nthem and you have silence that's the\nbasic idea behind noise cancelling\nheadphones but it takes a lot of\ntechnology to make that seemingly simple\nscience possible we have 15 millionth of\na second to measure the noise run it\nthrough a little DSP processor compute\nthat inverse uh signal and pop it out\nthrough the driver here's how they\nwork one way to visualize acoustic waves\nthat I like to use as a slinky John rule\nhas spent the last decade developing new\nalgorithms RMS for personalizing noise\ncancellation performance in Bose\nheadphones we draw them as sine waves as\nif something's going back and forth or\nup and down but what's really happening\nis that these vibrations are actually\npropagating through the air the medium\nhas stayed fixed but you can see that\npulse of energy sort of running through\nthe length of it because sound is just\nwaves you can cancel a sound wave by\nintroducing an equal and opposite wave\nso what you've got is you've got an\nincoming sound wave and the way\ndestructive interference works is we say\nhey if I could generate an equal and\nopposite signal right I could generate\nthe\nsignal that's the inverse of that and if\nI sum those two things together I'll be\nleft with a flat line I'll be left with\nzero pressure and that will be\ninterpreted by my brain as the noise\nhaving been canceled Bose was the first\ncompany to develop noise reduction\ntechnology for headphones Dr Bose was\ncoming back on an overseas flight and\ngot very frustrated by the fact that\nairplanes were very noisy we can control\nall sorts of other stuff why can't we\ncontrol noise the first application that\nwe looked at was of canceling noise on\nairplanes Pilots wore its earliest\nprototypes in 1986 while the technology\nhas gotten more sophisticated the basic\nscience Remains the Same active noise\ncancellation requires a few main\ncomponents an outer microphone to track\nincoming noise an inner microphone the\ntracks sound waves that make it inside\nyour ear and also checks if more\nenvironmental noise than expected is\nmaking it through a digital signal\nprocessor to run some algorithms Based\non data from the mics and the speaker\nwhich cancels the background noise while\nalso playing the music or Sound you want\nto hear think about how fast this has to\nhappen the sound is obviously\npropagating at the speed of sound right\nwhich is 343 m/s if you think about that\nin terms of the thickness of an earbud\nit's getting from the outside of the\nearbud to the inside of the earbud in\nabout 15 micros seconds so that's\nmillionths of a second we're doing math\nas fast as we can to basically cancel it\nout before it gets in because everyone's\nears are differently shaped active noise\ncancellation requires algorithms that\ncan be tuned based on the user Bose for\ninstance does this by playing a welcome\nchime and monitoring feedback from the\ninternal microphone to customize noise\ncancelling filters accordingly this\nrequires a lot of testing to make sure\nthe algorithms work on a wide range of\nusers in all types of noisy environment\nments but eliminating background noise\nis just the first step the next is\nfiguring out what noise to remove based\non the context I I think it's really\nimportant to recognize that noise is not\nbad noise is critical to my brain\ncritical to my body my brain uses it to\ncreate richer experiences to fill in\nwhat's missing which is all the time\npoppy crumb was previously the chief\nscientist at Dolby Laboratories where\nshe worked for more than a decade she's\nLED teams focused on emergent\nTechnologies and platforms that impact\nsensory systems when you think about\nnoise cancelling technology I like to\nsort of separate it into three different\ncategories you know there's passive\nnoise cancelling or passive noise\nreduction which is effectively an\nearplug the second layer would be active\nnoise reduction you it's Dynamic to the\nsystem but it's dealing with what we\nwould call stationary sound sounds that\nare you know consistent they're\ncontinuous or they're predictable\nexamples of that might be a generator or\nairplane noise you know not all the\nsounds in airplane but that General\nRumble those low frequency sounds you're\ntrying to get rid of they're pretty\npredictable for these predictable noises\ncurrent noise cancelling algorithms can\nquickly identify unwanted soundwaves and\ncancel them out beyond that things get\nharder and then the next layer which is\nI think where you know the future is\nstill evolving is when you start being\nable to really cancel out things that\nare what you would call non-stationary\nnoise things that might be a dog barking\nand you know those elements that happen\nwhere you can't predict them and you\nmight be able to have a expectation that\nthey're going to happen but they're\nthings that aren't con continuous and\naren't constant but sometimes after your\ntechnology has gone through so many\nsteps to reduce background noise you\nwant it back airpods Pro have a\ntransparency mode where they recreate\nthe normal sound of your environment\nother noise cancelling earbuds also\noffer modes to help you hear your\nsurroundings like Bose's aware mode and\nSony's Ambient sound mode that preserve\nenough background noise to keep you\nalert to your surroundings when you\nbuild a technology that's supposed to\nmap to a human experience you need to\nunderstand how the human system\nperceives change or perceives that\nelement you're building and then that\nbecomes how your algorithm behaves so\nthat you have a continuous experience of\nthe world so you need Labs where you can\nremove or control every other element\nnoise cancellation could soon solve more\n",
+      "videoPath": "/root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/j0J-favyUeQ.mp4",
+      "videoDownloadLink": "http://10.206.123.77:8906/Video-MME/videos/j0J-favyUeQ.mp4",
+      "youtubeLink": "https://www.youtube.com/watch?v=j0J-favyUeQ",
+      "humanReasoningSteps": "这个题光看题目都就猜到是 A，因为这只是一个软件。但是可以通过 ocr 和音频找到对应产品的片段，搜索前后片段，看是否介绍了和软硬件相关的信息",
+      "abilities": [
+        "audiovisual_joint",
+        "visual_perception",
+        "high_level_reasoning"
+      ]
+    }
+  ]
+}

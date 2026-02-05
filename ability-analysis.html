@@ -1,0 +1,1913 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>长视频理解能力分析可视化</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --color-text: #1a1a1a;
+            --color-text-secondary: #555;
+            --color-text-muted: #888;
+            --color-bg: #ffffff;
+            --color-bg-alt: #f8f9fa;
+            --color-border: #e5e5e5;
+            --color-accent: #2563eb;
+            --color-accent-light: #dbeafe;
+
+            /* 能力颜色 */
+            --color-visual: #4CAF50;
+            --color-temporal: #2196F3;
+            --color-reasoning: #F44336;
+            --color-spatial: #FF9800;
+            --color-audiovisual: #9C27B0;
+            --color-highlight: #FFF9C4;
+
+            --font-serif: 'Crimson Pro', 'Noto Sans SC', serif;
+            --font-sans: 'Noto Sans SC', -apple-system, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            font-size: 16px;
+            line-height: 1.6;
+            color: var(--color-text);
+            background: var(--color-bg);
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+            border-bottom: 1px solid var(--color-border);
+            padding: 3rem 2rem 2.5rem;
+            text-align: center;
+        }
+
+        .header-tag {
+            display: inline-block;
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--color-accent);
+            background: var(--color-accent-light);
+            padding: 0.25rem 0.75rem;
+            border-radius: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .header h1 {
+            font-family: var(--font-serif);
+            font-size: clamp(1.75rem, 4vw, 2.5rem);
+            font-weight: 700;
+            color: var(--color-text);
+            margin-bottom: 0.5rem;
+        }
+
+        .header .subtitle {
+            font-size: 1rem;
+            color: var(--color-text-secondary);
+            font-weight: 400;
+        }
+
+        /* Main Content */
+        .main {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem 4rem;
+        }
+
+        /* Section */
+        .section {
+            margin-bottom: 3rem;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--color-text);
+        }
+
+        .section-number {
+            font-family: var(--font-serif);
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--color-accent);
+            line-height: 1;
+        }
+
+        .section-title {
+            font-family: var(--font-serif);
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .section-count {
+            margin-left: auto;
+            font-size: 0.875rem;
+            color: var(--color-text-muted);
+        }
+
+        /* ========== 能力分类概览表格 ========== */
+        .ability-overview-table {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 1px;
+            background: var(--color-border);
+            border: 1px solid var(--color-border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .ability-column {
+            background: var(--color-bg);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .ability-header {
+            padding: 1rem;
+            text-align: center;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .ability-icon {
+            font-size: 1.25rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .ability-name-zh {
+            font-weight: 600;
+            font-size: 0.95rem;
+            margin-bottom: 0.125rem;
+        }
+
+        .ability-name-en {
+            font-size: 0.75rem;
+            color: var(--color-text-muted);
+        }
+
+        .ability-skills {
+            padding: 1rem;
+            flex: 1;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .ability-skills ul {
+            list-style: none;
+            font-size: 0.85rem;
+        }
+
+        .ability-skills li {
+            padding: 0.25rem 0;
+            padding-left: 1rem;
+            position: relative;
+        }
+
+        .ability-skills li::before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            font-weight: bold;
+        }
+
+        .ability-examples {
+            padding: 1rem;
+            background: var(--color-bg-alt);
+            font-size: 0.8rem;
+            color: var(--color-text-secondary);
+        }
+
+        .ability-examples p {
+            margin-bottom: 0.5rem;
+        }
+
+        .ability-examples p:last-child {
+            margin-bottom: 0;
+        }
+
+        .ability-examples .icon {
+            margin-right: 0.25rem;
+        }
+
+        /* 能力颜色标记 */
+        .ability-column[data-ability="visual_perception"] .ability-header {
+            border-top: 3px solid var(--color-visual);
+        }
+        .ability-column[data-ability="visual_perception"] .ability-skills li::before {
+            color: var(--color-visual);
+        }
+
+        .ability-column[data-ability="temporal_dynamics"] .ability-header {
+            border-top: 3px solid var(--color-temporal);
+        }
+        .ability-column[data-ability="temporal_dynamics"] .ability-skills li::before {
+            color: var(--color-temporal);
+        }
+
+        .ability-column[data-ability="high_level_reasoning"] .ability-header {
+            border-top: 3px solid var(--color-reasoning);
+        }
+        .ability-column[data-ability="high_level_reasoning"] .ability-skills li::before {
+            color: var(--color-reasoning);
+        }
+
+        .ability-column[data-ability="spatial_object_dynamics"] .ability-header {
+            border-top: 3px solid var(--color-spatial);
+        }
+        .ability-column[data-ability="spatial_object_dynamics"] .ability-skills li::before {
+            color: var(--color-spatial);
+        }
+
+        .ability-column[data-ability="audiovisual_joint"] .ability-header {
+            border-top: 3px solid var(--color-audiovisual);
+        }
+        .ability-column[data-ability="audiovisual_joint"] .ability-skills li::before {
+            color: var(--color-audiovisual);
+        }
+
+        /* ========== 能力筛选器 ========== */
+        .filter-section {
+            background: var(--color-bg-alt);
+            border: 1px solid var(--color-border);
+            border-radius: 8px;
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .filter-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .filter-title {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .filter-clear {
+            font-size: 0.8rem;
+            color: var(--color-accent);
+            cursor: pointer;
+            text-decoration: none;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .filter-clear:hover {
+            background: var(--color-accent-light);
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border: 2px solid var(--color-border);
+            border-radius: 6px;
+            background: var(--color-bg);
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.875rem;
+        }
+
+        .filter-btn .checkbox {
+            width: 16px;
+            height: 16px;
+            border: 2px solid currentColor;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .filter-btn .checkbox::after {
+            content: "✓";
+            font-size: 10px;
+            opacity: 0;
+            transform: scale(0);
+            transition: all 0.2s;
+        }
+
+        .filter-btn.active .checkbox {
+            background: currentColor;
+        }
+
+        .filter-btn.active .checkbox::after {
+            opacity: 1;
+            transform: scale(1);
+            color: white;
+        }
+
+        .filter-btn[data-ability="visual_perception"] {
+            color: var(--color-visual);
+        }
+        .filter-btn[data-ability="visual_perception"].active {
+            background: rgba(76, 175, 80, 0.1);
+            border-color: var(--color-visual);
+        }
+
+        .filter-btn[data-ability="temporal_dynamics"] {
+            color: var(--color-temporal);
+        }
+        .filter-btn[data-ability="temporal_dynamics"].active {
+            background: rgba(33, 150, 243, 0.1);
+            border-color: var(--color-temporal);
+        }
+
+        .filter-btn[data-ability="high_level_reasoning"] {
+            color: var(--color-reasoning);
+        }
+        .filter-btn[data-ability="high_level_reasoning"].active {
+            background: rgba(244, 67, 54, 0.1);
+            border-color: var(--color-reasoning);
+        }
+
+        .filter-btn[data-ability="spatial_object_dynamics"] {
+            color: var(--color-spatial);
+        }
+        .filter-btn[data-ability="spatial_object_dynamics"].active {
+            background: rgba(255, 152, 0, 0.1);
+            border-color: var(--color-spatial);
+        }
+
+        .filter-btn[data-ability="audiovisual_joint"] {
+            color: var(--color-audiovisual);
+        }
+        .filter-btn[data-ability="audiovisual_joint"].active {
+            background: rgba(156, 39, 176, 0.1);
+            border-color: var(--color-audiovisual);
+        }
+
+        .filter-status {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 1rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid var(--color-border);
+            font-size: 0.85rem;
+            color: var(--color-text-secondary);
+        }
+
+        .filter-status-counts {
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        .filter-status-counts span {
+            font-weight: 500;
+        }
+
+        /* ========== 论文方法展示区 ========== */
+        .paper-card {
+            border: 1px solid var(--color-border);
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+            transition: opacity 0.3s, transform 0.3s;
+        }
+
+        .paper-card.hidden {
+            display: none;
+        }
+
+        .paper-header {
+            background: var(--color-bg-alt);
+            padding: 0.75rem 1.25rem;
+            border-bottom: 1px solid var(--color-border);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .paper-icon {
+            font-size: 1.1rem;
+        }
+
+        .paper-name {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .paper-info-grid {
+            display: grid;
+            grid-template-columns: 180px 1fr 180px 120px 1.2fr;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .paper-info-cell {
+            padding: 0.75rem 1rem;
+            border-right: 1px solid var(--color-border);
+            font-size: 0.85rem;
+        }
+
+        .paper-info-cell:last-child {
+            border-right: none;
+        }
+
+        .paper-info-label {
+            font-size: 0.75rem;
+            color: var(--color-text-muted);
+            margin-bottom: 0.25rem;
+            font-weight: 500;
+        }
+
+        .paper-info-value {
+            color: var(--color-text);
+            line-height: 1.4;
+        }
+
+        .paper-info-value ul {
+            list-style: none;
+            font-size: 0.8rem;
+        }
+
+        .paper-info-value li {
+            padding-left: 0.75rem;
+            position: relative;
+        }
+
+        .paper-info-value li::before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: var(--color-accent);
+        }
+
+        /* Tools & Memory 区域 */
+        .tools-memory-section {
+            padding: 1rem 1.25rem;
+        }
+
+        .tools-memory-header {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--color-text-muted);
+            margin-bottom: 0.75rem;
+        }
+
+        .tools-memory-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        /* Tool 卡片 */
+        .tool-card {
+            width: 280px;
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            background: var(--color-bg);
+            font-size: 0.8rem;
+            transition: all 0.3s;
+            flex-shrink: 0;
+        }
+
+        .tool-card.highlighted {
+            background: var(--color-highlight);
+            border-color: #fde047;
+            order: -1;
+        }
+
+        .tool-card-header {
+            padding: 0.5rem 0.75rem;
+            border-bottom: 1px solid var(--color-border);
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+            font-weight: 600;
+        }
+
+        .tool-card.highlighted .tool-card-header {
+            border-bottom-color: #fde047;
+        }
+
+        .tool-card-body {
+            padding: 0.5rem 0.75rem;
+        }
+
+        .tool-card-row {
+            display: flex;
+            margin-bottom: 0.25rem;
+            align-items: flex-start;
+        }
+
+        .tool-card-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .tool-card-label {
+            color: var(--color-text-muted);
+            width: 45px;
+            flex-shrink: 0;
+        }
+
+        .tool-card-value {
+            flex: 1;
+            word-wrap: break-word;
+            word-break: break-word;
+        }
+
+        .tool-card-abilities {
+            padding: 0.375rem 0.75rem;
+            border-top: 1px solid var(--color-border);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.25rem;
+        }
+
+        .tool-card.highlighted .tool-card-abilities {
+            border-top-color: #fde047;
+        }
+
+        /* Memory 卡片 */
+        .memory-card {
+            width: 280px;
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            background: var(--color-bg);
+            font-size: 0.8rem;
+            transition: all 0.3s;
+            flex-shrink: 0;
+        }
+
+        .memory-card.highlighted {
+            background: var(--color-highlight);
+            border-color: #fde047;
+            order: -1;
+        }
+
+        .memory-card-header {
+            padding: 0.5rem 0.75rem;
+            border-bottom: 1px solid var(--color-border);
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+            font-weight: 600;
+        }
+
+        .memory-card.highlighted .memory-card-header {
+            border-bottom-color: #fde047;
+        }
+
+        .memory-card-body {
+            padding: 0.5rem 0.75rem;
+        }
+
+        .memory-card-row {
+            display: flex;
+            margin-bottom: 0.25rem;
+            align-items: flex-start;
+        }
+
+        .memory-card-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .memory-card-label {
+            color: var(--color-text-muted);
+            width: 45px;
+            flex-shrink: 0;
+        }
+
+        .memory-card-value {
+            flex: 1;
+            word-wrap: break-word;
+            word-break: break-word;
+        }
+
+        .memory-card-abilities {
+            padding: 0.375rem 0.75rem;
+            border-top: 1px solid var(--color-border);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.25rem;
+        }
+
+        .memory-card.highlighted .memory-card-abilities {
+            border-top-color: #fde047;
+        }
+
+        /* 能力标签 */
+        .ability-tag {
+            display: inline-block;
+            padding: 0.125rem 0.375rem;
+            border-radius: 3px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .ability-tag:hover {
+            transform: scale(1.05);
+        }
+
+        .ability-tag[data-ability="visual_perception"] {
+            background: rgba(76, 175, 80, 0.15);
+            color: var(--color-visual);
+        }
+
+        .ability-tag[data-ability="temporal_dynamics"] {
+            background: rgba(33, 150, 243, 0.15);
+            color: var(--color-temporal);
+        }
+
+        .ability-tag[data-ability="high_level_reasoning"] {
+            background: rgba(244, 67, 54, 0.15);
+            color: var(--color-reasoning);
+        }
+
+        .ability-tag[data-ability="spatial_object_dynamics"] {
+            background: rgba(255, 152, 0, 0.15);
+            color: var(--color-spatial);
+        }
+
+        .ability-tag[data-ability="audiovisual_joint"] {
+            background: rgba(156, 39, 176, 0.15);
+            color: var(--color-audiovisual);
+        }
+
+        /* ========== Case 展示区 ========== */
+        .case-card {
+            border: 1px solid var(--color-border);
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+            transition: opacity 0.3s, transform 0.3s;
+        }
+
+        .case-card.hidden {
+            display: none;
+        }
+
+        .case-header {
+            background: var(--color-bg-alt);
+            padding: 0.75rem 1.25rem;
+            border-bottom: 1px solid var(--color-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .case-header-left {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .case-icon {
+            font-size: 1.1rem;
+        }
+
+        .case-id {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .case-header-right {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .case-link {
+            color: var(--color-accent);
+            text-decoration: none;
+            font-size: 1.1rem;
+            transition: transform 0.2s;
+        }
+
+        .case-link:hover {
+            transform: scale(1.1);
+        }
+
+        .case-body {
+            padding: 1.25rem;
+        }
+
+        /* 基础信息区 */
+        .case-info-section {
+            margin-bottom: 1.25rem;
+        }
+
+        .case-info-grid {
+            display: grid;
+            grid-template-columns: 180px 180px 1fr;
+            gap: 1px;
+            background: var(--color-border);
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .case-info-cell {
+            background: var(--color-bg);
+            padding: 0.75rem 1rem;
+        }
+
+        .case-info-label {
+            font-size: 0.75rem;
+            color: var(--color-text-muted);
+            margin-bottom: 0.25rem;
+            font-weight: 500;
+        }
+
+        .case-info-value {
+            font-size: 0.85rem;
+            color: var(--color-text);
+        }
+
+        /* 分类信息字段样式 */
+        .case-info-field {
+            display: flex;
+            margin-bottom: 0.35rem;
+        }
+
+        .case-info-field:last-child {
+            margin-bottom: 0;
+        }
+
+        .case-info-field-name {
+            color: var(--color-text-muted);
+            font-size: 0.8rem;
+            min-width: 75px;
+            flex-shrink: 0;
+        }
+
+        .case-info-field-value {
+            color: var(--color-text);
+            font-weight: 500;
+        }
+
+        .case-question-cell {
+            grid-row: span 2;
+        }
+
+        .case-question {
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            line-height: 1.5;
+        }
+
+        .case-options {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .case-option {
+            font-size: 0.85rem;
+            padding: 0.25rem 0.5rem;
+            background: var(--color-bg-alt);
+            border-radius: 4px;
+        }
+
+        .case-option.correct {
+            background: rgba(76, 175, 80, 0.15);
+            font-weight: 500;
+        }
+
+        .case-option.correct::after {
+            content: " ✓";
+            color: var(--color-visual);
+        }
+
+        .case-abilities {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.375rem;
+            margin-top: 0.5rem;
+        }
+
+        .case-abilities-label {
+            font-size: 0.75rem;
+            color: var(--color-text-muted);
+            margin-right: 0.25rem;
+        }
+
+        /* 推理对照区 */
+        .case-reasoning-section {
+            margin-bottom: 1.25rem;
+        }
+
+        .reasoning-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .reasoning-column {
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .reasoning-header {
+            background: var(--color-bg-alt);
+            padding: 0.5rem 0.75rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--color-text-secondary);
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .reasoning-content {
+            padding: 0.75rem;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .reasoning-content.placeholder {
+            color: var(--color-text-muted);
+            font-style: italic;
+        }
+
+        /* 字幕和 Plan 区域 - 两栏布局 */
+        .case-subtitle-plan-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        /* 字幕区 */
+        .case-subtitle-section {
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .subtitle-header {
+            background: var(--color-bg-alt);
+            padding: 0.5rem 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .subtitle-header:hover {
+            background: #eef2ff;
+        }
+
+        .subtitle-title {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--color-text-secondary);
+        }
+
+        .subtitle-toggle {
+            font-size: 0.75rem;
+            color: var(--color-accent);
+        }
+
+        .subtitle-content {
+            display: none;
+            padding: 0.75rem;
+            font-size: 0.8rem;
+            line-height: 1.6;
+            max-height: 200px;
+            overflow-y: auto;
+            color: var(--color-text-secondary);
+            font-family: var(--font-mono);
+            white-space: pre-wrap;
+        }
+
+        .subtitle-content.expanded {
+            display: block;
+        }
+
+        .subtitle-preview {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.8rem;
+            color: var(--color-text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            border-top: 1px solid var(--color-border);
+        }
+
+        .subtitle-preview.hidden {
+            display: none;
+        }
+
+        /* Plan 区域样式 */
+        .case-plan-section {
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .plan-header {
+            background: var(--color-bg-alt);
+            padding: 0.5rem 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .plan-title {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--color-text-secondary);
+        }
+
+        .plan-content {
+            padding: 0.75rem;
+            font-size: 0.8rem;
+            line-height: 1.6;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .plan-content.placeholder {
+            color: var(--color-text-muted);
+            font-style: italic;
+        }
+
+        .plan-task {
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .plan-steps {
+            list-style: none;
+        }
+
+        .plan-step {
+            padding: 0.5rem;
+            margin-bottom: 0.5rem;
+            background: var(--color-bg-alt);
+            border-radius: 4px;
+            border-left: 3px solid var(--color-accent);
+        }
+
+        .plan-step-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .plan-step-number {
+            background: var(--color-accent);
+            color: white;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .plan-step-desc {
+            font-weight: 500;
+            color: var(--color-text);
+        }
+
+        .plan-step-details {
+            margin-left: 26px;
+            font-size: 0.75rem;
+            color: var(--color-text-secondary);
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .plan-step-tool {
+            display: inline-block;
+            background: rgba(37, 99, 235, 0.1);
+            color: var(--color-accent);
+            padding: 0.125rem 0.375rem;
+            border-radius: 3px;
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+        }
+
+        .plan-step-purpose {
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .plan-step-dep {
+            color: var(--color-text-muted);
+            font-size: 0.7rem;
+            background: var(--color-bg);
+            padding: 0.125rem 0.375rem;
+            border-radius: 3px;
+        }
+
+        .plan-step-io {
+            margin-left: 26px;
+            margin-top: 0.375rem;
+            padding: 0.375rem 0.5rem;
+            background: var(--color-bg);
+            border-radius: 4px;
+            border: 1px dashed var(--color-border);
+            font-size: 0.7rem;
+        }
+
+        .plan-io-row {
+            display: flex;
+            margin-bottom: 0.25rem;
+        }
+
+        .plan-io-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .plan-io-label {
+            color: var(--color-text-muted);
+            min-width: 36px;
+            flex-shrink: 0;
+            font-weight: 500;
+        }
+
+        .plan-io-value {
+            color: var(--color-text-secondary);
+            font-family: var(--font-mono);
+            word-break: break-word;
+        }
+
+        .plan-tool-chain {
+            margin-top: 0.75rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid var(--color-border);
+            font-size: 0.75rem;
+            color: var(--color-text-muted);
+        }
+
+        .plan-tool-chain-label {
+            font-weight: 500;
+            margin-right: 0.5rem;
+        }
+
+        /* ========== 响应式 ========== */
+        @media (max-width: 1200px) {
+            .paper-info-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .paper-info-cell:nth-child(5) {
+                grid-column: span 2;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .ability-overview-table {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .ability-column:nth-child(4),
+            .ability-column:nth-child(5) {
+                grid-column: auto;
+            }
+
+            .case-info-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .case-question-cell {
+                grid-row: auto;
+            }
+
+            .reasoning-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .case-subtitle-plan-section {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 2rem 1rem;
+            }
+
+            .main {
+                padding: 1.5rem 1rem;
+            }
+
+            .ability-overview-table {
+                grid-template-columns: 1fr;
+            }
+
+            .filter-buttons {
+                flex-direction: column;
+            }
+
+            .filter-btn {
+                width: 100%;
+                justify-content: flex-start;
+            }
+
+            .paper-info-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .tool-card,
+            .memory-card {
+                width: 100%;
+            }
+        }
+
+        /* 滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--color-bg-alt);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--color-border);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--color-text-muted);
+        }
+
+        /* Loading 状态 */
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: var(--color-text-muted);
+        }
+
+        .loading::after {
+            content: "";
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--color-border);
+            border-top-color: var(--color-accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-left: 0.5rem;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Header -->
+    <header class="header">
+        <span class="header-tag">可视化分析</span>
+        <h1>长视频理解能力分析</h1>
+        <p class="subtitle">Long Video Understanding - Ability Analysis & Visualization</p>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <!-- 一、能力分类概览 -->
+        <section class="section" id="ability-overview">
+            <div class="section-header">
+                <span class="section-number">01</span>
+                <h2 class="section-title">能力分类概览</h2>
+            </div>
+
+            <div class="ability-overview-table">
+                <!-- 视觉感知 -->
+                <div class="ability-column" data-ability="visual_perception">
+                    <div class="ability-header">
+                        <div class="ability-icon">🟢</div>
+                        <div class="ability-name-zh">视觉感知</div>
+                        <div class="ability-name-en">Visual Perception</div>
+                    </div>
+                    <div class="ability-skills">
+                        <ul>
+                            <li>物体识别</li>
+                            <li>动作识别</li>
+                            <li>文字识别(OCR)</li>
+                            <li>场景理解</li>
+                        </ul>
+                    </div>
+                    <div class="ability-examples">
+                        <p><span class="icon">📝</span>图中有哪些物体？</p>
+                        <p><span class="icon">📝</span>有多少个红色的方块？</p>
+                    </div>
+                </div>
+
+                <!-- 时间动态理解 -->
+                <div class="ability-column" data-ability="temporal_dynamics">
+                    <div class="ability-header">
+                        <div class="ability-icon">🔵</div>
+                        <div class="ability-name-zh">时间动态理解</div>
+                        <div class="ability-name-en">Temporal Dynamics</div>
+                    </div>
+                    <div class="ability-skills">
+                        <ul>
+                            <li>时间指代对齐</li>
+                            <li>时间定位</li>
+                            <li>时间顺序理解</li>
+                            <li>事件检测</li>
+                        </ul>
+                    </div>
+                    <div class="ability-examples">
+                        <p><span class="icon">📝</span>该动作发生在视频的哪一段？</p>
+                        <p><span class="icon">📝</span>哪个事件先发生？</p>
+                    </div>
+                </div>
+
+                <!-- 高层推理 -->
+                <div class="ability-column" data-ability="high_level_reasoning">
+                    <div class="ability-header">
+                        <div class="ability-icon">🔴</div>
+                        <div class="ability-name-zh">高层推理</div>
+                        <div class="ability-name-en">High-Level Reasoning</div>
+                    </div>
+                    <div class="ability-skills">
+                        <ul>
+                            <li>算术推理</li>
+                            <li>逻辑推理</li>
+                            <li>数量比较</li>
+                            <li>序数推理</li>
+                        </ul>
+                    </div>
+                    <div class="ability-examples">
+                        <p><span class="icon">📝</span>如果每组有3个物体，共5组...</p>
+                        <p><span class="icon">📝</span>哪一类数量更多？</p>
+                    </div>
+                </div>
+
+                <!-- 空间与物体动态 -->
+                <div class="ability-column" data-ability="spatial_object_dynamics">
+                    <div class="ability-header">
+                        <div class="ability-icon">🟠</div>
+                        <div class="ability-name-zh">空间与物体动态</div>
+                        <div class="ability-name-en">Spatial & Object Dynamics</div>
+                    </div>
+                    <div class="ability-skills">
+                        <ul>
+                            <li>空间定位</li>
+                            <li>空间关系识别</li>
+                            <li>轨迹分析</li>
+                            <li>目标跟踪</li>
+                        </ul>
+                    </div>
+                    <div class="ability-examples">
+                        <p><span class="icon">📝</span>物体A位于物体B的哪个方向？</p>
+                        <p><span class="icon">📝</span>哪个物体最靠近中心？</p>
+                    </div>
+                </div>
+
+                <!-- 视听联合理解 -->
+                <div class="ability-column" data-ability="audiovisual_joint">
+                    <div class="ability-header">
+                        <div class="ability-icon">🟣</div>
+                        <div class="ability-name-zh">视听联合理解</div>
+                        <div class="ability-name-en">Audio-Visual Understanding</div>
+                    </div>
+                    <div class="ability-skills">
+                        <ul>
+                            <li>语音识别</li>
+                            <li>音频事件检测</li>
+                            <li>视听对齐</li>
+                            <li>视听关联</li>
+                        </ul>
+                    </div>
+                    <div class="ability-examples">
+                        <p><span class="icon">📝</span>这段语音对应画面中的谁？</p>
+                        <p><span class="icon">📝</span>声音是否与画面同步？</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 二、能力筛选器 -->
+        <section class="filter-section" id="ability-filter">
+            <div class="filter-header">
+                <span class="filter-title">能力筛选 (多选，AND 逻辑)</span>
+                <a href="#" class="filter-clear" onclick="clearFilters(); return false;">清除全部</a>
+            </div>
+            <div class="filter-buttons">
+                <button class="filter-btn" data-ability="visual_perception" onclick="toggleFilter(this)">
+                    <span class="checkbox"></span>
+                    <span>视觉感知</span>
+                </button>
+                <button class="filter-btn" data-ability="temporal_dynamics" onclick="toggleFilter(this)">
+                    <span class="checkbox"></span>
+                    <span>时间动态理解</span>
+                </button>
+                <button class="filter-btn" data-ability="high_level_reasoning" onclick="toggleFilter(this)">
+                    <span class="checkbox"></span>
+                    <span>高层推理</span>
+                </button>
+                <button class="filter-btn" data-ability="spatial_object_dynamics" onclick="toggleFilter(this)">
+                    <span class="checkbox"></span>
+                    <span>空间与物体动态</span>
+                </button>
+                <button class="filter-btn" data-ability="audiovisual_joint" onclick="toggleFilter(this)">
+                    <span class="checkbox"></span>
+                    <span>视听联合理解</span>
+                </button>
+            </div>
+            <div class="filter-status">
+                <span class="filter-current">当前筛选: <span id="filter-current-text">无 (显示全部)</span></span>
+                <div class="filter-status-counts">
+                    <span>匹配论文: <span id="paper-count">0</span></span>
+                    <span>匹配Case: <span id="case-count">0</span></span>
+                </div>
+            </div>
+        </section>
+
+        <!-- 三、论文方法展示区 -->
+        <section class="section" id="papers-section">
+            <div class="section-header">
+                <span class="section-number">02</span>
+                <h2 class="section-title">论文方法展示</h2>
+                <span class="section-count" id="papers-total-count"></span>
+            </div>
+            <div id="papers-container">
+                <div class="loading">加载数据中</div>
+            </div>
+        </section>
+
+        <!-- 四、Case 展示区 -->
+        <section class="section" id="cases-section">
+            <div class="section-header">
+                <span class="section-number">03</span>
+                <h2 class="section-title">Case 展示</h2>
+                <span class="section-count" id="cases-total-count"></span>
+            </div>
+            <div id="cases-container">
+                <div class="loading">加载数据中</div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // 全局数据
+        let data = null;
+        let planData = null;  // plan 数据
+        let selectedAbilities = new Set();
+
+        // 能力名称映射 - 完整名称
+        const abilityNames = {
+            'visual_perception': '视觉感知',
+            'temporal_dynamics': '时间动态理解',
+            'high_level_reasoning': '高层推理',
+            'spatial_object_dynamics': '空间与物体动态',
+            'audiovisual_joint': '视听联合理解'
+        };
+
+        const abilityFullNames = {
+            'visual_perception': '视觉感知',
+            'temporal_dynamics': '时间动态理解',
+            'high_level_reasoning': '高层推理',
+            'spatial_object_dynamics': '空间与物体动态',
+            'audiovisual_joint': '视听联合理解'
+        };
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                // 并行加载主数据和 plan 数据
+                const [dataResponse, planResponse] = await Promise.all([
+                    fetch('data/ability-analysis.json'),
+                    fetch('data/ability-analysis-plan.json').catch(() => null)
+                ]);
+
+                data = await dataResponse.json();
+
+                // plan 数据可能不存在，处理为 Map 便于查找
+                if (planResponse && planResponse.ok) {
+                    const planJson = await planResponse.json();
+                    planData = new Map();
+                    (planJson.results || []).forEach(item => {
+                        if (item.id && item.plan_summary) {
+                            planData.set(item.id, item.plan_summary);
+                        }
+                    });
+                }
+
+                renderPapers();
+                renderCases();
+                updateCounts();
+            } catch (error) {
+                console.error('加载数据失败:', error);
+                document.getElementById('papers-container').innerHTML = '<p style="color: red;">加载数据失败，请刷新页面重试</p>';
+                document.getElementById('cases-container').innerHTML = '<p style="color: red;">加载数据失败，请刷新页面重试</p>';
+            }
+        });
+
+        // 渲染论文卡片
+        function renderPapers() {
+            const container = document.getElementById('papers-container');
+            container.innerHTML = '';
+
+            data.papers.forEach(paper => {
+                const card = createPaperCard(paper);
+                container.appendChild(card);
+            });
+
+            document.getElementById('papers-total-count').textContent = `共 ${data.papers.length} 篇论文`;
+        }
+
+        // 创建论文卡片
+        function createPaperCard(paper) {
+            const card = document.createElement('div');
+            card.className = 'paper-card';
+            card.dataset.paperId = paper.id;
+
+            // 收集所有能力
+            const allAbilities = new Set();
+            paper.tools?.forEach(tool => {
+                tool.abilities?.forEach(a => allAbilities.add(a));
+            });
+            paper.memory?.abilities?.forEach(a => allAbilities.add(a));
+            card.dataset.abilities = JSON.stringify([...allAbilities]);
+
+            card.innerHTML = `
+                <div class="paper-header">
+                    <span class="paper-icon">📄</span>
+                    <span class="paper-name">${paper.name}</span>
+                </div>
+                <div class="paper-info-grid">
+                    <div class="paper-info-cell">
+                        <div class="paper-info-label">问题</div>
+                        <div class="paper-info-value">${paper.problem || '-'}</div>
+                    </div>
+                    <div class="paper-info-cell">
+                        <div class="paper-info-label">主要方法</div>
+                        <div class="paper-info-value">
+                            <ul>
+                                ${(paper.methods || []).map(m => `<li>${m}</li>`).join('')}
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="paper-info-cell">
+                        <div class="paper-info-label">基座模型</div>
+                        <div class="paper-info-value">${paper.baseModel || '-'}</div>
+                    </div>
+                    <div class="paper-info-cell">
+                        <div class="paper-info-label">训练方式</div>
+                        <div class="paper-info-value">${paper.trainingMethod || '-'}</div>
+                    </div>
+                    <div class="paper-info-cell">
+                        <div class="paper-info-label">关键发现 / 未解决问题</div>
+                        <div class="paper-info-value">
+                            ${paper.keyFindings ? `<strong>发现:</strong> ${paper.keyFindings}<br>` : ''}
+                            ${paper.unsolvedProblems ? `<strong>未解决:</strong> ${paper.unsolvedProblems}` : ''}
+                        </div>
+                    </div>
+                </div>
+                <div class="tools-memory-section">
+                    <div class="tools-memory-header">Tools & Memory</div>
+                    <div class="tools-memory-grid" data-paper-id="${paper.id}">
+                        ${renderToolCards(paper.tools || [])}
+                        ${paper.memory ? renderMemoryCard(paper.memory) : ''}
+                    </div>
+                </div>
+            `;
+
+            return card;
+        }
+
+        // 渲染 Tool 卡片
+        function renderToolCards(tools) {
+            return tools.map(tool => `
+                <div class="tool-card" data-abilities='${JSON.stringify(tool.abilities || [])}'>
+                    <div class="tool-card-header">
+                        <span>🔧</span>
+                        <span>${tool.name}</span>
+                    </div>
+                    <div class="tool-card-body">
+                        <div class="tool-card-row">
+                            <span class="tool-card-label">实现:</span>
+                            <span class="tool-card-value">${tool.implementation || '-'}</span>
+                        </div>
+                        <div class="tool-card-row">
+                            <span class="tool-card-label">输入:</span>
+                            <span class="tool-card-value">${tool.input || '-'}</span>
+                        </div>
+                        <div class="tool-card-row">
+                            <span class="tool-card-label">输出:</span>
+                            <span class="tool-card-value">${tool.output || '-'}</span>
+                        </div>
+                        <div class="tool-card-row">
+                            <span class="tool-card-label">用途:</span>
+                            <span class="tool-card-value">${tool.purpose || '-'}</span>
+                        </div>
+                    </div>
+                    <div class="tool-card-abilities">
+                        ${(tool.abilities || []).map(a => `<span class="ability-tag" data-ability="${a}" onclick="filterByAbility('${a}')">${abilityNames[a] || a}</span>`).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 渲染 Memory 卡片
+        function renderMemoryCard(memory) {
+            return `
+                <div class="memory-card" data-abilities='${JSON.stringify(memory.abilities || [])}'>
+                    <div class="memory-card-header">
+                        <span>📦</span>
+                        <span>Memory</span>
+                    </div>
+                    <div class="memory-card-body">
+                        <div class="memory-card-row">
+                            <span class="memory-card-label">处理:</span>
+                            <span class="memory-card-value">${memory.contextHandling || '-'}</span>
+                        </div>
+                        <div class="memory-card-row">
+                            <span class="memory-card-label">机制:</span>
+                            <span class="memory-card-value">${memory.mechanism || '-'}</span>
+                        </div>
+                        <div class="memory-card-row">
+                            <span class="memory-card-label">设计:</span>
+                            <span class="memory-card-value">${memory.keyDesign || '-'}</span>
+                        </div>
+                    </div>
+                    <div class="memory-card-abilities">
+                        ${(memory.abilities || []).map(a => `<span class="ability-tag" data-ability="${a}" onclick="filterByAbility('${a}')">${abilityNames[a] || a}</span>`).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        // 渲染 Case 卡片
+        function renderCases() {
+            const container = document.getElementById('cases-container');
+            container.innerHTML = '';
+
+            data.cases.forEach(caseItem => {
+                const card = createCaseCard(caseItem);
+                container.appendChild(card);
+            });
+
+            document.getElementById('cases-total-count').textContent = `共 ${data.cases.length} 个 Case`;
+        }
+
+        // 创建 Case 卡片
+        function createCaseCard(caseItem) {
+            const card = document.createElement('div');
+            card.className = 'case-card';
+            card.dataset.caseId = caseItem.id;
+            card.dataset.abilities = JSON.stringify(caseItem.abilities || []);
+
+            const options = caseItem.options || [];
+            const answer = caseItem.answer || '';
+
+            // 获取 plan 数据
+            const planSummary = planData ? planData.get(caseItem.id) : null;
+
+            card.innerHTML = `
+                <div class="case-header">
+                    <div class="case-header-left">
+                        <span class="case-icon">🎬</span>
+                        <span class="case-id">${caseItem.id}</span>
+                    </div>
+                    <div class="case-header-right">
+                        ${caseItem.youtubeLink ? `<a href="${caseItem.youtubeLink}" target="_blank" class="case-link" title="观看视频">▶️</a>` : ''}
+                    </div>
+                </div>
+                <div class="case-body">
+                    <div class="case-info-section">
+                        <div class="case-info-grid">
+                            <div class="case-info-cell">
+                                <div class="case-info-label">分类信息</div>
+                                <div class="case-info-value">
+                                    <div class="case-info-field">
+                                        <span class="case-info-field-name">Benchmark:</span>
+                                        <span class="case-info-field-value">${caseItem.benchmark || '-'}</span>
+                                    </div>
+                                    <div class="case-info-field">
+                                        <span class="case-info-field-name">Domain:</span>
+                                        <span class="case-info-field-value">${caseItem.domain || '-'}</span>
+                                    </div>
+                                    <div class="case-info-field">
+                                        <span class="case-info-field-name">SubCategory:</span>
+                                        <span class="case-info-field-value">${caseItem.subCategory || '-'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="case-info-cell">
+                                <div class="case-info-label">任务类型</div>
+                                <div class="case-info-value">
+                                    <div style="font-weight: 600; margin-bottom: 0.25rem;">${caseItem.taskType || '-'}</div>
+                                    <div style="font-size: 0.8rem; color: var(--color-text-muted);">${caseItem.taskTypeDesc || ''}</div>
+                                </div>
+                            </div>
+                            <div class="case-info-cell case-question-cell">
+                                <div class="case-info-label">问题与答案</div>
+                                <div class="case-info-value">
+                                    <div class="case-question">Q: ${caseItem.question || '-'}</div>
+                                    <div class="case-options">
+                                        ${options.map(opt => {
+                                            const optLetter = opt.charAt(0);
+                                            const isCorrect = optLetter === answer;
+                                            return `<div class="case-option${isCorrect ? ' correct' : ''}">${opt}</div>`;
+                                        }).join('')}
+                                    </div>
+                                    <div class="case-abilities">
+                                        <span class="case-abilities-label">所需能力:</span>
+                                        ${(caseItem.abilities || []).map(a => `<span class="ability-tag" data-ability="${a}" onclick="filterByAbility('${a}')">${abilityFullNames[a] || a}</span>`).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="case-reasoning-section">
+                        <div class="reasoning-grid">
+                            <div class="reasoning-column">
+                                <div class="reasoning-header">人类推理路径</div>
+                                <div class="reasoning-content">${caseItem.humanReasoningSteps || '-'}</div>
+                            </div>
+                            <div class="reasoning-column">
+                                <div class="reasoning-header">UniVA Plan Agent 输出总结（仅输入 Question）</div>
+                                <div class="reasoning-content${planSummary ? '' : ' placeholder'}">${planSummary ? renderPlanSummary(planSummary) : '暂无数据...'}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="case-subtitle-plan-section">
+                        ${caseItem.subtitle ? `
+                        <div class="case-subtitle-section">
+                            <div class="subtitle-header" onclick="toggleSubtitle(this)">
+                                <span class="subtitle-title">字幕内容</span>
+                                <span class="subtitle-toggle">展开 ▼</span>
+                            </div>
+                            <div class="subtitle-preview">${(caseItem.subtitle || '').substring(0, 100)}...</div>
+                            <div class="subtitle-content">${caseItem.subtitle || ''}</div>
+                        </div>
+                        ` : '<div></div>'}
+                        <div class="case-plan-section">
+                            <div class="plan-header">
+                                <span class="plan-title">Plan 详情 (JSON)</span>
+                            </div>
+                            <div class="plan-content${planSummary ? '' : ' placeholder'}">
+                                ${planSummary ? renderPlanDetails(planSummary) : '暂无数据...'}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            return card;
+        }
+
+        // 渲染 Plan 摘要（用于推理对照区）
+        function renderPlanSummary(plan) {
+            if (!plan) return '';
+
+            let html = '';
+            if (plan.任务) {
+                html += `<div class="plan-task">📋 ${plan.任务}</div>`;
+            }
+            if (plan.工具链) {
+                html += `<div class="plan-tool-chain"><span class="plan-tool-chain-label">工具链:</span>${plan.工具链}</div>`;
+            }
+            return html || '-';
+        }
+
+        // 渲染 Plan 详情（用于下方 JSON 区域）
+        function renderPlanDetails(plan) {
+            if (!plan) return '';
+
+            let html = '';
+
+            if (plan.任务) {
+                html += `<div class="plan-task">📋 任务: ${plan.任务}</div>`;
+            }
+
+            if (plan.执行步骤 && plan.执行步骤.length > 0) {
+                html += '<ul class="plan-steps">';
+                plan.执行步骤.forEach(step => {
+                    html += `
+                        <li class="plan-step">
+                            <div class="plan-step-header">
+                                <span class="plan-step-number">${step.步骤}</span>
+                                <span class="plan-step-desc">${step.描述}</span>
+                            </div>
+                            <div class="plan-step-details">
+                                <span class="plan-step-tool">${step.工具}</span>
+                                ${step.目的 ? `<span class="plan-step-purpose">${step.目的}</span>` : ''}
+                                ${step.依赖 ? `<span class="plan-step-dep">依赖: ${step.依赖.join(', ')}</span>` : ''}
+                            </div>
+                            ${(step.输入 || step.输出) ? `
+                            <div class="plan-step-io">
+                                ${step.输入 ? `<div class="plan-io-row"><span class="plan-io-label">输入:</span><span class="plan-io-value">${step.输入}</span></div>` : ''}
+                                ${step.输出 ? `<div class="plan-io-row"><span class="plan-io-label">输出:</span><span class="plan-io-value">${step.输出}</span></div>` : ''}
+                            </div>
+                            ` : ''}
+                        </li>
+                    `;
+                });
+                html += '</ul>';
+            }
+
+            if (plan.工具链) {
+                html += `<div class="plan-tool-chain"><span class="plan-tool-chain-label">🔗 工具链:</span>${plan.工具链}</div>`;
+            }
+
+            return html || '-';
+        }
+
+        // 切换字幕展开/收起
+        function toggleSubtitle(header) {
+            const section = header.parentElement;
+            const content = section.querySelector('.subtitle-content');
+            const preview = section.querySelector('.subtitle-preview');
+            const toggle = header.querySelector('.subtitle-toggle');
+
+            if (content.classList.contains('expanded')) {
+                content.classList.remove('expanded');
+                preview.classList.remove('hidden');
+                toggle.textContent = '展开 ▼';
+            } else {
+                content.classList.add('expanded');
+                preview.classList.add('hidden');
+                toggle.textContent = '收起 ▲';
+            }
+        }
+
+        // 切换筛选器
+        function toggleFilter(btn) {
+            const ability = btn.dataset.ability;
+
+            if (selectedAbilities.has(ability)) {
+                selectedAbilities.delete(ability);
+                btn.classList.remove('active');
+            } else {
+                selectedAbilities.add(ability);
+                btn.classList.add('active');
+            }
+
+            applyFilters();
+        }
+
+        // 通过能力标签筛选
+        function filterByAbility(ability) {
+            // 清除所有筛选
+            selectedAbilities.clear();
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // 添加选中的能力
+            selectedAbilities.add(ability);
+            const targetBtn = document.querySelector(`.filter-btn[data-ability="${ability}"]`);
+            if (targetBtn) {
+                targetBtn.classList.add('active');
+            }
+
+            applyFilters();
+
+            // 滚动到筛选器
+            document.getElementById('ability-filter').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // 清除所有筛选
+        function clearFilters() {
+            selectedAbilities.clear();
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            applyFilters();
+        }
+
+        // 应用筛选
+        function applyFilters() {
+            // 更新筛选状态文本
+            const currentText = document.getElementById('filter-current-text');
+            if (selectedAbilities.size === 0) {
+                currentText.textContent = '无 (显示全部)';
+            } else {
+                const names = [...selectedAbilities].map(a => abilityFullNames[a] || a);
+                currentText.textContent = names.join(' + ');
+            }
+
+            // 筛选论文
+            filterPapers();
+
+            // 筛选 Cases
+            filterCases();
+
+            // 更新计数
+            updateCounts();
+        }
+
+        // 筛选论文
+        function filterPapers() {
+            const papers = document.querySelectorAll('.paper-card');
+
+            papers.forEach(paper => {
+                if (selectedAbilities.size === 0) {
+                    paper.classList.remove('hidden');
+                    // 移除所有高亮
+                    paper.querySelectorAll('.tool-card, .memory-card').forEach(card => {
+                        card.classList.remove('highlighted');
+                    });
+                    return;
+                }
+
+                // 检查论文是否有匹配的工具/Memory
+                let hasMatch = false;
+                const toolsGrid = paper.querySelector('.tools-memory-grid');
+                const cards = toolsGrid.querySelectorAll('.tool-card, .memory-card');
+
+                cards.forEach(card => {
+                    const cardAbilities = JSON.parse(card.dataset.abilities || '[]');
+                    const matches = [...selectedAbilities].every(a => cardAbilities.includes(a));
+
+                    if (matches && cardAbilities.length > 0) {
+                        card.classList.add('highlighted');
+                        hasMatch = true;
+                    } else {
+                        card.classList.remove('highlighted');
+                    }
+                });
+
+                if (hasMatch) {
+                    paper.classList.remove('hidden');
+                } else {
+                    paper.classList.add('hidden');
+                }
+            });
+        }
+
+        // 筛选 Cases
+        function filterCases() {
+            const cases = document.querySelectorAll('.case-card');
+
+            cases.forEach(caseCard => {
+                if (selectedAbilities.size === 0) {
+                    caseCard.classList.remove('hidden');
+                    return;
+                }
+
+                const caseAbilities = JSON.parse(caseCard.dataset.abilities || '[]');
+                const matches = [...selectedAbilities].every(a => caseAbilities.includes(a));
+
+                if (matches) {
+                    caseCard.classList.remove('hidden');
+                } else {
+                    caseCard.classList.add('hidden');
+                }
+            });
+        }
+
+        // 更新计数
+        function updateCounts() {
+            const visiblePapers = document.querySelectorAll('.paper-card:not(.hidden)').length;
+            const visibleCases = document.querySelectorAll('.case-card:not(.hidden)').length;
+
+            document.getElementById('paper-count').textContent = visiblePapers;
+            document.getElementById('case-count').textContent = visibleCases;
+        }
+    </script>
+</body>
+
+</html>

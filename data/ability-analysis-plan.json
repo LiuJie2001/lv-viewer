@@ -1,0 +1,1685 @@
+{
+  "test_time": "2026-02-05T01:42:53.904591",
+  "total_cases": 11,
+  "success_count": 11,
+  "error_count": 0,
+  "results": [
+    {
+      "id": "videomme_145_1",
+      "plan_summary": {
+        "任务": "定位视频中男子起跳扣篮的时刻，观察兔子在此期间的动作",
+        "执行步骤": [
+          {
+            "步骤": 1,
+            "描述": "整体理解视频内容",
+            "工具": "vision2text_gen",
+            "输入": "视频路径 + prompt（描述视频主要事件，特别是扣篮和兔子）",
+            "输出": "视频整体摘要文本",
+            "目的": "生成视频摘要，识别扣篮时间和兔子位置"
+          },
+          {
+            "步骤": 2,
+            "描述": "分析扣篮起跳时刻的关键帧",
+            "工具": "video_timestamp_analysis",
+            "输入": "视频路径 + 时间戳列表（起跳开始/中间/即将扣篮）",
+            "输出": "各时间点的帧描述 JSON",
+            "目的": "在起跳开始、中间、即将扣篮三个时间点提取帧，描述兔子动作",
+            "依赖": [1]
+          },
+          {
+            "步骤": 3,
+            "描述": "追踪分析兔子对象（可选）",
+            "工具": "main_object_analysis",
+            "输入": "视频路径 + 对象标签（rabbit）+ prompt",
+            "输出": "兔子行为的聚焦描述文本",
+            "目的": "若帧分析结果不够清晰，专门追踪兔子并生成聚焦描述",
+            "依赖": [2]
+          },
+          {
+            "步骤": 4,
+            "描述": "综合生成最终答案",
+            "工具": "vision2text_gen",
+            "输入": "前序步骤的描述结果 + prompt（回答问题）",
+            "输出": "最终答案文本",
+            "目的": "基于收集的证据，回答'男子起跳扣篮时兔子在做什么'",
+            "依赖": [2, 3]
+          }
+        ],
+        "工具链": "vision2text_gen → video_timestamp_analysis → main_object_analysis → vision2text_gen"
+      },
+      "plan_output": {
+        "task_analysis": "Video understanding question tied to a specific action moment. We need to locate the timestamp where the man is flying up to dunk, then observe what the rabbit is doing during that interval using frame/timestamp analysis and (if needed) object-focused analysis.",
+        "execution_plan": {
+          "total_steps": 4,
+          "steps": [
+            {
+              "step_number": 1,
+              "action_description": "Get an overall understanding of the video content and identify (approximately) when the dunk sequence happens and where the rabbit appears.",
+              "tool": {
+                "name": "vision2text_gen",
+                "purpose": "Produce a coarse summary of the video and highlight key actions/segments (man dunking, rabbit behavior) to guide precise timestamp selection.",
+                "input_requirements": [
+                  "video_path: /root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/gvtvz-keDmE.mp4",
+                  "prompt: Describe the main events in this video, especially any scene where a man flies/jumps up to dunk a basketball and what the rabbit is doing at that time. Include approximate timestamps if possible."
+                ]
+              },
+              "dependencies": [],
+              "status": "ongoing",
+              "output": ""
+            },
+            {
+              "step_number": 2,
+              "action_description": "Perform detailed frame-level analysis at the estimated start/mid/end moments of the 'man flying up to dunk' action to capture what the rabbit is doing during the ascent.",
+              "tool": {
+                "name": "video_timestamp_analysis",
+                "purpose": "Extract and caption specific frames at chosen timestamps to precisely describe the rabbit’s actions while the man is ascending to dunk.",
+                "input_requirements": [
+                  "video_path: /root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/gvtvz-keDmE.mp4",
+                  "timestamps: (to be filled from Step 1; pick 3 points: ascent start, mid-ascent, just before dunk)",
+                  "enable_instance_segmentation: true (if available) to help distinguish rabbit vs man"
+                ]
+              },
+              "dependencies": [
+                1
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 3,
+              "action_description": "If the rabbit’s behavior is still ambiguous from frame captions, isolate/track the rabbit across the dunk-ascent segment to clarify its actions.",
+              "tool": {
+                "name": "main_object_analysis",
+                "purpose": "Segment the rabbit throughout the video (or relevant portion) and generate a focused description of its actions during the dunk ascent.",
+                "input_requirements": [
+                  "video_path: /root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/gvtvz-keDmE.mp4",
+                  "label: rabbit",
+                  "prompt: Analyze what the rabbit is doing specifically while the man is flying up to dunk (during the ascent)."
+                ]
+              },
+              "dependencies": [
+                2
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 4,
+              "action_description": "Synthesize the observations into a direct answer to the question (rabbit’s action during the man’s ascent to dunk), citing the relevant moment(s).",
+              "tool": {
+                "name": "vision2text_gen",
+                "purpose": "Convert the collected evidence (frame captions / rabbit analysis) into a concise natural-language answer.",
+                "input_requirements": [
+                  "inputs: Step 2 JSON descriptions (and Step 3 description if used)",
+                  "prompt: Based on the analyses, answer: What does the rabbit do while the man is flying up to dunk? Provide a short, specific action description."
+                ]
+              },
+              "dependencies": [
+                2,
+                3
+              ],
+              "status": "pending",
+              "output": ""
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "videomme_434_3",
+      "plan_summary": {
+        "任务": "确定视频中角色 Vayne 的屏幕位置（左/右/中/上/下）",
+        "执行步骤": [
+          {
+            "步骤": 1,
+            "描述": "整体理解视频内容",
+            "工具": "vision2text_gen",
+            "输入": "视频路径 + prompt（关注 Vayne 的位置）",
+            "输出": "视频整体描述文本",
+            "目的": "获取视频高层描述，判断 Vayne 是否出现及大致位置"
+          },
+          {
+            "步骤": 2,
+            "描述": "分析早期时间戳帧（5秒）",
+            "工具": "video_timestamp_analysis",
+            "输入": "视频路径 + timestamp=5s + prompt",
+            "输出": "该帧的描述及 Vayne 位置",
+            "目的": "检查 Vayne 是否存在并估计屏幕位置",
+            "依赖": [1]
+          },
+          {
+            "步骤": 3,
+            "描述": "分析中期时间戳帧（30秒）",
+            "工具": "video_timestamp_analysis",
+            "输入": "视频路径 + timestamp=30s + prompt",
+            "输出": "该帧的描述及 Vayne 位置",
+            "目的": "确认 Vayne 位置的一致性",
+            "依赖": [2]
+          },
+          {
+            "步骤": 4,
+            "描述": "追踪分析 Vayne 对象",
+            "工具": "main_object_analysis",
+            "输入": "视频路径 + label=Vayne + prompt",
+            "输出": "Vayne 的追踪描述及位置信息",
+            "目的": "稳定追踪 Vayne 并确认其位置描述",
+            "依赖": [3]
+          },
+          {
+            "步骤": 5,
+            "描述": "综合生成最终答案",
+            "工具": "vision2text_gen",
+            "输入": "前序分析结果 + prompt",
+            "输出": "最终位置答案",
+            "目的": "输出 Vayne 最一致的屏幕位置",
+            "依赖": [4]
+          }
+        ],
+        "工具链": "vision2text_gen → video_timestamp_analysis ×2 → main_object_analysis → vision2text_gen"
+      },
+      "plan_output": {
+        "task_analysis": "This is a video understanding QA task asking for the on-screen position of a specific entity (Vayne). We should first scan the video to find frames where Vayne appears, then confirm Vayne’s identity via focused analysis, and finally determine her relative screen position (e.g., left/right/center; top/bottom) at the relevant moments.",
+        "execution_plan": {
+          "total_steps": 5,
+          "steps": [
+            {
+              "step_number": 1,
+              "action_description": "Get an overall understanding of the video content, and see if 'Vayne' is explicitly visible/mentioned and roughly where she appears.",
+              "tool": {
+                "name": "vision2text_gen",
+                "purpose": "High-level video description to identify scenes and whether Vayne appears, including any clear positional cues.",
+                "input_requirements": [
+                  "video_path: /root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/0FM64MrRuZE.mp4",
+                  "prompt: Describe the video content with focus on any character/entity named 'Vayne' and where she appears on screen (left/center/right; top/middle/bottom). If not sure, describe prominent HUD/nameplates that could indicate positions."
+                ]
+              },
+              "dependencies": [],
+              "status": "ongoing",
+              "output": ""
+            },
+            {
+              "step_number": 2,
+              "action_description": "Sample a key early timestamp frame (e.g., 5s) to check if Vayne is present and estimate her position in the frame.",
+              "tool": {
+                "name": "video_timestamp_analysis",
+                "purpose": "Extract and caption a specific frame to locate Vayne and describe her screen position precisely.",
+                "input_requirements": [
+                  "video_path: /root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/0FM64MrRuZE.mp4",
+                  "timestamp: 00:00:05",
+                  "enable_instance_segmentation: optional (set true if supported) to help locate subjects",
+                  "prompt: Identify Vayne (if visible) and state her position on screen using relative terms (left/center/right and top/middle/bottom). Also note any minimap/HUD indicators that locate Vayne."
+                ]
+              },
+              "dependencies": [
+                1
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 3,
+              "action_description": "Sample a mid-video timestamp frame (e.g., 30s) to find a clearer appearance of Vayne and refine her position description.",
+              "tool": {
+                "name": "video_timestamp_analysis",
+                "purpose": "Check another representative frame to confirm Vayne’s presence and consistent on-screen location.",
+                "input_requirements": [
+                  "video_path: /root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/0FM64MrRuZE.mp4",
+                  "timestamp: 00:00:30",
+                  "enable_instance_segmentation: optional (set true if supported)",
+                  "prompt: Identify Vayne (if visible) and state her position on screen (left/center/right; top/middle/bottom). If multiple characters, specify which one is Vayne and how you know."
+                ]
+              },
+              "dependencies": [
+                2
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 4,
+              "action_description": "If Vayne is visible, run targeted main-object analysis for 'Vayne' to robustly confirm the entity and derive a stable position description across the clip.",
+              "tool": {
+                "name": "main_object_analysis",
+                "purpose": "Locate and analyze the primary object referred to as 'Vayne' (by label) in the video, improving confidence in identity and position.",
+                "input_requirements": [
+                  "video_path: /root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/0FM64MrRuZE.mp4",
+                  "label: Vayne",
+                  "prompt: Track the character/entity 'Vayne' and describe where she is positioned on screen during appearances (left/center/right and top/middle/bottom)."
+                ]
+              },
+              "dependencies": [
+                3
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 5,
+              "action_description": "Synthesize findings from the overall description, timestamp frames, and object analysis to answer: 'Which position is Vayne in this video?' with a single, clear positional statement (and brief qualifiers if position changes).",
+              "tool": {
+                "name": "vision2text_gen",
+                "purpose": "Final consolidation into a concise QA-style response based on prior extracted evidence (using the key analyzed frames/insights as context in the prompt).",
+                "input_requirements": [
+                  "prompt: Using the prior analyses (overall caption + timestamp frame descriptions + main-object analysis), answer: 'Which position is Vayne in this video?' Provide the most consistent on-screen position (e.g., bottom-left) and note if it changes."
+                ]
+              },
+              "dependencies": [
+                4
+              ],
+              "status": "pending",
+              "output": ""
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "videomme_384_3",
+      "plan_summary": {
+        "任务": "识别视频中汽车座椅的颜色",
+        "执行步骤": [
+          {
+            "步骤": 1,
+            "描述": "分析显示车内的时间戳帧",
+            "工具": "video_timestamp_analysis",
+            "输入": "视频路径 + 多个时间戳（1s/5s/10s/15s）+ prompt",
+            "输出": "各帧的车内描述及座椅颜色",
+            "目的": "从代表性帧中识别座椅颜色"
+          },
+          {
+            "步骤": 2,
+            "描述": "分割座椅区域（可选）",
+            "工具": "video_referring_segmentation",
+            "输入": "视频路径 + text_prompt='car seat'",
+            "输出": "座椅区域分割后的视频",
+            "目的": "若颜色不清晰，隔离座椅区域减少背景干扰",
+            "依赖": [1]
+          },
+          {
+            "步骤": 3,
+            "描述": "生成最终颜色答案",
+            "工具": "vision2text_gen",
+            "输入": "分割视频或最清晰帧 + prompt",
+            "输出": "座椅颜色答案（如 black/tan/gray）",
+            "目的": "基于分割结果或最清晰帧输出座椅颜色",
+            "依赖": [2]
+          }
+        ],
+        "工具链": "video_timestamp_analysis → video_referring_segmentation → vision2text_gen"
+      },
+      "plan_output": {
+        "task_analysis": "Need to answer a specific visual attribute question about a video (seat color). We should inspect frames where the car interior/seats are visible using timestamp-based analysis; if unclear, segment/zoom on seats via referring segmentation and then caption the result.",
+        "execution_plan": {
+          "total_steps": 3,
+          "steps": [
+            {
+              "step_number": 1,
+              "action_description": "Scan the video for frames where the car interior is visible and identify the seat color from a representative timestamp frame.",
+              "tool": {
+                "name": "video_timestamp_analysis",
+                "purpose": "Extract and describe a specific timestamp frame to determine car seat color.",
+                "input_requirements": [
+                  "video_path: /root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/ECgVLceb_LE.mp4",
+                  "timestamp(s): start with 00:00:01.0; if not interior, iterate 00:00:05.0, 00:00:10.0, 00:00:15.0 (run sequentially as needed in later plan updates)",
+                  "prompt: 'Describe the car interior focusing on the seats. What color are the seats? Provide a single dominant color if possible.'",
+                  "instance_segmentation: optional (enable if available) to help isolate seats/interior objects"
+                ]
+              },
+              "dependencies": [],
+              "status": "ongoing",
+              "output": ""
+            },
+            {
+              "step_number": 2,
+              "action_description": "If seat color is still ambiguous from the timestamp frame, isolate the seats across the video to reduce background distractions.",
+              "tool": {
+                "name": "video_referring_segmentation",
+                "purpose": "Create a segmented video focusing on the 'car seats' region for clearer color identification.",
+                "input_requirements": [
+                  "video_path: output video from Step 1 (or the original video if Step 1 produced no usable frame info)",
+                  "text_prompt/label: 'car seat' (if needed, retry with 'front seats' or 'seat upholstery')"
+                ]
+              },
+              "dependencies": [
+                1
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 3,
+              "action_description": "Determine the seat color from the segmented seat-focused result (or from the clearest interior frame) and produce the final answer.",
+              "tool": {
+                "name": "vision2text_gen",
+                "purpose": "Generate a precise textual answer about the seat color from the most relevant visual (segmented) content.",
+                "input_requirements": [
+                  "input: segmented video from Step 2 (preferred) OR the best interior frame/image path produced in Step 1",
+                  "prompt: 'What color are the car seats? Answer with the seat color only (e.g., black, tan, gray, red).' "
+                ]
+              },
+              "dependencies": [
+                2
+              ],
+              "status": "pending",
+              "output": ""
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "videomme_154_2",
+      "plan_summary": {
+        "任务": "描述视频中男子身后的背景场景",
+        "执行步骤": [
+          {
+            "步骤": 1,
+            "描述": "分析视频中间时间戳帧",
+            "工具": "video_timestamp_analysis",
+            "输入": "视频路径 + timestamp=50%时长 + prompt（描述背景）",
+            "输出": "该帧场景描述（位置类型、物体、环境）",
+            "目的": "提取帧并详细描述男子身后的背景元素"
+          },
+          {
+            "步骤": 2,
+            "描述": "分析早期时间戳帧验证",
+            "工具": "video_timestamp_analysis",
+            "输入": "视频路径 + timestamp=2s + prompt",
+            "输出": "第二个帧的背景描述",
+            "目的": "确认背景是否一致（排除快速切换）",
+            "依赖": [1]
+          },
+          {
+            "步骤": 3,
+            "描述": "追踪分析男子对象（可选）",
+            "工具": "main_object_analysis",
+            "输入": "视频路径 + label='man' + prompt",
+            "输出": "男子及其周围环境的描述",
+            "目的": "锚定男子并推断其所处环境背景",
+            "依赖": [2]
+          },
+          {
+            "步骤": 4,
+            "描述": "综合生成最终答案",
+            "工具": "vision2text_gen",
+            "输入": "前序描述 + 选项列表 + prompt",
+            "输出": "最匹配的选项答案",
+            "目的": "基于描述选择最匹配背景场景的选项",
+            "依赖": [3]
+          }
+        ],
+        "工具链": "video_timestamp_analysis ×2 → main_object_analysis → vision2text_gen"
+      },
+      "plan_output": {
+        "task_analysis": "This is a video understanding question focused on describing the background behind a man. We should first locate a clear frame where the man and background are visible, then generate a detailed caption of that frame (and optionally confirm across a couple timestamps). Use video_timestamp_analysis for precise frame-based descriptions; optionally use main_object_analysis to ensure we are indeed describing the man’s scene context.",
+        "execution_plan": {
+          "total_steps": 4,
+          "steps": [
+            {
+              "step_number": 1,
+              "action_description": "Sample an initial representative frame from the middle of the video and get a detailed description, focusing on what is behind the man (background scene elements).",
+              "tool": {
+                "name": "video_timestamp_analysis",
+                "purpose": "Extract a frame at a chosen timestamp and generate a detailed description of the scene with emphasis on the background behind the man.",
+                "input_requirements": [
+                  "video_path: /root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/1tidNDIpKSY.mp4",
+                  "timestamp: 50% of video duration (if duration unknown, start with t=5.0s)",
+                  "prompt: 'Describe the scene, especially the background behind the man. Mention location type (indoors/outdoors), notable objects, setting (office/street/park/kitchen/etc.), and lighting.'",
+                  "optional: enable instance segmentation if available to help separate man vs background"
+                ]
+              },
+              "dependencies": [],
+              "status": "ongoing",
+              "output": ""
+            },
+            {
+              "step_number": 2,
+              "action_description": "Confirm the background description by analyzing an earlier timestamp where the man is still present, to ensure the background is consistent (not a quick cut).",
+              "tool": {
+                "name": "video_timestamp_analysis",
+                "purpose": "Get a second independent background description from a different frame to validate the setting.",
+                "input_requirements": [
+                  "video_path: /root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/1tidNDIpKSY.mp4",
+                  "timestamp: t=2.0s (or ~20% duration if duration is known)",
+                  "prompt: 'Describe what is behind the man (background only). Be specific about environment and key objects/signage/architecture.'"
+                ]
+              },
+              "dependencies": [
+                1
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 3,
+              "action_description": "If the scene varies or the man is not clearly visible in prior frames, isolate and analyze the man to anchor the context and infer what background he is in front of.",
+              "tool": {
+                "name": "main_object_analysis",
+                "purpose": "Segment and analyze the primary object (the man) and provide contextual cues about the surrounding environment/backdrop.",
+                "input_requirements": [
+                  "video_path: /root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/1tidNDIpKSY.mp4",
+                  "label: 'man'",
+                  "prompt: 'Describe the man and any visible context/background elements around him; focus on what setting he is in front of.'"
+                ]
+              },
+              "dependencies": [
+                2
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 4,
+              "action_description": "Use the collected descriptions to choose the option that best matches the background scene behind the man (and provide a brief justification referencing detected background elements).",
+              "tool": {
+                "name": "vision2text_gen",
+                "purpose": "Synthesize the observations into a final multiple-choice selection rationale (requires the options from the question to map description -> best option).",
+                "input_requirements": [
+                  "descriptions from steps 1-3 (JSON outputs and/or extracted captions)",
+                  "the list of answer options (must be provided by the user/question prompt)"
+                ]
+              },
+              "dependencies": [
+                3
+              ],
+              "status": "pending",
+              "output": ""
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "videomme_451_2",
+      "plan_summary": {
+        "任务": "定位比分变为2-1的时刻，描述随后发生的动作",
+        "执行步骤": [
+          {
+            "步骤": 1,
+            "描述": "整体理解视频内容",
+            "工具": "vision2text_gen",
+            "输入": "视频路径 + prompt（描述计分板位置和比分）",
+            "输出": "视频整体描述及计分板线索",
+            "目的": "了解运动类型、计分板位置，指导后续搜索"
+          },
+          {
+            "步骤": 2,
+            "描述": "分析早期时间戳帧",
+            "工具": "video_timestamp_analysis",
+            "输入": "视频路径 + timestamp=5s + prompt",
+            "输出": "计分板格式和当前比分",
+            "目的": "确认计分板格式和可读性",
+            "依赖": [1]
+          },
+          {
+            "步骤": 3,
+            "描述": "搜索2-1比分时刻",
+            "工具": "video_timestamp_analysis",
+            "输入": "视频路径 + 多个时间戳（粗扫每30s，细扫±10s）",
+            "输出": "各时间点比分及2-1出现时刻",
+            "目的": "粗到细扫描多个时间点，定位比分恰好为2-1的时刻",
+            "依赖": [2]
+          },
+          {
+            "步骤": 4,
+            "描述": "分析2-1后的连续帧",
+            "工具": "video_timestamp_analysis",
+            "输入": "视频路径 + timestamps=T+1s/+3s/+5s/+10s",
+            "输出": "2-1后各帧的动作描述",
+            "目的": "检查2-1后+1s/+3s/+5s/+10s的帧，确定接下来发生什么",
+            "依赖": [3]
+          },
+          {
+            "步骤": 5,
+            "描述": "综合生成最终答案",
+            "工具": "vision2text_gen",
+            "输入": "前序分析结果 + prompt",
+            "输出": "最终答案文本",
+            "目的": "回答'比分2-1时接下来发生了什么'",
+            "依赖": [4]
+          }
+        ],
+        "工具链": "vision2text_gen → video_timestamp_analysis ×3 → vision2text_gen"
+      },
+      "plan_output": {
+        "task_analysis": "Video understanding task: locate the moment when the on-screen score becomes 2-1, then describe the immediate subsequent action. Use timestamp-based frame analysis to find the 2-1 moment, then confirm what happens right after with additional timestamps (and optionally a short window description via vision2text).",
+        "execution_plan": {
+          "total_steps": 5,
+          "steps": [
+            {
+              "step_number": 1,
+              "action_description": "Get a high-level understanding of the video (sport type, presence/location of scoreboard, typical scene layout) to guide efficient searching for the '2-1' moment.",
+              "tool": {
+                "name": "vision2text_gen",
+                "purpose": "Generate an overall description of the video content and cues about where/when the score is shown.",
+                "input_requirements": [
+                  "video_path: /root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/Mxkg3qLIPC8.mp4",
+                  "prompt: Describe the video, especially the scoreboard/score display (where it appears, what it looks like) and any visible scores."
+                ]
+              },
+              "dependencies": [],
+              "status": "ongoing",
+              "output": ""
+            },
+            {
+              "step_number": 2,
+              "action_description": "Sample an early timestamp to verify what the score overlay looks like and whether it is consistently visible; adjust search strategy accordingly.",
+              "tool": {
+                "name": "video_timestamp_analysis",
+                "purpose": "Extract and caption a specific frame to inspect the scoreboard format and confirm if scores are readable.",
+                "input_requirements": [
+                  "video_path: /root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/Mxkg3qLIPC8.mp4",
+                  "timestamp: 00:00:05 (or another early visible gameplay moment)",
+                  "optional: enable instance segmentation if the overlay is small; prompt: Focus on reading the on-screen score/scoreboard and describing the immediate scene."
+                ]
+              },
+              "dependencies": [
+                1
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 3,
+              "action_description": "Search for the moment when the score is exactly 2-1 by running timestamp analyses at multiple candidate times (coarse-to-fine). Refine around the first detection of '2-1' until the exact transition/moment is identified.",
+              "tool": {
+                "name": "video_timestamp_analysis",
+                "purpose": "Iteratively inspect frames at different times to locate the exact moment where the score reads 2-1.",
+                "input_requirements": [
+                  "video_path: /root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/Mxkg3qLIPC8.mp4",
+                  "timestamps: coarse sweep (e.g., every 30s or 60s depending on video length), then fine sweep (e.g., ±10s around the first 2-1 detection at 1s or 2s intervals)",
+                  "prompt: Read the scoreboard/overlay; explicitly report the score and what is happening in the play."
+                ]
+              },
+              "dependencies": [
+                2
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 4,
+              "action_description": "Once the 2-1 frame/time is found, analyze the immediate next sequence by checking a few timestamps after it (e.g., +1s, +3s, +5s, +10s) to determine what happens next.",
+              "tool": {
+                "name": "video_timestamp_analysis",
+                "purpose": "Describe what occurs immediately after the score is 2-1 using several successive frames to capture the 'next event'.",
+                "input_requirements": [
+                  "video_path: /root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/Mxkg3qLIPC8.mp4",
+                  "timestamps: t(2-1)+1s, +3s, +5s, +10s (relative to the located 2-1 time)",
+                  "prompt: Describe the action that happens next after the score is 2-1; include key actors/teams and the event outcome (e.g., serve, kickoff, goal attempt, foul, etc.)."
+                ]
+              },
+              "dependencies": [
+                3
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 5,
+              "action_description": "Synthesize the findings into a direct answer to the question: 'What happens next when the score is 2-1?' referencing the identified moment and the immediate subsequent event.",
+              "tool": {
+                "name": "vision2text_gen",
+                "purpose": "Create a concise natural-language answer grounded in the observed frames/events around the 2-1 moment.",
+                "input_requirements": [
+                  "Use the descriptions/results from steps 3-4 (identified 2-1 timestamp and post-2-1 events)",
+                  "prompt: Provide a short, specific answer describing what happens next right after the score shows 2-1."
+                ]
+              },
+              "dependencies": [
+                4
+              ],
+              "status": "pending",
+              "output": ""
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "videomme_840_3",
+      "plan_summary": {
+        "任务": "当一队吃披萨时，统计另一队完成了多少任务",
+        "执行步骤": [
+          {
+            "步骤": 1,
+            "描述": "整体理解视频内容",
+            "工具": "vision2text_gen",
+            "输入": "视频路径 + prompt（关注队伍、任务板、披萨时刻）",
+            "输出": "视频描述及披萨时刻大致位置",
+            "目的": "识别队伍、任务板、披萨时刻及任务完成数指示"
+          },
+          {
+            "步骤": 2,
+            "描述": "分析披萨场景时间戳帧",
+            "工具": "video_timestamp_analysis",
+            "输入": "视频路径 + 披萨时刻时间戳 + prompt",
+            "输出": "该帧描述及另一队任务完成数",
+            "目的": "确认披萨场景并读取另一队任务完成数",
+            "依赖": [1]
+          },
+          {
+            "步骤": 3,
+            "描述": "分析披萨前时间戳帧",
+            "工具": "video_timestamp_analysis",
+            "输入": "视频路径 + timestamp=披萨时刻-2s",
+            "输出": "该帧任务完成数",
+            "目的": "交叉验证任务数一致性",
+            "依赖": [2]
+          },
+          {
+            "步骤": 4,
+            "描述": "分析披萨后时间戳帧",
+            "工具": "video_timestamp_analysis",
+            "输入": "视频路径 + timestamp=披萨时刻+2s",
+            "输出": "该帧任务完成数",
+            "目的": "确认任务数在相邻帧保持一致",
+            "依赖": [3]
+          },
+          {
+            "步骤": 5,
+            "描述": "聚焦任务板/计分板",
+            "工具": "vision2text_gen",
+            "输入": "视频路径 + prompt（聚焦任务板数字）",
+            "输出": "任务完成数的精确读取",
+            "目的": "针对性识别任务完成数字/标记",
+            "依赖": [4]
+          },
+          {
+            "步骤": 6,
+            "描述": "综合生成最终答案",
+            "工具": "vision2text_gen",
+            "输入": "前序分析结果 + prompt",
+            "输出": "最终任务数答案",
+            "目的": "输出另一队完成的具体任务数",
+            "依赖": [5]
+          }
+        ],
+        "工具链": "vision2text_gen → video_timestamp_analysis ×3 → vision2text_gen ×2"
+      },
+      "plan_output": {
+        "task_analysis": "Video question answering that requires (1) locating the moment when one team is enjoying pizza, then (2) identifying the other team and counting how many tasks they have completed at that time. Use timestamped frame analysis to find the pizza scene and surrounding context, then use vision2text-based counting/verification on key frames.",
+        "execution_plan": {
+          "total_steps": 6,
+          "steps": [
+            {
+              "step_number": 1,
+              "action_description": "Get an overall understanding of the video content and determine whether it contains teams, tasks, and a pizza-eating moment; extract any visible task-board/scoreboard cues.",
+              "tool": {
+                "name": "vision2text_gen",
+                "purpose": "High-level video captioning to identify the relevant segment(s) and any on-screen text/score indicators related to tasks completed.",
+                "input_requirements": [
+                  "video_path: /root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/y9Fne3oUwX4.mp4",
+                  "prompt: Describe the video. Focus on: teams, any task board/scoreboard, any on-screen text showing number of tasks completed, and any moment where a team is eating/enjoying pizza. If you see pizza, mention the approximate time and what indicates tasks completed for the other team."
+                ]
+              },
+              "dependencies": [],
+              "status": "ongoing",
+              "output": ""
+            },
+            {
+              "step_number": 2,
+              "action_description": "Based on Step 1’s approximate time, analyze an initial candidate timestamp where pizza is visible to confirm the pizza scene and capture the other team’s task completion info in the same frame.",
+              "tool": {
+                "name": "video_timestamp_analysis",
+                "purpose": "Extract and deeply caption a single key frame at a specified timestamp (including on-screen text) to confirm pizza scene and read/estimate completed task counts.",
+                "input_requirements": [
+                  "video_path: /root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/y9Fne3oUwX4.mp4",
+                  "timestamp: <to be filled from Step 1 pizza time estimate>",
+                  "prompt: In this frame, identify which team is enjoying pizza. Then identify the other team and determine how many tasks they have completed (read any scoreboard/task board text/numbers; if not text, infer from visible completed markers). Quote exact on-screen numbers if present."
+                ]
+              },
+              "dependencies": [
+                1
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 3,
+              "action_description": "Analyze a slightly earlier timestamp (just before the pizza frame) to ensure the task count is not changing mid-cut and to capture any clearer view of the task board/scoreboard.",
+              "tool": {
+                "name": "video_timestamp_analysis",
+                "purpose": "Cross-check the other team’s completed task count near the pizza moment for consistency and improved readability.",
+                "input_requirements": [
+                  "video_path: /root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/y9Fne3oUwX4.mp4",
+                  "timestamp: <pizza_time - 2s (or nearest clear frame)>",
+                  "prompt: Determine if one team is about to/starting to enjoy pizza. Identify the other team and read/count how many tasks they have completed. Extract any visible numbers or completed-task markers."
+                ]
+              },
+              "dependencies": [
+                2
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 4,
+              "action_description": "Analyze a slightly later timestamp (during/after pizza) to confirm the same completed-task count for the other team at the time the pizza is being enjoyed.",
+              "tool": {
+                "name": "video_timestamp_analysis",
+                "purpose": "Verify the completed task count remains the same across adjacent frames and avoid misreading due to motion blur/occlusion.",
+                "input_requirements": [
+                  "video_path: /root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/y9Fne3oUwX4.mp4",
+                  "timestamp: <pizza_time + 2s (or nearest clear frame)>",
+                  "prompt: Confirm the team enjoying pizza and determine the other team’s number of completed tasks at this moment. Read any scoreboard/task board; if multiple boards exist, specify which one corresponds to the other team."
+                ]
+              },
+              "dependencies": [
+                3
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 5,
+              "action_description": "If the completed-task indicator is an object/board that is hard to read, isolate it by focusing analysis on that element (using targeted prompting on the same video) to improve OCR-like extraction via multimodal description.",
+              "tool": {
+                "name": "vision2text_gen",
+                "purpose": "Targeted re-captioning aimed specifically at reading the task count (numbers/labels) for the non-pizza team during the pizza segment.",
+                "input_requirements": [
+                  "video_path: /root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/y9Fne3oUwX4.mp4",
+                  "prompt: Around the pizza-eating moment identified earlier, focus only on any scoreboard/task board for the other team. What number of tasks completed is shown? If there are checkmarks/icons, count them and report the total."
+                ]
+              },
+              "dependencies": [
+                4
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 6,
+              "action_description": "Synthesize the evidence from the pizza timestamp and adjacent frames to answer: 'As one team enjoys pizza, how many tasks has the other team completed?' Provide the single best-supported number and cite the frame evidence (timestamp references).",
+              "tool": {
+                "name": "vision2text_gen",
+                "purpose": "Final reasoning-style consolidation using the collected descriptions to output a single numeric answer with minimal justification.",
+                "input_requirements": [
+                  "inputs: Step 2-5 textual findings (pizza team identification + other team completed-task count across timestamps)",
+                  "prompt: Using the provided frame analyses, answer with the exact number of tasks the other team has completed at the time one team is enjoying pizza. If there is any discrepancy, choose the most clearly visible reading and explain briefly why."
+                ]
+              },
+              "dependencies": [
+                5
+              ],
+              "status": "pending",
+              "output": ""
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "videomme_278_1",
+      "plan_summary": {
+        "任务": "统计视频中出现的狐狸数量（不同个体）",
+        "执行步骤": [
+          {
+            "步骤": 1,
+            "描述": "整体理解视频内容",
+            "工具": "vision2text_gen",
+            "输入": "视频路径 + prompt（描述狐狸数量）",
+            "输出": "视频描述及狐狸大致数量线索",
+            "目的": "获取狐狸出现情况及大致数量线索"
+          },
+          {
+            "步骤": 2,
+            "描述": "分析多个代表性时间戳帧",
+            "工具": "video_timestamp_analysis",
+            "输入": "视频路径 + timestamps=[5,15,30,45,60]s + instance_segmentation=true",
+            "输出": "各帧狐狸数量及位置描述",
+            "目的": "统计各帧可见狐狸数量，检查是否有多个个体",
+            "依赖": [1]
+          },
+          {
+            "步骤": 3,
+            "描述": "分割追踪狐狸对象",
+            "工具": "video_referring_segmentation",
+            "输入": "视频路径 + text_prompt='fox'",
+            "输出": "狐狸分割追踪视频",
+            "目的": "全视频追踪狐狸，避免重复计数同一只",
+            "依赖": [2]
+          },
+          {
+            "步骤": 4,
+            "描述": "分析分割后的狐狸视频",
+            "工具": "main_object_analysis",
+            "输入": "分割后视频路径 + label='fox' + prompt",
+            "输出": "独立狐狸个体数及轨迹描述",
+            "目的": "确定不同轨迹数量，推断独立个体数",
+            "依赖": [3]
+          },
+          {
+            "步骤": 5,
+            "描述": "补充分析关键时间戳",
+            "工具": "video_timestamp_analysis",
+            "输入": "视频路径 + 关键时间戳（多狐狸重叠处）",
+            "输出": "精确狐狸计数",
+            "目的": "在可能出现多只狐狸的时刻精确计数",
+            "依赖": [4]
+          },
+          {
+            "步骤": 6,
+            "描述": "综合生成最终答案",
+            "工具": "vision2text_gen",
+            "输入": "前序分析结果 + prompt",
+            "输出": "最终狐狸数量答案",
+            "目的": "输出视频中出现的独立狐狸总数",
+            "依赖": [5]
+          }
+        ],
+        "工具链": "vision2text_gen → video_timestamp_analysis → video_referring_segmentation → main_object_analysis → video_timestamp_analysis → vision2text_gen"
+      },
+      "plan_output": {
+        "task_analysis": "Video understanding/counting task. We need to determine the number of distinct foxes that appear across the whole video. Use coarse-to-fine analysis: first get a global description, then sample timestamps for counting, and finally (if needed) use segmentation/tracking to confirm distinct individuals and avoid double-counting.",
+        "execution_plan": {
+          "total_steps": 6,
+          "steps": [
+            {
+              "step_number": 1,
+              "action_description": "Get an overall understanding of the video content and whether foxes appear, plus any hints about counts (e.g., single fox vs multiple).",
+              "tool": {
+                "name": "vision2text_gen",
+                "purpose": "Generate a high-level caption/summary of the video focused on fox presence and approximate counts.",
+                "input_requirements": [
+                  "video_path: /root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/fQVhppRP4Wo.mp4",
+                  "prompt: 'Describe the video and specifically mention how many foxes are visible at any time and overall. Note if the same fox reappears.'"
+                ]
+              },
+              "dependencies": [],
+              "status": "ongoing",
+              "output": ""
+            },
+            {
+              "step_number": 2,
+              "action_description": "Identify key moments in the video where foxes are visible by analyzing representative timestamps (early/middle/late) to estimate the maximum concurrent fox count and check for multiple individuals.",
+              "tool": {
+                "name": "video_timestamp_analysis",
+                "purpose": "Extract and caption specific frames at chosen timestamps to count visible foxes and understand scene changes.",
+                "input_requirements": [
+                  "video_path: /root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/fQVhppRP4Wo.mp4",
+                  "timestamps_seconds: [5, 15, 30, 45, 60] (adjust based on video length if shorter/longer)",
+                  "with_instance_segmentation: true",
+                  "prompt: 'Count the number of foxes visible in this frame. Describe their positions and whether they look like distinct individuals.'"
+                ]
+              },
+              "dependencies": [
+                1
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 3,
+              "action_description": "If timestamps show foxes, segment and track fox instances through the video to avoid double-counting the same fox across time.",
+              "tool": {
+                "name": "video_referring_segmentation",
+                "purpose": "Produce a segmentation/tracking result for the object label 'fox' across the whole video.",
+                "input_requirements": [
+                  "video_path: /root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/fQVhppRP4Wo.mp4",
+                  "text_prompt: 'fox'"
+                ]
+              },
+              "dependencies": [
+                2
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 4,
+              "action_description": "Analyze the segmented (fox-only) video to determine how many distinct foxes appear (distinct tracks/individuals), and the maximum number present simultaneously.",
+              "tool": {
+                "name": "main_object_analysis",
+                "purpose": "Generate a detailed description of the segmented fox object(s), helping infer the number of distinct foxes present.",
+                "input_requirements": [
+                  "video_path: output_segmented_video_from_step_3",
+                  "label: 'fox'",
+                  "prompt: 'Determine how many distinct foxes appear in the full video. Note if there are multiple individuals or a single one reappearing. Provide the final count of distinct foxes.'"
+                ]
+              },
+              "dependencies": [
+                3
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 5,
+              "action_description": "Resolve ambiguity by doing additional timestamp analyses around moments where multiple foxes might appear (based on steps 2 and 4), to confirm the peak count and distinct individuals.",
+              "tool": {
+                "name": "video_timestamp_analysis",
+                "purpose": "Perform targeted frame checks at critical times to confirm the exact number of foxes.",
+                "input_requirements": [
+                  "video_path: /root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/fQVhppRP4Wo.mp4",
+                  "timestamps_seconds: 'chosen based on evidence from steps 2-4 (e.g., around scene cuts or when multiple tracks overlap)'",
+                  "with_instance_segmentation: true",
+                  "prompt: 'Count foxes precisely in this frame; indicate if any are partially occluded and whether they are distinct individuals.'"
+                ]
+              },
+              "dependencies": [
+                4
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 6,
+              "action_description": "Aggregate findings from the summaries, timestamp counts, and segmentation/tracking analysis to provide the final answer: how many foxes appear in the video.",
+              "tool": {
+                "name": "vision2text_gen",
+                "purpose": "Synthesize a final, concise answer grounded in prior step outputs.",
+                "input_requirements": [
+                  "inputs: outputs from steps 1, 2, 4, 5",
+                  "prompt: 'Using the prior analyses, output the final number of foxes that appear in the video (distinct individuals). If uncertain, state the most supported count and why.'"
+                ]
+              },
+              "dependencies": [
+                5
+              ],
+              "status": "pending",
+              "output": ""
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "videomme_317_3",
+      "plan_summary": {
+        "任务": "确定绘画过程中四个事件的时间顺序（背景、睡莲叶、纹理、花朵）",
+        "执行步骤": [
+          {
+            "步骤": 1,
+            "描述": "整体理解视频内容",
+            "工具": "vision2text_gen",
+            "输入": "视频路径 + prompt（描述绘画阶段）",
+            "输出": "绘画过程整体描述",
+            "目的": "确认是绘画过程，识别关键元素"
+          },
+          {
+            "步骤": 2,
+            "描述": "分析早期时间戳（~开始）",
+            "工具": "video_timestamp_analysis",
+            "输入": "视频路径 + timestamp=5-10s",
+            "输出": "该帧绘画状态描述",
+            "目的": "检测背景/基础层的创建",
+            "依赖": [1]
+          },
+          {
+            "步骤": 3,
+            "描述": "分析25%进度时间戳",
+            "工具": "video_timestamp_analysis",
+            "输入": "视频路径 + timestamp=25%时长",
+            "输出": "该帧绘画状态描述",
+            "目的": "观察睡莲叶或纹理是否开始出现",
+            "依赖": [2]
+          },
+          {
+            "步骤": 4,
+            "描述": "分析50%进度时间戳",
+            "工具": "video_timestamp_analysis",
+            "输入": "视频路径 + timestamp=50%时长",
+            "输出": "该帧绘画状态描述",
+            "目的": "确定睡莲叶是否已完成、纹理是否加强",
+            "依赖": [3]
+          },
+          {
+            "步骤": 5,
+            "描述": "分析75%进度时间戳",
+            "工具": "video_timestamp_analysis",
+            "输入": "视频路径 + timestamp=75%时长",
+            "输出": "该帧绘画状态描述",
+            "目的": "检查花朵是否开始添加",
+            "依赖": [4]
+          },
+          {
+            "步骤": 6,
+            "描述": "分析接近结束时间戳",
+            "工具": "video_timestamp_analysis",
+            "输入": "视频路径 + timestamp=接近结束",
+            "输出": "最终绘画状态描述",
+            "目的": "确认最终状态和最后出现的元素",
+            "依赖": [5]
+          },
+          {
+            "步骤": 7,
+            "描述": "补充分析过渡区域（可选）",
+            "工具": "video_timestamp_analysis",
+            "输入": "视频路径 + 过渡区域时间戳",
+            "输出": "过渡时刻的精确描述",
+            "目的": "在顺序模糊处精确定位事件首次出现时间",
+            "依赖": [6]
+          },
+          {
+            "步骤": 8,
+            "描述": "综合生成最终答案",
+            "工具": "vision2text_gen",
+            "输入": "前序所有帧描述 + prompt",
+            "输出": "四个事件的正确时间顺序",
+            "目的": "将每个事件映射到最早时间戳，输出正确时间顺序",
+            "依赖": [7]
+          }
+        ],
+        "工具链": "vision2text_gen → video_timestamp_analysis ×6 → vision2text_gen"
+      },
+      "plan_output": {
+        "task_analysis": "We need to determine the chronological order of four painting-related events in a specific video. The best approach is to sample multiple timestamps across the video, generate detailed frame descriptions, then map each event to the earliest timestamp it clearly appears and sort by time.",
+        "execution_plan": {
+          "total_steps": 8,
+          "steps": [
+            {
+              "step_number": 1,
+              "action_description": "Get a high-level understanding of the video content (confirm it is a painting process and identify key objects like water lilies, pads, flowers, background).",
+              "tool": {
+                "name": "vision2text_gen",
+                "purpose": "Generate an overall textual description of the video to guide which timestamps to sample and what visual cues to look for.",
+                "input_requirements": [
+                  "video_path: /root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/Bkheu99K5lY.mp4",
+                  "prompt: 'Describe the main activity and the sequence of actions in this video at a high level, focusing on stages of painting (background, texture buildup, lily pads, flowers).'"
+                ]
+              },
+              "dependencies": [],
+              "status": "ongoing",
+              "output": ""
+            },
+            {
+              "step_number": 2,
+              "action_description": "Analyze an early timestamp to detect creation of the basic background (initial broad color blocks / wash / base layer).",
+              "tool": {
+                "name": "video_timestamp_analysis",
+                "purpose": "Extract and caption an early frame to identify if the painting is at the background/base stage.",
+                "input_requirements": [
+                  "video_path: /root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/Bkheu99K5lY.mp4",
+                  "timestamp: near start (e.g., 5-10s)",
+                  "optional segmentation: off (unless needed)"
+                ]
+              },
+              "dependencies": [
+                1
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 3,
+              "action_description": "Analyze a 25% progress timestamp to see whether lily pads are being drawn or texture is being built up.",
+              "tool": {
+                "name": "video_timestamp_analysis",
+                "purpose": "Capture a mid-early frame and describe visible elements (pads outlines/shapes, textured strokes, flowers).",
+                "input_requirements": [
+                  "video_path: /root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/Bkheu99K5lY.mp4",
+                  "timestamp: ~25% of duration",
+                  "optional segmentation: off"
+                ]
+              },
+              "dependencies": [
+                2
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 4,
+              "action_description": "Analyze a 50% progress timestamp to determine if the lily pads are already in place and whether texture-building has intensified.",
+              "tool": {
+                "name": "video_timestamp_analysis",
+                "purpose": "Provide a detailed caption for the mid video state to map to events (2/3/4).",
+                "input_requirements": [
+                  "video_path: /root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/Bkheu99K5lY.mp4",
+                  "timestamp: ~50% of duration",
+                  "optional segmentation: off"
+                ]
+              },
+              "dependencies": [
+                3
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 5,
+              "action_description": "Analyze a 75% progress timestamp to check for the appearance of flowers being added and final texture buildup.",
+              "tool": {
+                "name": "video_timestamp_analysis",
+                "purpose": "Identify later-stage details like flowers and heavier texture/finishing strokes.",
+                "input_requirements": [
+                  "video_path: /root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/Bkheu99K5lY.mp4",
+                  "timestamp: ~75% of duration",
+                  "optional segmentation: off"
+                ]
+              },
+              "dependencies": [
+                4
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 6,
+              "action_description": "Analyze a near-end timestamp to confirm the final state and verify which elements appear last (flowers vs texture refinement).",
+              "tool": {
+                "name": "video_timestamp_analysis",
+                "purpose": "Confirm end-stage composition and last actions by inspecting the near-final frame.",
+                "input_requirements": [
+                  "video_path: /root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/Bkheu99K5lY.mp4",
+                  "timestamp: near end (e.g., last 5-10s)",
+                  "optional segmentation: off"
+                ]
+              },
+              "dependencies": [
+                5
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 7,
+              "action_description": "If any event order remains ambiguous (e.g., pads vs texture buildup), perform additional focused analyses around the transition region by sampling 2-3 extra timestamps near where the change is suspected.",
+              "tool": {
+                "name": "video_timestamp_analysis",
+                "purpose": "Resolve ambiguity by pinpointing when a specific element first appears (pads outlines/shapes, flowers) or when texture buildup noticeably increases.",
+                "input_requirements": [
+                  "video_path: /root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/Bkheu99K5lY.mp4",
+                  "timestamps: targeted (chosen based on results from steps 2-6)",
+                  "optional segmentation: on if needed to highlight 'lily pads' or 'flowers' regions"
+                ]
+              },
+              "dependencies": [
+                6
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 8,
+              "action_description": "Synthesize findings: assign each of the four events to the earliest timestamp it clearly occurs, then sort by timestamp to output the correct order as a numbered list matching options 1-4.",
+              "tool": {
+                "name": "vision2text_gen",
+                "purpose": "Convert the collected timestamp descriptions into a final ordered answer (event sequence).",
+                "input_requirements": [
+                  "all textual outputs from steps 1-7",
+                  "prompt: 'Given these timestamped descriptions, determine when each event (1 background, 4 drawing lily pads, 3 building texture more, 2 adding flowers) first occurs and output the correct chronological order as a sequence of event numbers.'"
+                ]
+              },
+              "dependencies": [
+                7
+              ],
+              "status": "pending",
+              "output": ""
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "videomme_043_1",
+      "plan_summary": {
+        "任务": "分析视频中屋顶飞起的原因",
+        "执行步骤": [
+          {
+            "步骤": 1,
+            "描述": "整体理解视频内容",
+            "工具": "vision2text_gen",
+            "输入": "视频路径 + prompt（描述屋顶飞起事件及可能原因）",
+            "输出": "视频描述及屋顶事件线索",
+            "目的": "定位屋顶飞起事件并假设可能原因（风/爆炸/撞击）"
+          },
+          {
+            "步骤": 2,
+            "描述": "粗粒度时间戳扫描",
+            "工具": "video_timestamp_analysis",
+            "输入": "视频路径 + timestamps=[0,5,10,15,20,25,30]s",
+            "输出": "各时间点帧描述",
+            "目的": "确定屋顶开始移动/飞起的大致时间区间",
+            "依赖": [1]
+          },
+          {
+            "步骤": 3,
+            "描述": "细粒度时间戳分析",
+            "工具": "video_timestamp_analysis",
+            "输入": "视频路径 + timestamps=T±2s（T为关键时刻）",
+            "输出": "关键时刻前后帧描述",
+            "目的": "在关键时刻前后逐帧分析，捕捉触发因素",
+            "依赖": [2]
+          },
+          {
+            "步骤": 4,
+            "描述": "追踪分割屋顶对象",
+            "工具": "video_referring_segmentation",
+            "输入": "视频路径 + text_prompt='roof'",
+            "输出": "屋顶分割追踪视频",
+            "目的": "隔离屋顶并确认与其交互的因素",
+            "依赖": [3]
+          },
+          {
+            "步骤": 5,
+            "描述": "综合生成因果解释",
+            "工具": "vision2text_gen",
+            "输入": "分割视频或原视频 + 前序分析 + prompt",
+            "输出": "屋顶飞起的原因解释",
+            "目的": "解释屋顶飞起的原因，引用视觉证据",
+            "依赖": [4]
+          }
+        ],
+        "工具链": "vision2text_gen → video_timestamp_analysis ×2 → video_referring_segmentation → vision2text_gen"
+      },
+      "plan_output": {
+        "task_analysis": "Video understanding task: determine the cause/context behind a roof object flying in the provided video. Approach: first get a global caption to find the relevant event, then do timestamped frame analyses around the moment the roof flies, optionally segment/track the roof object to confirm interactions (wind, explosion, collision, etc.), and finally synthesize a causal explanation.",
+        "execution_plan": {
+          "total_steps": 5,
+          "steps": [
+            {
+              "step_number": 1,
+              "action_description": "Generate an overall description of the video and explicitly ask for what happens to the roof and why it might fly; this helps locate the event and hypothesize causes.",
+              "tool": {
+                "name": "vision2text_gen",
+                "purpose": "Obtain a high-level semantic summary of the full video with emphasis on the roof flying event and potential causes (e.g., wind, explosion, impact).",
+                "input_requirements": [
+                  "video_path: /root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/9jjTGpWmc5U.mp4",
+                  "prompt: 'Describe the video in detail. Focus on any roof/roof-like object that flies or gets torn off. What happens right before it flies, what seems to cause it (wind/storm/explosion/impact), and what else is occurring in the scene?'"
+                ]
+              },
+              "dependencies": [],
+              "status": "ongoing",
+              "output": ""
+            },
+            {
+              "step_number": 2,
+              "action_description": "Identify the approximate timestamp when the roof starts moving/flying by performing timestamp analysis at coarse intervals; pick the interval that contains the key action.",
+              "tool": {
+                "name": "video_timestamp_analysis",
+                "purpose": "Extract and caption representative frames at selected timestamps to localize the roof-flying moment.",
+                "input_requirements": [
+                  "video_path: /root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/9jjTGpWmc5U.mp4",
+                  "timestamps_to_check: e.g., 0s, 5s, 10s, 15s, 20s, 25s, 30s (adjust based on Step 1 summary if it suggests a shorter/longer clip)",
+                  "enable_instance_segmentation: optional (set true if roof is visible and needs clearer separation)"
+                ]
+              },
+              "dependencies": [
+                1
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 3,
+              "action_description": "Zoom in on the exact moment: run fine-grained timestamp analysis around the detected interval (before/during/after) to capture the causal trigger (gust, blast, collision, structural failure).",
+              "tool": {
+                "name": "video_timestamp_analysis",
+                "purpose": "Provide detailed frame-level descriptions around the roof-flying event to infer causality from immediate context.",
+                "input_requirements": [
+                  "video_path: /root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/9jjTGpWmc5U.mp4",
+                  "timestamps_to_check: refined times around the key moment (e.g., T-2s, T-1s, T, T+1s, T+2s where T is found in Step 2)",
+                  "enable_instance_segmentation: true if the roof needs to be isolated in captions"
+                ]
+              },
+              "dependencies": [
+                2
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 4,
+              "action_description": "Track and isolate the roof object across the critical segment to confirm what interacts with it (wind direction cues, contact with another object, blast source).",
+              "tool": {
+                "name": "video_referring_segmentation",
+                "purpose": "Produce a segmented/tracked visualization of the 'roof' object to verify motion and interaction cues that explain why it flies.",
+                "input_requirements": [
+                  "video_path: /root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/9jjTGpWmc5U.mp4",
+                  "text_prompt/label: 'roof' (fallback prompts if needed: 'roof panel', 'roof sheet', 'roof structure', 'building roof')"
+                ]
+              },
+              "dependencies": [
+                3
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 5,
+              "action_description": "Synthesize all observations into a direct answer to: 'Why does the roof object fly?' including the immediate trigger and supporting visual evidence (what happens right before, how it detaches, and environmental cues).",
+              "tool": {
+                "name": "vision2text_gen",
+                "purpose": "Convert the segmented/tracked result (and/or original video) into a final, evidence-grounded explanation of causality.",
+                "input_requirements": [
+                  "video_path: output_video_from_step_4 (segmented roof tracking) OR original video if segmentation is not usable",
+                  "prompt: 'Explain why the roof object flies in this video. Describe the causal event immediately preceding the motion (e.g., strong wind/gust, explosion, impact, structural collapse), and cite the visual cues that support the conclusion.'"
+                ]
+              },
+              "dependencies": [
+                4
+              ],
+              "status": "pending",
+              "output": ""
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "videomme_027_3",
+      "plan_summary": {
+        "任务": "判断哪些陈述可以从视频内容中推断出来",
+        "执行步骤": [
+          {
+            "步骤": 1,
+            "描述": "整体理解视频内容",
+            "工具": "vision2text_gen",
+            "输入": "视频路径 + prompt（详细描述场景、人物、动作、事件）",
+            "输出": "全面的视频摘要文本",
+            "目的": "生成全面的视频摘要，建立推理基础"
+          },
+          {
+            "步骤": 2,
+            "描述": "分析多个代表性时间戳帧",
+            "工具": "video_timestamp_analysis",
+            "输入": "视频路径 + timestamps=[5%,15%,30%,50%,70%,85%,95%]时长",
+            "输出": "各时间点带时间戳的描述",
+            "目的": "收集带时间戳的证据支持推理",
+            "依赖": [1]
+          },
+          {
+            "步骤": 3,
+            "描述": "追踪分析关键实体（可选）",
+            "工具": "main_object_analysis",
+            "输入": "视频路径 + label（从前序推断）+ prompt",
+            "输出": "对象属性、行为、交互的描述",
+            "目的": "追踪描述特定对象的属性、行为、交互",
+            "依赖": [2]
+          },
+          {
+            "步骤": 4,
+            "描述": "生成推理报告",
+            "工具": "vision2text_gen",
+            "输入": "视频路径 + 前序分析 + prompt",
+            "输出": "分类报告（直接观察/合理推断/无法推断）",
+            "目的": "区分直接观察、合理推断、无法推断的内容",
+            "依赖": [3]
+          },
+          {
+            "步骤": 5,
+            "描述": "匹配选项生成答案",
+            "工具": "vision2text_gen",
+            "输入": "候选陈述列表 + 推理报告 + prompt",
+            "输出": "每个陈述是否被支持的判断及理由",
+            "目的": "评估每个候选陈述，判断是否被视频支持",
+            "依赖": [4]
+          }
+        ],
+        "工具链": "vision2text_gen → video_timestamp_analysis → main_object_analysis → vision2text_gen ×2"
+      },
+      "plan_output": {
+        "task_analysis": "Need to infer which statement(s) are supported by the video content. Since the candidate statements are not provided, first extract a thorough understanding of the video (global + key timestamps), then map observations to the statement options once they are available (or request them). Use video understanding workflows to produce structured, timestamped evidence for inference.",
+        "execution_plan": {
+          "total_steps": 5,
+          "steps": [
+            {
+              "step_number": 1,
+              "action_description": "Obtain an overall, detailed description of the entire video (scene, actors, actions, setting, notable events) to establish baseline understanding for later inference.",
+              "tool": {
+                "name": "vision2text_gen",
+                "purpose": "Generate a comprehensive natural-language summary of the video content.",
+                "input_requirements": [
+                  "video_path: /root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/tS4a6I4-Yjo.mp4",
+                  "prompt: \"Provide a detailed summary of the full video: setting, main subjects, actions, sequence of events, any text on screen, and anything that implies causes, intentions, or outcomes. Include uncertainties explicitly.\""
+                ]
+              },
+              "dependencies": [],
+              "status": "ongoing",
+              "output": ""
+            },
+            {
+              "step_number": 2,
+              "action_description": "Identify key moments across the video by analyzing several representative timestamps (early/middle/late) to gather timestamped evidence supporting inferable statements.",
+              "tool": {
+                "name": "video_timestamp_analysis",
+                "purpose": "Extract frames at chosen timestamps and produce detailed captions per moment for evidence-based inference.",
+                "input_requirements": [
+                  "video_path: output video from step 1 (same path)",
+                  "timestamps: choose 6-10 timestamps spanning the video (e.g., 5%, 15%, 30%, 50%, 70%, 85%, 95% of duration); if duration unknown, start with 10s, 30s, 60s, 90s, 120s, 180s, 240s, 300s (adjust after step 1 summary)",
+                  "enable_instance_segmentation: true (if available) for richer object-level details"
+                ]
+              },
+              "dependencies": [
+                1
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 3,
+              "action_description": "If the question’s answer depends on a particular entity (e.g., a person, vehicle, animal, object), run targeted main-object analysis to verify attributes and actions over time.",
+              "tool": {
+                "name": "main_object_analysis",
+                "purpose": "Track and describe a specified primary object throughout the video for stronger inference (appearance, behavior, interactions).",
+                "input_requirements": [
+                  "video_path: /root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/tS4a6I4-Yjo.mp4",
+                  "label: derived from step 1-2 (e.g., \"man\", \"woman\", \"dog\", \"car\", etc.)",
+                  "prompt_for_analysis: \"Describe this object’s attributes, actions, interactions, and any changes over time with supporting timestamps.\""
+                ]
+              },
+              "dependencies": [
+                2
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 4,
+              "action_description": "Convert the gathered evidence into a set of explicit inferences (what can be reasonably concluded vs. what is only visible vs. what is uncertain).",
+              "tool": {
+                "name": "vision2text_gen",
+                "purpose": "Synthesize an inference-focused report grounded in observations and timestamps.",
+                "input_requirements": [
+                  "video_path: /root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/tS4a6I4-Yjo.mp4",
+                  "prompt: \"Using your understanding of the video plus the timestamped descriptions collected, list: (1) directly observed facts, (2) plausible inferences supported by evidence, (3) things that cannot be inferred. When possible, cite timestamps.\""
+                ]
+              },
+              "dependencies": [
+                3
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 5,
+              "action_description": "Match the inferences to the provided answer choices and select which statement(s) are supported by the video; if choices are missing, request them and then decide using the evidence report.",
+              "tool": {
+                "name": "vision2text_gen",
+                "purpose": "Final decision step: evaluate each candidate statement against the video evidence and pick supported ones with justification.",
+                "input_requirements": [
+                  "video_path: /root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/tS4a6I4-Yjo.mp4",
+                  "prompt: \"Given these candidate statements: <PASTE_OPTIONS_HERE>. For each option, state Supported/Not Supported/Unclear based only on video evidence and the timestamped analysis; provide 1-2 sentence justification with timestamps.\""
+                ]
+              },
+              "dependencies": [
+                4
+              ],
+              "status": "pending",
+              "output": ""
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "videomme_688_3",
+      "plan_summary": {
+        "任务": "识别视频中哪个科技产品不是软硬件结合的",
+        "执行步骤": [
+          {
+            "步骤": 1,
+            "描述": "整体理解视频内容",
+            "工具": "vision2text_gen",
+            "输入": "视频路径 + prompt（列出所有科技产品）",
+            "输出": "视频摘要及产品列表",
+            "目的": "列出所有展示的科技产品及简要描述"
+          },
+          {
+            "步骤": 2,
+            "描述": "分析早期时间戳帧（5秒）",
+            "工具": "video_timestamp_analysis",
+            "输入": "视频路径 + timestamp=5s + prompt",
+            "输出": "该帧产品信息及屏幕文字",
+            "目的": "捕捉首批产品介绍及屏幕标题",
+            "依赖": [1]
+          },
+          {
+            "步骤": 3,
+            "描述": "分析中期时间戳帧（30秒）",
+            "工具": "video_timestamp_analysis",
+            "输入": "视频路径 + timestamp=30s + prompt",
+            "输出": "该帧产品信息及类型判断",
+            "目的": "识别产品类型（硬件/软件/服务）",
+            "依赖": [2]
+          },
+          {
+            "步骤": 4,
+            "描述": "分析后期时间戳帧（55秒）",
+            "工具": "video_timestamp_analysis",
+            "输入": "视频路径 + timestamp=55s + prompt",
+            "输出": "该帧产品信息及列表",
+            "目的": "捕捉剩余产品及总结列表",
+            "依赖": [3]
+          },
+          {
+            "步骤": 5,
+            "描述": "聚焦分析关键产品对象（可选）",
+            "工具": "main_object_analysis",
+            "输入": "视频路径 + label（产品名）+ prompt",
+            "输出": "产品的精确分类描述",
+            "目的": "精确确认产品是纯硬件/纯软件/软硬结合",
+            "依赖": [4]
+          },
+          {
+            "步骤": 6,
+            "描述": "综合分类生成答案",
+            "工具": "vision2text_gen",
+            "输入": "视频路径 + 前序分析 + prompt",
+            "输出": "每个产品分类及最终答案",
+            "目的": "分类所有产品，指出哪个不是软硬件结合",
+            "依赖": [5]
+          }
+        ],
+        "工具链": "vision2text_gen → video_timestamp_analysis ×3 → main_object_analysis → vision2text_gen"
+      },
+      "plan_output": {
+        "task_analysis": "Video understanding task: determine which tech product presented is NOT a combination of software and hardware. Approach: (1) get a high-level description of the video to identify all presented products, (2) extract detailed descriptions at multiple timestamps where products appear, (3) compile a candidate product list and infer which is purely hardware or purely software, then answer.",
+        "execution_plan": {
+          "total_steps": 6,
+          "steps": [
+            {
+              "step_number": 1,
+              "action_description": "Get an overall understanding of the video and list all tech products presented (names + brief descriptions) to form initial candidates.",
+              "tool": {
+                "name": "vision2text_gen",
+                "purpose": "Generate a high-level caption/summary of the video with emphasis on any products shown or mentioned.",
+                "input_requirements": [
+                  "video_path: /root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/j0J-favyUeQ.mp4",
+                  "prompt: 'Summarize this video and list every tech product/device/app/service that is presented, demonstrated, or discussed. Provide product names if visible and what each one does.'"
+                ]
+              },
+              "dependencies": [],
+              "status": "ongoing",
+              "output": ""
+            },
+            {
+              "step_number": 2,
+              "action_description": "Analyze an early timestamp frame to capture the first product introduction(s) and any on-screen titles/labels.",
+              "tool": {
+                "name": "video_timestamp_analysis",
+                "purpose": "Extract and describe the frame at a chosen early time to identify products and text overlays.",
+                "input_requirements": [
+                  "video_path: /root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/j0J-favyUeQ.mp4",
+                  "timestamp: 5 (seconds)",
+                  "prompt: 'Identify any tech products shown or named on-screen in this frame (devices, apps, services, logos, packaging, model names).'",
+                  "enable_instance_segmentation: true (if available in workflow)"
+                ]
+              },
+              "dependencies": [
+                1
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 3,
+              "action_description": "Analyze a mid timestamp frame where product demos or comparisons typically occur to capture additional products and context.",
+              "tool": {
+                "name": "video_timestamp_analysis",
+                "purpose": "Extract and describe a mid-video frame to identify products and their nature (hardware/software/service).",
+                "input_requirements": [
+                  "video_path: /root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/j0J-favyUeQ.mp4",
+                  "timestamp: 30 (seconds)",
+                  "prompt: 'What tech product(s) are being presented here? Capture any model names, brand names, and whether it appears to be hardware, software, or a service.'",
+                  "enable_instance_segmentation: true (if available in workflow)"
+                ]
+              },
+              "dependencies": [
+                2
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 4,
+              "action_description": "Analyze a later timestamp frame to capture any additional products, concluding summaries, or lists that may include the answer.",
+              "tool": {
+                "name": "video_timestamp_analysis",
+                "purpose": "Extract and describe a later frame to identify remaining products and on-screen lists/graphics.",
+                "input_requirements": [
+                  "video_path: /root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/j0J-favyUeQ.mp4",
+                  "timestamp: 55 (seconds) (or near end if video is shorter/longer; adjust after step 1 summary)",
+                  "prompt: 'Identify all products mentioned/shown in this frame and any on-screen text lists or rankings. Note which are hardware-only or software-only.'",
+                  "enable_instance_segmentation: true (if available in workflow)"
+                ]
+              },
+              "dependencies": [
+                3
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 5,
+              "action_description": "If product names are ambiguous, isolate the main object(s) (e.g., a device) for a focused description to confirm what it is.",
+              "tool": {
+                "name": "main_object_analysis",
+                "purpose": "Segment and describe a suspected key product object to disambiguate model/type when the global captions are unclear.",
+                "input_requirements": [
+                  "video_path: /root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/j0J-favyUeQ.mp4",
+                  "label: '<to be filled after steps 1-4, e.g., the most prominent device name like \"smartphone\", \"laptop\", \"headset\", or a brand/model>'",
+                  "prompt: 'Describe this object precisely (brand/model if possible) and whether it is purely hardware, purely software, or a hardware+software ecosystem product.'"
+                ]
+              },
+              "dependencies": [
+                4
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 6,
+              "action_description": "Synthesize findings: enumerate all presented products and select the one that is not a combination of software and hardware (i.e., software-only or hardware-only), then provide the final answer with brief justification.",
+              "tool": {
+                "name": "vision2text_gen",
+                "purpose": "Use a final targeted query over the whole video to validate the classification and extract the exact product name to answer confidently.",
+                "input_requirements": [
+                  "video_path: /root/paddlejob/workspace/env_run/bwh/lj/long-video/datasets/cleaned/Video-MME/videos/j0J-favyUeQ.mp4",
+                  "prompt: 'List each tech product presented and classify each as (1) hardware-only, (2) software-only, or (3) hardware+software combination. Then state which product is NOT a combination of software and hardware and quote/describe the moment it appears.'"
+                ]
+              },
+              "dependencies": [
+                5
+              ],
+              "status": "pending",
+              "output": ""
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
