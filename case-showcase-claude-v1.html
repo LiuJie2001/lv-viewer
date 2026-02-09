@@ -871,7 +871,7 @@
 
                     const deps = (tool.dependencies || []).join(', ') || '—';
                     const optDeps = (tool.optional_dependencies || []).length > 0
-                        ? `<br><span style="color:var(--color-text-muted);font-style:italic">可选: ${tool.optional_dependencies.join(', ')}</span>` : '';
+                        ? `<span style="color:var(--color-text-muted);font-style:italic;margin-left:0.5em">（可选: ${tool.optional_dependencies.join(', ')}）</span>` : '';
 
                     // 来源标签：方法简称：原工具名称
                     const sourceBadges = info ? info.sources.map(src =>
