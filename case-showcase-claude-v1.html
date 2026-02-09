@@ -1,0 +1,1275 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plan 轨迹展示 — 分层 21 工具集 × Claude</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <!-- Markdown 渲染 -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- JSON 树视图 -->
+    <script src="https://cdn.jsdelivr.net/npm/renderjson@1.4.0/renderjson.js"></script>
+
+    <style>
+        :root {
+            --color-text: #1a1a1a;
+            --color-text-secondary: #555;
+            --color-text-muted: #888;
+            --color-bg: #ffffff;
+            --color-bg-alt: #f8f9fa;
+            --color-border: #e5e5e5;
+            --color-accent: #2563eb;
+            --color-accent-light: #dbeafe;
+
+            --color-visual: #4CAF50;
+            --color-temporal: #2196F3;
+            --color-reasoning: #F44336;
+            --color-spatial: #FF9800;
+            --color-audiovisual: #9C27B0;
+
+            --font-serif: 'Crimson Pro', 'Noto Sans SC', serif;
+            --font-sans: 'Noto Sans SC', -apple-system, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: var(--font-sans);
+            font-size: 16px;
+            line-height: 1.6;
+            color: var(--color-text);
+            background: var(--color-bg);
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+            border-bottom: 1px solid var(--color-border);
+            padding: 2.5rem 2rem 2rem;
+            text-align: center;
+        }
+        .header-tag {
+            display: inline-block;
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--color-accent);
+            background: var(--color-accent-light);
+            padding: 0.25rem 0.75rem;
+            border-radius: 2rem;
+            margin-bottom: 1rem;
+        }
+        .header h1 {
+            font-family: var(--font-serif);
+            font-size: clamp(1.5rem, 3.5vw, 2.25rem);
+            font-weight: 700;
+            color: var(--color-text);
+            margin-bottom: 0.5rem;
+        }
+        .header .subtitle {
+            font-size: 0.95rem;
+            color: var(--color-text-secondary);
+        }
+
+        /* Main */
+        .main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem 4rem;
+        }
+
+        /* Section */
+        .section { margin-bottom: 3rem; }
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--color-text);
+        }
+        .section-number {
+            font-family: var(--font-serif);
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--color-accent);
+            line-height: 1;
+        }
+        .section-title {
+            font-family: var(--font-serif);
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+        .section-count {
+            margin-left: auto;
+            font-size: 0.875rem;
+            color: var(--color-text-muted);
+        }
+
+        /* 概述文字 */
+        .overview-text {
+            font-size: 0.9rem;
+            color: var(--color-text-secondary);
+            line-height: 1.7;
+            margin-bottom: 1.5rem;
+        }
+        .overview-text strong { color: var(--color-text); }
+
+        /* ========== 工具表格 ========== */
+        .tool-table-container {
+            border: 1px solid var(--color-border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .tool-layer-group {}
+        .tool-layer-header {
+            padding: 0.5rem 1rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .tool-layer-header .layer-badge {
+            background: rgba(255,255,255,0.25);
+            padding: 0.1rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.7rem;
+        }
+        /* 层级渐变色 */
+        .tool-layer-header[data-layer="1"] { background: #64748b; }
+        .tool-layer-header[data-layer="2"] { background: #6366f1; }
+        .tool-layer-header[data-layer="3"] { background: #0891b2; }
+        .tool-layer-header[data-layer="4"] { background: #059669; }
+        .tool-layer-header[data-layer="5"] { background: #d97706; }
+        .tool-layer-header[data-layer="6"] { background: #dc2626; }
+
+        .tool-row {
+            display: grid;
+            grid-template-columns: 180px 1fr;
+            border-bottom: 1px solid var(--color-border);
+            font-size: 0.8rem;
+        }
+        .tool-row:last-child { border-bottom: none; }
+        .tool-row-name {
+            padding: 0.6rem 0.75rem;
+            font-family: var(--font-mono);
+            font-weight: 600;
+            font-size: 0.75rem;
+            color: var(--color-accent);
+            background: var(--color-bg-alt);
+            border-right: 1px solid var(--color-border);
+            display: flex;
+            align-items: flex-start;
+            word-break: break-all;
+        }
+        .tool-row-details {
+            padding: 0.6rem 0.75rem;
+        }
+        .tool-detail-line {
+            margin-bottom: 0.3rem;
+            line-height: 1.5;
+        }
+        .tool-detail-line:last-child { margin-bottom: 0; }
+        .tool-detail-label {
+            color: var(--color-text-muted);
+            font-weight: 500;
+            font-size: 0.7rem;
+            min-width: 45px;
+            display: inline-block;
+        }
+        .tool-detail-value {
+            color: var(--color-text-secondary);
+            font-size: 0.78rem;
+        }
+        .tool-row-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.2rem;
+            margin-top: 0.3rem;
+        }
+
+        /* 能力标签 */
+        .ability-tag {
+            display: inline-block;
+            padding: 0.1rem 0.35rem;
+            border-radius: 3px;
+            font-size: 0.65rem;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        .ability-tag[data-ability="visual_perception"] { background: rgba(76, 175, 80, 0.15); color: #2e7d32; }
+        .ability-tag[data-ability="temporal_dynamics"] { background: rgba(33, 150, 243, 0.15); color: #1565c0; }
+        .ability-tag[data-ability="high_level_reasoning"] { background: rgba(244, 67, 54, 0.15); color: #c62828; }
+        .ability-tag[data-ability="spatial_object_dynamics"] { background: rgba(255, 152, 0, 0.15); color: #e65100; }
+        .ability-tag[data-ability="audiovisual_joint"] { background: rgba(156, 39, 176, 0.15); color: #6a1b9a; }
+
+        .source-badge {
+            display: inline-block;
+            padding: 0.1rem 0.35rem;
+            border-radius: 3px;
+            font-size: 0.65rem;
+            font-weight: 500;
+            background: rgba(37, 99, 235, 0.08);
+            color: var(--color-accent);
+            white-space: nowrap;
+        }
+
+        /* ========== 实验设定面板 ========== */
+        .setup-desc {
+            font-size: 0.85rem;
+            color: var(--color-text-secondary);
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+        .setup-desc code {
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            background: var(--color-bg-alt);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            border: 1px solid var(--color-border);
+        }
+
+        .prompt-panel {
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            overflow: hidden;
+            margin-bottom: 0.75rem;
+        }
+        .prompt-panel-header {
+            background: var(--color-bg-alt);
+            padding: 0.6rem 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--color-text-secondary);
+        }
+        .prompt-panel-header:hover { background: #eef2ff; }
+        .prompt-panel-toggle {
+            font-size: 0.75rem;
+            color: var(--color-accent);
+        }
+        .prompt-panel-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            padding: 0 1rem;
+            font-size: 0.82rem;
+            line-height: 1.6;
+        }
+        .prompt-panel-body.expanded {
+            max-height: none;
+            padding: 1rem;
+        }
+        .prompt-panel-body h1,
+        .prompt-panel-body h2,
+        .prompt-panel-body h3,
+        .prompt-panel-body h4 {
+            font-family: var(--font-serif);
+            margin: 1rem 0 0.5rem;
+        }
+        .prompt-panel-body h1 { font-size: 1.1rem; }
+        .prompt-panel-body h2 { font-size: 1rem; }
+        .prompt-panel-body h3 { font-size: 0.9rem; }
+        .prompt-panel-body h4 { font-size: 0.85rem; }
+        .prompt-panel-body ul, .prompt-panel-body ol {
+            padding-left: 1.5rem;
+            margin: 0.5rem 0;
+        }
+        .prompt-panel-body li { margin-bottom: 0.25rem; font-size: 0.82rem; }
+        .prompt-panel-body p { margin-bottom: 0.5rem; }
+        .prompt-panel-body hr { border: none; border-top: 1px solid var(--color-border); margin: 1rem 0; }
+        .prompt-panel-body code {
+            font-family: var(--font-mono);
+            font-size: 0.78rem;
+            background: var(--color-bg-alt);
+            padding: 0.1rem 0.3rem;
+            border-radius: 2px;
+        }
+
+        /* 提示词 JSON 块 */
+        .prompt-json-block {
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            margin: 0.75rem 0;
+            overflow: hidden;
+        }
+        .prompt-json-block .json-content {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .prompt-json-block .renderjson {
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            line-height: 1.5;
+        }
+        .prompt-json-block .renderjson a {
+            text-decoration: none;
+            color: var(--color-accent);
+        }
+
+        /* ========== Case 卡片 ========== */
+        .case-card {
+            border: 1px solid var(--color-border);
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+        }
+        .case-header {
+            background: var(--color-bg-alt);
+            padding: 0.75rem 1.25rem;
+            border-bottom: 1px solid var(--color-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .case-header-left {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .case-icon { font-size: 1.1rem; }
+        .case-id { font-weight: 600; font-size: 1rem; }
+        .case-header-right {
+            display: flex;
+            gap: 0.75rem;
+        }
+        .case-link {
+            color: var(--color-accent);
+            text-decoration: none;
+            font-size: 1.1rem;
+            transition: transform 0.2s;
+        }
+        .case-link:hover { transform: scale(1.1); }
+
+        .case-body { padding: 1.25rem; }
+
+        .case-info-section { margin-bottom: 1.25rem; }
+        .case-info-grid {
+            display: grid;
+            grid-template-columns: 180px 180px 1fr;
+            gap: 1px;
+            background: var(--color-border);
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        .case-info-cell {
+            background: var(--color-bg);
+            padding: 0.75rem 1rem;
+        }
+        .case-info-label {
+            font-size: 0.75rem;
+            color: var(--color-text-muted);
+            margin-bottom: 0.25rem;
+            font-weight: 500;
+        }
+        .case-info-value { font-size: 0.85rem; color: var(--color-text); }
+        .case-info-field { display: flex; margin-bottom: 0.35rem; }
+        .case-info-field:last-child { margin-bottom: 0; }
+        .case-info-field-name {
+            color: var(--color-text-muted);
+            font-size: 0.8rem;
+            min-width: 75px;
+            flex-shrink: 0;
+        }
+        .case-info-field-value { color: var(--color-text); font-weight: 500; }
+        .case-question-cell { grid-row: span 2; }
+        .case-question { font-weight: 600; margin-bottom: 0.75rem; line-height: 1.5; }
+        .case-options {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+        }
+        .case-option {
+            font-size: 0.85rem;
+            padding: 0.25rem 0.5rem;
+            background: var(--color-bg-alt);
+            border-radius: 4px;
+        }
+        .case-option.correct {
+            background: rgba(76, 175, 80, 0.15);
+            font-weight: 500;
+        }
+        .case-option.correct::after { content: " ✓"; color: var(--color-visual); }
+
+        /* 推理 + 字幕 */
+        .case-reasoning-section { margin-bottom: 1.25rem; }
+        .reasoning-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        .reasoning-column {
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        .reasoning-header {
+            background: var(--color-bg-alt);
+            padding: 0.5rem 0.75rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--color-text-secondary);
+            border-bottom: 1px solid var(--color-border);
+        }
+        .reasoning-content {
+            padding: 0.75rem;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        .reasoning-content.placeholder {
+            color: var(--color-text-muted);
+            font-style: italic;
+        }
+
+        /* ========== Plan 区 ========== */
+        .plan-comparison-header {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--color-text-secondary);
+            margin: 0.75rem 0 0.5rem;
+            padding-bottom: 0.35rem;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .plan-column {
+            border: 2px solid #7ba3d4;
+            border-radius: 6px;
+            overflow: hidden;
+            background: #f8faff;
+        }
+        .plan-column-header {
+            padding: 0.5rem 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #4b6cb7;
+            background: #4b6cb7;
+        }
+        .plan-column-title-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.1rem;
+        }
+        .plan-column-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #fff;
+        }
+        .plan-column-model {
+            font-size: 0.7rem;
+            color: rgba(255,255,255,0.7);
+        }
+
+        .plan-view-toggle {
+            display: flex;
+            gap: 0;
+            border: 1px solid rgba(255,255,255,0.4);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .plan-view-btn {
+            padding: 0.15rem 0.4rem;
+            font-size: 0.65rem;
+            border: none;
+            background: var(--color-bg);
+            color: var(--color-text-muted);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .plan-view-btn.active {
+            background: var(--color-accent);
+            color: white;
+        }
+
+        .plan-column-body {
+            padding: 0.75rem;
+            max-height: 600px;
+            overflow-y: auto;
+            font-size: 0.8rem;
+        }
+
+        /* 任务分析 */
+        .plan-task-analysis {
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--color-border);
+            font-size: 0.8rem;
+            color: var(--color-text-secondary);
+            line-height: 1.5;
+        }
+        .plan-task-analysis-label {
+            font-weight: 600;
+            color: var(--color-text);
+            margin-bottom: 0.25rem;
+            display: block;
+            font-size: 0.75rem;
+        }
+
+        /* Step 卡片 */
+        .plan-steps-header {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--color-text);
+            margin-bottom: 0.5rem;
+        }
+        .plan-step-card {
+            margin-bottom: 0.5rem;
+            background: var(--color-bg-alt);
+            border-radius: 4px;
+            border-left: 3px solid var(--color-accent);
+            overflow: hidden;
+        }
+        .plan-step-card-header {
+            padding: 0.4rem 0.5rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .plan-step-card-header:hover { background: rgba(37, 99, 235, 0.04); }
+        .plan-step-card-title {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            margin-bottom: 0.2rem;
+        }
+        .plan-step-num {
+            background: var(--color-accent);
+            color: white;
+            width: 18px; height: 18px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+        .plan-step-tool-name {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--color-accent);
+        }
+        .plan-step-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.2rem;
+            margin-left: 26px;
+            margin-bottom: 0.2rem;
+        }
+        .plan-step-desc-text {
+            margin-left: 26px;
+            font-size: 0.75rem;
+            color: var(--color-text-secondary);
+        }
+        .plan-step-toggle {
+            margin-left: 26px;
+            font-size: 0.7rem;
+            color: var(--color-accent);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.2rem;
+        }
+        .plan-step-card-details {
+            display: none;
+            margin: 0 0.5rem 0.5rem;
+            padding: 0.4rem 0.5rem;
+            margin-left: 26px;
+            background: var(--color-bg);
+            border-radius: 4px;
+            border: 1px dashed var(--color-border);
+            font-size: 0.7rem;
+        }
+        .plan-step-card-details.expanded { display: block; }
+        .plan-step-detail-row {
+            display: flex;
+            margin-bottom: 0.2rem;
+        }
+        .plan-step-detail-row:last-child { margin-bottom: 0; }
+        .plan-step-detail-label {
+            color: var(--color-text-muted);
+            min-width: 60px;
+            flex-shrink: 0;
+            font-weight: 500;
+        }
+        .plan-step-detail-value {
+            color: var(--color-text-secondary);
+            word-break: break-word;
+        }
+        .plan-step-dep-label {
+            margin-left: 26px;
+            font-size: 0.65rem;
+            color: var(--color-text-muted);
+        }
+
+        /* Source tag (in plan steps) */
+        .source-tag {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.1rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            background: rgba(37, 99, 235, 0.08);
+            color: var(--color-accent);
+            white-space: nowrap;
+        }
+
+        /* Plan ability tag (in plan steps) */
+        .plan-ability-tag {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.1rem 0.35rem;
+            border-radius: 3px;
+            font-size: 0.65rem;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        .plan-ability-tag[data-ability="visual_perception"] { background: rgba(76, 175, 80, 0.15); color: #2e7d32; }
+        .plan-ability-tag[data-ability="temporal_dynamics"] { background: rgba(33, 150, 243, 0.15); color: #1565c0; }
+        .plan-ability-tag[data-ability="high_level_reasoning"] { background: rgba(244, 67, 54, 0.15); color: #c62828; }
+        .plan-ability-tag[data-ability="spatial_object_dynamics"] { background: rgba(255, 152, 0, 0.15); color: #e65100; }
+        .plan-ability-tag[data-ability="audiovisual_joint"] { background: rgba(156, 39, 176, 0.15); color: #6a1b9a; }
+
+        /* 工具链 */
+        .plan-tool-chain-summary {
+            margin-top: 0.75rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid var(--color-border);
+            font-size: 0.7rem;
+            color: var(--color-text-muted);
+        }
+        .plan-tool-chain-summary .label { font-weight: 500; margin-right: 0.25rem; }
+
+        /* JSON 视图 */
+        .plan-json-view { display: none; }
+        .plan-json-view.active { display: block; }
+        .plan-structured-view.hidden { display: none; }
+        .plan-json-view .renderjson {
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            line-height: 1.5;
+        }
+        .plan-json-view .renderjson a { text-decoration: none; color: var(--color-accent); }
+
+        /* JSON 工具栏 */
+        .json-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.3rem 0.6rem;
+            background: var(--color-bg-alt);
+            border-bottom: 1px solid var(--color-border);
+            font-size: 0.7rem;
+        }
+        .json-toolbar button {
+            padding: 0.15rem 0.4rem;
+            border: 1px solid var(--color-border);
+            border-radius: 3px;
+            background: var(--color-bg);
+            color: var(--color-text-secondary);
+            cursor: pointer;
+            font-size: 0.65rem;
+            transition: all 0.2s;
+        }
+        .json-toolbar button:hover {
+            background: var(--color-accent-light);
+            border-color: var(--color-accent);
+            color: var(--color-accent);
+        }
+        .json-toolbar button.active {
+            background: var(--color-accent);
+            color: white;
+            border-color: var(--color-accent);
+        }
+        .json-toolbar input[type="range"] {
+            width: 80px; height: 4px;
+            cursor: pointer;
+            accent-color: var(--color-accent);
+        }
+        .json-toolbar .level-label {
+            color: var(--color-text-muted);
+            font-family: var(--font-mono);
+            min-width: 28px;
+        }
+        .json-content { padding: 0.5rem; }
+        .json-wrap .renderjson, .json-wrap .json-content {
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        /* ========== 响应式 ========== */
+        @media (max-width: 900px) {
+            .case-info-grid { grid-template-columns: 1fr; }
+            .case-question-cell { grid-row: auto; }
+            .reasoning-grid { grid-template-columns: 1fr; }
+            .tool-row { grid-template-columns: 1fr; }
+            .tool-row-name { border-right: none; border-bottom: 1px solid var(--color-border); }
+        }
+    </style>
+</head>
+
+<body>
+    <header class="header">
+        <div class="header-tag">Plan Trajectory Showcase</div>
+        <h1>长视频理解 Plan 轨迹展示</h1>
+        <p class="subtitle">分层 21 工具集 × Claude Opus 4.6</p>
+    </header>
+
+    <main class="main">
+        <!-- 第一部分：工具集介绍 -->
+        <section class="section" id="tool-architecture">
+            <div class="section-header">
+                <span class="section-number">01</span>
+                <span class="section-title">工具集介绍</span>
+            </div>
+            <div class="overview-text">
+                <p>本实验使用的工具集整合自 <a href="index.html#papers-section" target="_blank" style="color:var(--color-accent);text-decoration:none;border-bottom:1px dashed var(--color-accent)"><strong>11 篇长视频理解论文</strong></a>的工具设计，借助 Claude Code 进行系统化整理、合并相似功能后，提取出 <strong>21 个核心工具</strong>，按依赖关系组织成 <strong>6 层架构</strong>。核心设计原则：功能相同的工具合并为统一接口（如 DVD 的 Clip Search 和 HAVEN 的 Segment Caption Search）；每个工具保留来源论文和实现方式；区分必需依赖和可选依赖；Plan Agent 总是规划所有前置步骤，不假设预处理已完成。</p>
+            </div>
+            <div class="prompt-panel">
+                <div class="prompt-panel-header" onclick="togglePromptPanel(this)">
+                    <span>21 个工具详细信息（点击展开）</span>
+                    <span class="prompt-panel-toggle">展开 ▼</span>
+                </div>
+                <div class="prompt-panel-body">
+                    <div class="tool-table-container" id="tool-table"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 第二部分：实验设定 -->
+        <section class="section" id="experiment-setup">
+            <div class="section-header">
+                <span class="section-number">02</span>
+                <span class="section-title">实验设定</span>
+            </div>
+            <div class="setup-desc">
+                <p>使用 <strong>claude-opus-4-6</strong> 模型，仅生成 Plan（不执行），测试模型能否根据工具集为长视频理解任务做出合理的执行规划。</p>
+                <p>User Prompt: <code>Analyze the video at ./video.mp4 and answer the question: {question}</code></p>
+            </div>
+            <div class="prompt-panel">
+                <div class="prompt-panel-header" onclick="togglePromptPanel(this)">
+                    <span>System Prompt（点击展开查看完整内容）</span>
+                    <span class="prompt-panel-toggle">展开 ▼</span>
+                </div>
+                <div class="prompt-panel-body" id="system-prompt-body"></div>
+            </div>
+        </section>
+
+        <!-- 第三部分：Case 结果 -->
+        <section class="section" id="case-results">
+            <div class="section-header">
+                <span class="section-number">03</span>
+                <span class="section-title">Case 结果</span>
+                <span class="section-count" id="case-count"></span>
+            </div>
+            <div id="cases-container"></div>
+        </section>
+    </main>
+
+    <script>
+        // ==================== 全局变量 ====================
+        let data = null;           // data.json
+        let toolsData = null;      // long_video_understanding_tools.json
+        let experimentResult = null; // exp_001_baseline results map
+        let systemPromptText = '';
+        let toolLookup = new Map();
+
+        const LAYER_NAMES = {
+            1: 'Video Preprocessing',
+            2: 'Content Analysis',
+            3: 'Indexing & Aggregation',
+            4: 'Global Understanding',
+            5: 'Retrieval & Browsing',
+            6: 'Detailed Inspection & Processing'
+        };
+
+        const abilityNames = {
+            'visual_perception': '视觉感知',
+            'temporal_dynamics': '时间动态理解',
+            'high_level_reasoning': '高层推理',
+            'spatial_object_dynamics': '空间与物体动态',
+            'audiovisual_joint': '视听联合理解'
+        };
+
+        function getToolShortName(fullName) {
+            if (!fullName) return '';
+            return fullName.includes('-') ? fullName.split('-').slice(1).join('-').trim() : fullName;
+        }
+
+        // ==================== 工具查找表 ====================
+        function buildToolLookup() {
+            toolLookup = new Map();
+            if (toolsData && toolsData.tools) {
+                for (const tool of toolsData.tools) {
+                    const sources = (tool.sources || []).map(s => {
+                        const paper = data.papers.find(p => p.name === s.paper);
+                        const paperTool = paper?.tools?.find(t => t.name === s.tool);
+                        return {
+                            paper: s.paper,
+                            paperId: paper?.id || '',
+                            originalTool: s.tool,
+                            shortName: getToolShortName(s.tool),
+                            abilities: paperTool?.abilities || []
+                        };
+                    });
+                    toolLookup.set(tool.name, { sources, layer: tool.layer });
+                }
+            }
+        }
+
+        // ==================== 第一部分：工具表格 ====================
+        function renderToolTable() {
+            const container = document.getElementById('tool-table');
+            if (!toolsData || !toolsData.tools) return;
+
+            // 按层分组
+            const layers = {};
+            for (const tool of toolsData.tools) {
+                if (!layers[tool.layer]) layers[tool.layer] = [];
+                layers[tool.layer].push(tool);
+            }
+
+            let html = '';
+            for (const layerNum of Object.keys(layers).sort((a, b) => a - b)) {
+                const tools = layers[layerNum];
+                html += `<div class="tool-layer-group">
+                    <div class="tool-layer-header" data-layer="${layerNum}">
+                        <span class="layer-badge">Layer ${layerNum}</span>
+                        <span>${LAYER_NAMES[layerNum] || ''}</span>
+                        <span style="margin-left:auto; font-size:0.65rem; opacity:0.8">${tools.length} 个工具</span>
+                    </div>`;
+
+                for (const tool of tools) {
+                    // 从 toolLookup 获取合并后的能力
+                    const info = toolLookup.get(tool.name);
+                    const allAbilities = new Set();
+                    const sourcePapers = [];
+                    if (info) {
+                        for (const src of info.sources) {
+                            sourcePapers.push(src.paper);
+                            src.abilities.forEach(a => allAbilities.add(a));
+                        }
+                    }
+
+                    const deps = (tool.dependencies || []).join(', ') || '—';
+                    const optDeps = (tool.optional_dependencies || []).length > 0
+                        ? `<br><span style="color:var(--color-text-muted);font-style:italic">可选: ${tool.optional_dependencies.join(', ')}</span>` : '';
+
+                    // 来源标签：方法简称：原工具名称
+                    const sourceBadges = info ? info.sources.map(src =>
+                        `<span class="source-badge" title="${src.paper}: ${src.originalTool}">${src.paper}: ${src.shortName}</span>`
+                    ).join('') : '';
+
+                    html += `<div class="tool-row">
+                        <div class="tool-row-name">${tool.name}</div>
+                        <div class="tool-row-details">
+                            <div class="tool-detail-line"><span class="tool-detail-label">描述</span><span class="tool-detail-value">${tool.description || '-'}</span></div>
+                            <div class="tool-detail-line"><span class="tool-detail-label">输入</span><span class="tool-detail-value">${tool.input || '-'}</span></div>
+                            <div class="tool-detail-line"><span class="tool-detail-label">输出</span><span class="tool-detail-value">${tool.output || '-'}</span></div>
+                            <div class="tool-detail-line"><span class="tool-detail-label">依赖</span><span class="tool-detail-value">${deps}${optDeps}</span></div>
+                            <div class="tool-row-tags">
+                                ${sourceBadges}
+                                ${[...allAbilities].map(a => `<span class="ability-tag" data-ability="${a}">${abilityNames[a] || a}</span>`).join('')}
+                            </div>
+                        </div>
+                    </div>`;
+                }
+                html += '</div>';
+            }
+            container.innerHTML = html;
+        }
+
+        // ==================== 第二部分：System Prompt ====================
+        function togglePromptPanel(header) {
+            const body = header.nextElementSibling;
+            const toggle = header.querySelector('.prompt-panel-toggle');
+            if (body.classList.contains('expanded')) {
+                body.classList.remove('expanded');
+                toggle.textContent = '展开 ▼';
+            } else {
+                body.classList.add('expanded');
+                toggle.textContent = '收起 ▲';
+            }
+        }
+
+        function renderSystemPrompt() {
+            const container = document.getElementById('system-prompt-body');
+            if (!systemPromptText) { container.innerHTML = '<em>暂无内容</em>'; return; }
+
+            // 先从原始文本提取 Example format JSON
+            let exampleJson = null;
+            const jsonMatch = systemPromptText.match(/Example format:\s*\n(\{[\s\S]*?\n\})\s*\n/);
+            if (jsonMatch) {
+                try { exampleJson = JSON.parse(jsonMatch[1]); } catch (e) {}
+            }
+
+            container.innerHTML = marked.parse(systemPromptText);
+            if (exampleJson) {
+                injectExampleJsonView(container, exampleJson);
+            }
+        }
+
+        function injectExampleJsonView(container, jsonData) {
+            // 找到包含 "Example format" 的元素
+            let exampleEl = null;
+            const allElements = container.querySelectorAll('p, h2, h3, h4');
+            for (const el of allElements) {
+                if (el.textContent.trim().startsWith('Example format')) {
+                    exampleEl = el;
+                    break;
+                }
+            }
+            if (!exampleEl) return;
+
+            // 移除 exampleEl 到 "Planning Updates" h2 之间被 marked 渲染出的残余元素
+            let sibling = exampleEl.nextElementSibling;
+            while (sibling) {
+                if (sibling.tagName === 'H2' && sibling.textContent.includes('Planning Updates')) break;
+                const next = sibling.nextElementSibling;
+                sibling.remove();
+                sibling = next;
+            }
+
+            // 保留 "Example format:" 标题，插入 renderjson 视图
+            exampleEl.textContent = 'Example format:';
+            const block = document.createElement('div');
+            block.className = 'prompt-json-block';
+            exampleEl.after(block);
+            initJsonView('prompt-json', block, jsonData, 'all');
+        }
+
+        // ==================== 第三部分：Case 渲染 ====================
+        function renderCases() {
+            const container = document.getElementById('cases-container');
+            container.innerHTML = '';
+            const cases = data.cases || [];
+            cases.forEach(caseItem => {
+                container.appendChild(createCaseCard(caseItem));
+            });
+            document.getElementById('case-count').textContent = `共 ${cases.length} 个 Case`;
+        }
+
+        function createCaseCard(caseItem) {
+            const card = document.createElement('div');
+            card.className = 'case-card';
+            card.id = 'case-' + caseItem.id;
+
+            const options = caseItem.options || [];
+            const answer = caseItem.answer || '';
+            const plan = experimentResult?.get(caseItem.id);
+
+            card.innerHTML = `
+                <div class="case-header">
+                    <div class="case-header-left">
+                        <span class="case-icon">🎬</span>
+                        <span class="case-id">${caseItem.id}</span>
+                    </div>
+                    <div class="case-header-right">
+                        ${caseItem.youtubeLink ? `<a href="${caseItem.youtubeLink}" target="_blank" class="case-link" title="观看视频">▶️</a>` : ''}
+                    </div>
+                </div>
+                <div class="case-body">
+                    <div class="case-info-section">
+                        <div class="case-info-grid">
+                            <div class="case-info-cell">
+                                <div class="case-info-label">分类信息</div>
+                                <div class="case-info-value">
+                                    <div class="case-info-field"><span class="case-info-field-name">Benchmark:</span><span class="case-info-field-value">${caseItem.benchmark || '-'}</span></div>
+                                    <div class="case-info-field"><span class="case-info-field-name">Domain:</span><span class="case-info-field-value">${caseItem.domain || '-'}</span></div>
+                                    <div class="case-info-field"><span class="case-info-field-name">SubCategory:</span><span class="case-info-field-value">${caseItem.subCategory || '-'}</span></div>
+                                </div>
+                            </div>
+                            <div class="case-info-cell">
+                                <div class="case-info-label">任务类型</div>
+                                <div class="case-info-value">
+                                    <div style="font-weight: 600; margin-bottom: 0.25rem;">${caseItem.taskType || '-'}</div>
+                                    <div style="font-size: 0.8rem; color: var(--color-text-muted);">${caseItem.taskTypeDesc || ''}</div>
+                                </div>
+                            </div>
+                            <div class="case-info-cell case-question-cell">
+                                <div class="case-info-label">问题与答案</div>
+                                <div class="case-info-value">
+                                    <div class="case-question">Q: ${caseItem.question || '-'}</div>
+                                    <div class="case-options">
+                                        ${options.map(opt => {
+                                            const optLetter = opt.charAt(0);
+                                            const isCorrect = optLetter === answer;
+                                            return `<div class="case-option${isCorrect ? ' correct' : ''}">${opt}</div>`;
+                                        }).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="case-reasoning-section">
+                        <div class="reasoning-grid">
+                            <div class="reasoning-column">
+                                <div class="reasoning-header">人类推理路径</div>
+                                <div class="reasoning-content">${caseItem.humanReasoningSteps || '-'}</div>
+                            </div>
+                            <div class="reasoning-column">
+                                <div class="reasoning-header">字幕内容</div>
+                                <div class="reasoning-content${caseItem.subtitle ? '' : ' placeholder'}">${caseItem.subtitle || '暂无字幕'}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="plan-comparison-header">📊 Plan 轨迹</div>
+                    <div id="plan-${caseItem.id}"></div>
+                </div>
+            `;
+
+            // 渲染 plan
+            const planContainer = card.querySelector(`#plan-${caseItem.id}`);
+            const col = createPlanColumn(plan, caseItem.id);
+            planContainer.appendChild(col);
+
+            return card;
+        }
+
+        // ==================== Plan 渲染 ====================
+        function createPlanColumn(plan, caseId) {
+            const col = document.createElement('div');
+            col.className = 'plan-column';
+            const uniqueId = `plan-${caseId}`;
+
+            col.innerHTML = `
+                <div class="plan-column-header">
+                    <div class="plan-column-title-group">
+                        <span class="plan-column-title">分层 21 工具集</span>
+                        <span class="plan-column-model">claude-opus-4-6</span>
+                    </div>
+                    <div class="plan-view-toggle">
+                        <button class="plan-view-btn active" onclick="switchPlanView('${uniqueId}', 'structured')">结构化</button>
+                        <button class="plan-view-btn" onclick="switchPlanView('${uniqueId}', 'json')">JSON</button>
+                    </div>
+                </div>
+                <div class="plan-column-body">
+                    <div class="plan-structured-view" id="structured-${uniqueId}">
+                        ${plan ? renderStructuredPlan(plan, caseId) : '<span style="color:var(--color-text-muted);font-style:italic">暂无数据</span>'}
+                    </div>
+                    <div class="plan-json-view" id="json-${uniqueId}"></div>
+                </div>
+            `;
+
+            if (plan) {
+                col._planData = plan;
+                col._uniqueId = uniqueId;
+            }
+            return col;
+        }
+
+        function renderStructuredPlan(plan, caseId) {
+            let html = '';
+            if (plan.task_analysis) {
+                html += `<div class="plan-task-analysis">
+                    <span class="plan-task-analysis-label">任务分析</span>
+                    ${plan.task_analysis}
+                </div>`;
+            }
+
+            const ep = plan.execution_plan;
+            if (ep && ep.steps && ep.steps.length > 0) {
+                html += `<div class="plan-steps-header">执行计划 (${ep.total_steps || ep.steps.length} 步)</div>`;
+                ep.steps.forEach((step, idx) => {
+                    const toolName = step.tool?.name || '';
+                    const deps = step.dependencies && step.dependencies.length > 0
+                        ? `<div class="plan-step-dep-label">依赖: ${step.dependencies.map(d => circleNum(d)).join(' ')}</div>`
+                        : '';
+
+                    html += `
+                    <div class="plan-step-card">
+                        <div class="plan-step-card-header" onclick="toggleStepDetails(this)">
+                            <div class="plan-step-card-title">
+                                <span class="plan-step-num">${step.step_number}</span>
+                                <span class="plan-step-tool-name">${toolName}</span>
+                            </div>
+                            <div class="plan-step-desc-text">${step.action_description || ''}</div>
+                            ${deps}
+                            <span class="plan-step-toggle">▾ 收起</span>
+                        </div>
+                        <div class="plan-step-card-details expanded">
+                            ${step.tool?.purpose ? `<div class="plan-step-detail-row"><span class="plan-step-detail-label">Purpose:</span><span class="plan-step-detail-value">${step.tool.purpose}</span></div>` : ''}
+                            ${step.tool?.input_requirements ? `<div class="plan-step-detail-row"><span class="plan-step-detail-label">Inputs:</span><span class="plan-step-detail-value">${step.tool.input_requirements.map(i => '&bull; ' + i).join('<br>')}</span></div>` : ''}
+                        </div>
+                    </div>`;
+                });
+
+                const toolChain = ep.steps.map(s => s.tool?.name || '?').join(' → ');
+                html += `<div class="plan-tool-chain-summary"><span class="label">工具链:</span>${toolChain}</div>`;
+            }
+            return html || '<span style="color:var(--color-text-muted);font-style:italic">暂无数据</span>';
+        }
+
+        function renderToolTags(toolName) {
+            const info = toolLookup.get(toolName);
+            if (!info) return '';
+            let html = '';
+            const allAbilities = new Set();
+            for (const src of info.sources) {
+                html += `<span class="source-tag" title="${src.paper}: ${src.originalTool}">${src.paper}: ${src.shortName}</span>`;
+                src.abilities.forEach(a => allAbilities.add(a));
+            }
+            for (const a of allAbilities) {
+                html += `<span class="plan-ability-tag" data-ability="${a}">${abilityNames[a] || a}</span>`;
+            }
+            return html;
+        }
+
+        function circleNum(n) {
+            const circles = ['⓪','①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩'];
+            return circles[n] || n;
+        }
+
+        function toggleStepDetails(header) {
+            const details = header.nextElementSibling;
+            const toggle = header.querySelector('.plan-step-toggle');
+            if (details.classList.contains('expanded')) {
+                details.classList.remove('expanded');
+                toggle.textContent = '▸ 详情';
+            } else {
+                details.classList.add('expanded');
+                toggle.textContent = '▾ 收起';
+            }
+        }
+
+        // ==================== Plan JSON 视图 ====================
+        function switchPlanView(uniqueId, view) {
+            const structured = document.getElementById(`structured-${uniqueId}`);
+            const jsonView = document.getElementById(`json-${uniqueId}`);
+            const container = structured.closest('.plan-column');
+            const btns = container.querySelectorAll('.plan-view-btn');
+
+            if (view === 'json') {
+                structured.classList.add('hidden');
+                jsonView.classList.add('active');
+                btns[0].classList.remove('active');
+                btns[1].classList.add('active');
+
+                if (!jsonView.hasChildNodes() && container._planData) {
+                    initJsonView(uniqueId, jsonView, container._planData, 2);
+                }
+            } else {
+                structured.classList.remove('hidden');
+                jsonView.classList.remove('active');
+                btns[0].classList.add('active');
+                btns[1].classList.remove('active');
+            }
+        }
+
+        // ==================== JSON 视图通用工具 ====================
+        const jsonViewRegistry = {};
+
+        function createJsonToolbar(containerId, defaultLevel) {
+            const toolbar = document.createElement('div');
+            toolbar.className = 'json-toolbar';
+            toolbar.innerHTML = `
+                <button onclick="jsonSetLevel('${containerId}', 0)">全部收起</button>
+                <button onclick="jsonSetLevel('${containerId}', 'all')">全部展开</button>
+                <input type="range" min="0" max="6" value="${defaultLevel === 'all' ? 6 : defaultLevel}" oninput="jsonSliderChange('${containerId}', this.value)">
+                <span class="level-label">Lv.${defaultLevel === 'all' ? 6 : defaultLevel}</span>
+                <button onclick="jsonToggleWrap('${containerId}', this)">换行</button>
+            `;
+            return toolbar;
+        }
+
+        function renderJsonContent(containerId, jsonData, level) {
+            const reg = jsonViewRegistry[containerId];
+            if (!reg) return;
+            reg.contentEl.innerHTML = '';
+            const showLevel = level === 'all' ? 'all' : parseInt(level);
+            renderjson.set_show_to_level(showLevel);
+            renderjson.set_icons('+', '-');
+            reg.contentEl.appendChild(renderjson(jsonData));
+            renderjson.set_show_to_level(2);
+        }
+
+        function jsonSetLevel(containerId, level) {
+            const reg = jsonViewRegistry[containerId];
+            if (!reg) return;
+            renderJsonContent(containerId, reg.data, level);
+            const slider = reg.toolbarEl.querySelector('input[type="range"]');
+            const label = reg.toolbarEl.querySelector('.level-label');
+            if (level === 'all') { slider.value = 6; label.textContent = 'Lv.6'; }
+            else { slider.value = level; label.textContent = `Lv.${level}`; }
+        }
+
+        function jsonSliderChange(containerId, value) {
+            const reg = jsonViewRegistry[containerId];
+            if (!reg) return;
+            const intVal = parseInt(value);
+            const level = intVal >= 6 ? 'all' : intVal;
+            renderJsonContent(containerId, reg.data, level);
+            reg.toolbarEl.querySelector('.level-label').textContent = `Lv.${value}`;
+        }
+
+        function jsonToggleWrap(containerId, btn) {
+            const reg = jsonViewRegistry[containerId];
+            if (!reg) return;
+            reg.containerEl.classList.toggle('json-wrap');
+            btn.classList.toggle('active');
+        }
+
+        function initJsonView(containerId, containerEl, jsonData, defaultLevel) {
+            const toolbar = createJsonToolbar(containerId, defaultLevel);
+            const content = document.createElement('div');
+            content.className = 'json-content';
+            containerEl.appendChild(toolbar);
+            containerEl.appendChild(content);
+            jsonViewRegistry[containerId] = {
+                containerEl, toolbarEl: toolbar, contentEl: content, data: jsonData
+            };
+            renderJsonContent(containerId, jsonData, defaultLevel);
+        }
+
+        // ==================== 初始化 ====================
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const [dataResp, toolsResp, resultResp, promptResp] = await Promise.all([
+                    fetch('data/data.json'),
+                    fetch('data/long_video_understanding_tools.json'),
+                    fetch('data/results/exp_001_baseline.json'),
+                    fetch('data/templates/exp_001_baseline/system_prompt.txt')
+                ]);
+
+                data = await dataResp.json();
+                toolsData = await toolsResp.json();
+                const resultData = await resultResp.json();
+                systemPromptText = await promptResp.text();
+
+                // 构建结果 Map
+                experimentResult = new Map();
+                (resultData.results || []).forEach(r => experimentResult.set(r.case_id, r.plan));
+
+                buildToolLookup();
+                renderToolTable();
+                renderSystemPrompt();
+                renderCases();
+            } catch (error) {
+                console.error('加载数据失败:', error);
+                document.getElementById('cases-container').innerHTML = '<p style="color: red;">加载数据失败，请刷新页面重试</p>';
+            }
+        });
+    </script>
+</body>
+
+</html>

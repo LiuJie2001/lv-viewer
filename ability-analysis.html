@@ -1361,7 +1361,7 @@
 
         .case-plan-comparison {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1fr;
             gap: 1rem;
         }
 
@@ -2428,7 +2428,7 @@
                 data = await dataResp.json();
                 toolsData = await toolsResp.json();
                 const expIndex = await expIndexResp.json();
-                experiments = expIndex.experiments || [];
+                experiments = (expIndex.experiments || []).filter(e => e.id !== 'univa');
 
                 // 加载各实验的结果和提示词
                 const loadPromises = experiments.flatMap(exp => [
@@ -2569,7 +2569,7 @@
             // 说明文字
             const desc = document.createElement('p');
             desc.className = 'experiment-panels-desc';
-            desc.innerHTML = '以下为两组实验<strong>生成 Plan 轨迹</strong>所用的 <strong>System Prompt</strong>，定义了各自可选的工具集。其中「分层 21 工具集」的工具定义聚合自上方「02 论文方法展示」中各论文提出的工具，每个工具均标注了来源论文与对应能力。两组实验的 User Prompt 相同，均为：<code>Analyze the video at ./video.mp4 and answer the question: {question}</code>';
+            desc.innerHTML = '以下为<strong>生成 Plan 轨迹</strong>所用的 <strong>System Prompt</strong>，其中工具定义聚合自上方「02 论文方法展示」中各论文提出的工具，每个工具均标注了来源论文与对应能力。User Prompt 为：<code>Analyze the video at ./video.mp4 and answer the question: {question}</code>';
             container.appendChild(desc);
             const sortedExps = [...experiments].sort((a, b) => a.id === 'exp_001_baseline' ? -1 : b.id === 'exp_001_baseline' ? 1 : 0);
             sortedExps.forEach(exp => {
@@ -2758,7 +2758,7 @@
                         </div>
                     </div>
 
-                    <div class="plan-comparison-header">📊 Plan 轨迹对比</div>
+                    <div class="plan-comparison-header">📊 Plan 轨迹</div>
                     <div class="case-plan-comparison" id="plan-compare-${caseItem.id}">
                     </div>
                 </div>
