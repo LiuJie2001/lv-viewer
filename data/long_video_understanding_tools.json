@@ -1,0 +1,530 @@
+{
+  "version": "2.0",
+  "last_updated": "2026-02-06",
+  "tool_count": 21,
+  "layers": 6,
+  "tools": [
+    {
+      "name": "temporal_segmentation_uniform",
+      "category": "preprocessing",
+      "layer": 1,
+      "description": "Segments long videos into clips at fixed time intervals (e.g., every 5 seconds). Suitable for tasks requiring uniform sampling or fixed granularity processing.",
+      "input": "Raw video",
+      "output": "Video segments with uniform duration and timestamps",
+      "dependencies": [],
+      "optional_dependencies": [],
+      "provides_for": [
+        "caption_generation",
+        "vision_embedding",
+        "ocr",
+        "audio_caption",
+        "object_detection"
+      ],
+      "sources": [
+        {
+          "paper": "DVD",
+          "tool": "Preprocessor-Temporal Segmentation",
+          "implementation": "均匀分段"
+        }
+      ]
+    },
+    {
+      "name": "temporal_segmentation_shot",
+      "category": "preprocessing",
+      "layer": 1,
+      "description": "Segments long videos based on shot boundaries detected by scene change. Suitable for maintaining scene integrity and avoiding cross-scene cuts.",
+      "input": "Raw video",
+      "output": "Video segments aligned with shot boundaries and timestamps",
+      "dependencies": [],
+      "optional_dependencies": [],
+      "provides_for": [
+        "caption_generation",
+        "vision_embedding",
+        "ocr",
+        "audio_caption",
+        "object_detection"
+      ],
+      "sources": [
+        {
+          "paper": "LongShOTAgent",
+          "tool": "Preprocessor-Shot Detection",
+          "implementation": "镜头分割算法"
+        }
+      ]
+    },
+    {
+      "name": "audio_transcription",
+      "category": "preprocessing",
+      "layer": 1,
+      "description": "Transcribes speech audio to text using ASR models. Optionally includes speaker diarization for multi-speaker scenarios. This can enhance caption generation by providing speech context.",
+      "input": "Audio stream",
+      "output": "Transcribed text (optionally with speaker labels)",
+      "dependencies": [],
+      "optional_dependencies": [],
+      "provides_for": [
+        "caption_generation"
+      ],
+      "sources": [
+        {
+          "paper": "DVD",
+          "tool": "Preprocessor-ASR（可选）",
+          "implementation": "WhisperX"
+        },
+        {
+          "paper": "HAVEN",
+          "tool": "Preprocessor-ASR + Diarization",
+          "implementation": "WhisperX with speaker diarization"
+        },
+        {
+          "paper": "LongShOTAgent",
+          "tool": "Preprocessor-Speech Transcription",
+          "implementation": "轻量 ASR"
+        }
+      ]
+    },
+    {
+      "name": "caption_generation",
+      "category": "content_analysis",
+      "layer": 2,
+      "description": "Generates textual descriptions for video segments using VLM models. Converts visual content into searchable text. Can optionally incorporate speaker information from audio transcription for richer captions.",
+      "input": "Video frames (optionally with speaker info from audio_transcription)",
+      "output": "Text captions for each segment",
+      "dependencies": [
+        "temporal_segmentation_uniform OR temporal_segmentation_shot"
+      ],
+      "optional_dependencies": [
+        "audio_transcription"
+      ],
+      "provides_for": [
+        "text_embedding",
+        "entity_tracking",
+        "scene_aggregation"
+      ],
+      "sources": [
+        {
+          "paper": "DVD",
+          "tool": "Preprocessor-Captioning",
+          "implementation": "GPT-4.1 VLM"
+        },
+        {
+          "paper": "HAVEN",
+          "tool": "Preprocessor-Caption 生成",
+          "implementation": "GPT-4.1 with optional speaker info"
+        }
+      ]
+    },
+    {
+      "name": "vision_embedding",
+      "category": "content_analysis",
+      "layer": 2,
+      "description": "Encodes video frames into visual embeddings for visual similarity search. Captures visual details that text may miss. Use this when visual similarity is critical for the task.",
+      "input": "Video frames",
+      "output": "Visual embedding vectors",
+      "dependencies": [
+        "temporal_segmentation_uniform OR temporal_segmentation_shot"
+      ],
+      "optional_dependencies": [],
+      "provides_for": [
+        "segment_visual_search"
+      ],
+      "sources": [
+        {
+          "paper": "HAVEN",
+          "tool": "Preprocessor-Vision Embedding",
+          "implementation": "UNITE"
+        },
+        {
+          "paper": "LongShOTAgent",
+          "tool": "Preprocessor-Vision Embedding",
+          "implementation": "SigLIP"
+        }
+      ]
+    },
+    {
+      "name": "ocr",
+      "category": "content_analysis",
+      "layer": 2,
+      "description": "Extracts text from video frames. Useful for reading on-screen text, subtitles, signs, or any visible text. Only use this when the task requires reading text from the video.",
+      "input": "Video frames",
+      "output": "Extracted text with timestamps",
+      "dependencies": [
+        "temporal_segmentation_uniform OR temporal_segmentation_shot"
+      ],
+      "optional_dependencies": [],
+      "provides_for": [],
+      "sources": [
+        {
+          "paper": "LongShOTAgent",
+          "tool": "Preprocessor-OCR",
+          "implementation": "OCR 模型"
+        }
+      ]
+    },
+    {
+      "name": "audio_caption",
+      "category": "content_analysis",
+      "layer": 2,
+      "description": "Generates descriptions for non-speech audio such as music, applause, ambient sounds, and sound effects. Complements audio_transcription by handling environmental audio that ASR cannot process.",
+      "input": "Audio segment",
+      "output": "Text description of audio events (music type, sound effects, ambient sounds)",
+      "dependencies": [
+        "temporal_segmentation_uniform OR temporal_segmentation_shot"
+      ],
+      "optional_dependencies": [],
+      "provides_for": [],
+      "sources": [
+        {
+          "paper": "LongShOTAgent",
+          "tool": "Refiner Tool-Audio Caption",
+          "implementation": "Audio-Flamingo-3"
+        }
+      ]
+    },
+    {
+      "name": "object_detection",
+      "category": "content_analysis",
+      "layer": 2,
+      "description": "Detects and locates objects in video frames with bounding boxes. Can detect various object categories including people, vehicles, animals, and common objects. Useful for spatial localization and filtering specific objects.",
+      "input": "Video frames + target object categories (e.g., 'person', 'car', 'dog')",
+      "output": "Object bounding boxes with class labels and confidence scores",
+      "dependencies": [
+        "temporal_segmentation_uniform OR temporal_segmentation_shot"
+      ],
+      "optional_dependencies": [],
+      "provides_for": [
+        "pose_estimation"
+      ],
+      "sources": [
+        {
+          "paper": "Video-STAR",
+          "tool": "Human Detection（$T_d$）",
+          "implementation": "YOLO 11 (可检测多种物体类别)"
+        }
+      ]
+    },
+    {
+      "name": "pose_estimation",
+      "category": "content_analysis",
+      "layer": 2,
+      "description": "Estimates human poses with 17 skeletal keypoints for detailed motion analysis. Useful for action recognition, posture analysis, and understanding human movements. Can optionally use object_detection results to focus on specific people.",
+      "input": "Video frames (optionally with human bounding boxes from object_detection)",
+      "output": "17 skeletal keypoints for each detected person",
+      "dependencies": [
+        "temporal_segmentation_uniform OR temporal_segmentation_shot"
+      ],
+      "optional_dependencies": [
+        "object_detection"
+      ],
+      "provides_for": [],
+      "sources": [
+        {
+          "paper": "Video-STAR",
+          "tool": "Pose Estimation（$T_p$）",
+          "implementation": "YOLO 11 pose estimation"
+        }
+      ]
+    },
+    {
+      "name": "text_embedding",
+      "category": "indexing",
+      "layer": 3,
+      "description": "Encodes text captions into embeddings for semantic search. Enables text-based retrieval of video segments. This is essential for segment_caption_search.",
+      "input": "Text captions",
+      "output": "Text embedding vectors",
+      "dependencies": [
+        "caption_generation"
+      ],
+      "optional_dependencies": [],
+      "provides_for": [
+        "segment_caption_search"
+      ],
+      "sources": [
+        {
+          "paper": "DVD",
+          "tool": "Preprocessor-Caption Embedding",
+          "implementation": "Text Encoder"
+        },
+        {
+          "paper": "HAVEN",
+          "tool": "Preprocessor-Text Embedding",
+          "implementation": "Text Encoder"
+        }
+      ]
+    },
+    {
+      "name": "entity_tracking",
+      "category": "indexing",
+      "layer": 3,
+      "description": "Tracks and clusters entities (people, objects) across video segments. Maintains consistent IDs across scenes. This enables cross-scene entity tracking and search.",
+      "input": "Video segments and entity descriptions from captions",
+      "output": "Structured entity registry with IDs, appearances, and timestamps",
+      "dependencies": [
+        "caption_generation"
+      ],
+      "optional_dependencies": [
+        "vision_embedding"
+      ],
+      "provides_for": [
+        "entity_search"
+      ],
+      "sources": [
+        {
+          "paper": "DVD",
+          "tool": "Preprocessor-Subject Registry",
+          "implementation": "GPT-4.1"
+        },
+        {
+          "paper": "HAVEN",
+          "tool": "Preprocessor-实体聚类",
+          "implementation": "Embedding 聚类 + LLM 规范化"
+        }
+      ]
+    },
+    {
+      "name": "scene_aggregation",
+      "category": "indexing",
+      "layer": 3,
+      "description": "Groups related segments into scenes and generates scene-level summaries. Provides hierarchical video understanding. This is a prerequisite for global summary and browsing.",
+      "input": "Sequential video segments with captions",
+      "output": "Scene-level summaries",
+      "dependencies": [
+        "caption_generation"
+      ],
+      "optional_dependencies": [],
+      "provides_for": [
+        "global_summary",
+        "global_browsing"
+      ],
+      "sources": [
+        {
+          "paper": "HAVEN",
+          "tool": "Preprocessor-场景聚合",
+          "implementation": "GPT-4.1"
+        }
+      ]
+    },
+    {
+      "name": "global_summary",
+      "category": "global_understanding",
+      "layer": 4,
+      "description": "Generates a high-level overview of the entire video. Useful for understanding the overall narrative before diving into details.",
+      "input": "Scene summaries",
+      "output": "Global video summary",
+      "dependencies": [
+        "scene_aggregation"
+      ],
+      "optional_dependencies": [],
+      "provides_for": [
+        "global_browsing"
+      ],
+      "sources": [
+        {
+          "paper": "HAVEN",
+          "tool": "Preprocessor-全局摘要",
+          "implementation": "GPT-4.1"
+        }
+      ]
+    },
+    {
+      "name": "segment_caption_search",
+      "category": "retrieval",
+      "layer": 5,
+      "description": "Searches for relevant video segments using text queries. Returns top-k segments with timestamps based on caption similarity. This is the primary tool for locating relevant content in long videos.",
+      "input": "Text query",
+      "output": "List of relevant segments with timestamps and captions",
+      "dependencies": [
+        "text_embedding"
+      ],
+      "optional_dependencies": [],
+      "provides_for": [
+        "frame_inspect"
+      ],
+      "sources": [
+        {
+          "paper": "HAVEN",
+          "tool": "Segment Caption Search（$T_{caption}$）",
+          "implementation": "文本 Embedding 检索"
+        },
+        {
+          "paper": "DVD",
+          "tool": "Clip Search",
+          "implementation": "Embedding 检索"
+        },
+        {
+          "paper": "LongShOTAgent",
+          "tool": "Search Tool",
+          "implementation": "向量相似度检索"
+        }
+      ]
+    },
+    {
+      "name": "segment_visual_search",
+      "category": "retrieval",
+      "layer": 5,
+      "description": "Searches for visually similar segments using visual queries (image or video frame). Captures details that text descriptions may miss. Use this when visual similarity is more important than semantic meaning.",
+      "input": "Visual query (image or video frame)",
+      "output": "Visually similar segments with timestamps",
+      "dependencies": [
+        "vision_embedding"
+      ],
+      "optional_dependencies": [],
+      "provides_for": [
+        "frame_inspect"
+      ],
+      "sources": [
+        {
+          "paper": "HAVEN",
+          "tool": "Segment Visual Search（$T_{visual}$）",
+          "implementation": "UNITE 视觉 Embedding"
+        }
+      ]
+    },
+    {
+      "name": "entity_search",
+      "category": "retrieval",
+      "layer": 5,
+      "description": "Searches for all segments where a specific entity (person, object) appears. Useful for tracking people or objects across the entire video timeline.",
+      "input": "Entity name or description",
+      "output": "List of segments where the entity appears",
+      "dependencies": [
+        "entity_tracking"
+      ],
+      "optional_dependencies": [
+        "vision_embedding"
+      ],
+      "provides_for": [
+        "frame_inspect"
+      ],
+      "sources": [
+        {
+          "paper": "HAVEN",
+          "tool": "Entity Search（$T_{entity}$）",
+          "implementation": "实体库匹配 + 重排序"
+        }
+      ]
+    },
+    {
+      "name": "global_browsing",
+      "category": "retrieval",
+      "layer": 5,
+      "description": "Provides a high-level overview of the video content without specific queries. Useful for quickly understanding the overall narrative and structure before detailed analysis. Use this when the user wants a general understanding.",
+      "input": "Optional query for focused browsing",
+      "output": "Global summary with event-level descriptions and scene storyline",
+      "dependencies": [
+        "global_summary"
+      ],
+      "optional_dependencies": [],
+      "provides_for": [],
+      "sources": [
+        {
+          "paper": "DVD",
+          "tool": "Global Browse",
+          "implementation": "LLM 摘要 + VLM 采样"
+        },
+        {
+          "paper": "HAVEN",
+          "tool": "Global Scene Browse（$T_{scene}$）",
+          "implementation": "LLM 聚合场景摘要"
+        }
+      ]
+    },
+    {
+      "name": "frame_inspect",
+      "category": "inspection",
+      "layer": 6,
+      "description": "Performs detailed visual analysis on specific video frames or time ranges using VLM. Use this to answer specific questions about visual details after locating relevant segments. This tool verifies details and reduces hallucination.",
+      "input": "Time range or timestamp + specific visual question",
+      "output": "Detailed visual answer based on actual frames",
+      "dependencies": [
+        "segment_caption_search OR segment_visual_search OR entity_search"
+      ],
+      "optional_dependencies": [],
+      "provides_for": [],
+      "sources": [
+        {
+          "paper": "DVD",
+          "tool": "Frame Inspect",
+          "implementation": "OpenAI o3 VLM"
+        },
+        {
+          "paper": "HAVEN",
+          "tool": "Visual Inspect",
+          "implementation": "OpenAI o3 VLM"
+        },
+        {
+          "paper": "LongShOTAgent",
+          "tool": "Refiner Tool-Visual QA",
+          "implementation": "Qwen2.5-VL-32B"
+        }
+      ]
+    },
+    {
+      "name": "code_execution",
+      "category": "processing",
+      "layer": 6,
+      "description": "Execute Python code for precise calculations, data processing, or custom operations. Useful for timestamp calculations, statistical analysis, data transformation, and implementing custom logic that requires programmatic control.",
+      "input": "Python code string with context",
+      "output": "Execution result",
+      "dependencies": [],
+      "optional_dependencies": [],
+      "provides_for": [],
+      "sources": [
+        {
+          "paper": "Kimi K2.5",
+          "tool": "IPython 代码执行",
+          "implementation": "IPython 环境"
+        },
+        {
+          "paper": "LLM-in-Sandbox",
+          "tool": "execute_bash",
+          "implementation": "Docker Ubuntu 容器中执行 Python"
+        }
+      ]
+    },
+    {
+      "name": "image_processing",
+      "category": "processing",
+      "layer": 6,
+      "description": "Perform image operations such as cropping, rotation, binarization for enhanced visual analysis. Can be used at any stage to process frames for better inspection or analysis.",
+      "input": "Image + operation parameters (crop coordinates, rotation angle, binarization threshold, etc.)",
+      "output": "Processed image",
+      "dependencies": [],
+      "optional_dependencies": [
+        "frame_inspect"
+      ],
+      "provides_for": [],
+      "sources": [
+        {
+          "paper": "Kimi K2.5",
+          "tool": "IPython 代码执行-图像处理",
+          "implementation": "PIL/OpenCV"
+        },
+        {
+          "paper": "DeepEyesV2",
+          "tool": "Image Crop",
+          "implementation": "Python PIL/OpenCV"
+        }
+      ]
+    },
+    {
+      "name": "object_counting",
+      "category": "processing",
+      "layer": 6,
+      "description": "Accurately count objects in video frames using code-based counting to avoid VLM counting errors. Can work with detection results or directly on frames.",
+      "input": "Detection results or frame with objects + counting criteria",
+      "output": "Precise count with confidence",
+      "dependencies": [],
+      "optional_dependencies": [
+        "object_detection"
+      ],
+      "provides_for": [],
+      "sources": [
+        {
+          "paper": "Kimi K2.5",
+          "tool": "IPython 代码执行-计数",
+          "implementation": "Python 脚本"
+        }
+      ]
+    }
+  ]
+}

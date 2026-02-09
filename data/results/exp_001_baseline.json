@@ -1,0 +1,1307 @@
+{
+  "experiment_id": "exp_001_baseline",
+  "meta": {
+    "name": "分层 21 工具集",
+    "model": "claude-opus-4-6",
+    "temperature": 0.7,
+    "test_time": "2026-02-09T16:21:28.913459"
+  },
+  "results": [
+    {
+      "case_id": "videomme_145_1",
+      "plan": {
+        "task_analysis": "The user wants to know what a rabbit does during a specific moment (when a man is flying up to dunk) in the video. This requires locating the relevant segment where the man is dunking and observing the rabbit's actions simultaneously. I'll segment the video, generate captions, build a search index, find the relevant segment, and then inspect the frames closely.",
+        "execution_plan": {
+          "total_steps": 6,
+          "steps": [
+            {
+              "step_number": 1,
+              "action_description": "Segment the video into uniform 5-second clips for processing",
+              "tool": {
+                "name": "temporal_segmentation_uniform",
+                "purpose": "Split the video into fixed-duration segments as prerequisite for caption generation and content analysis",
+                "input_requirements": [
+                  "raw_video: ./video.mp4"
+                ]
+              },
+              "dependencies": [],
+              "status": "ongoing",
+              "output": ""
+            },
+            {
+              "step_number": 2,
+              "action_description": "Generate text captions for each video segment to describe visual content including actions of the man and the rabbit",
+              "tool": {
+                "name": "caption_generation",
+                "purpose": "Convert visual content to searchable text descriptions, capturing actions of both the man and the rabbit in each segment",
+                "input_requirements": [
+                  "video segments from step 1"
+                ]
+              },
+              "dependencies": [
+                1
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 3,
+              "action_description": "Encode captions into text embeddings for semantic search",
+              "tool": {
+                "name": "text_embedding",
+                "purpose": "Build searchable text embedding index to enable finding the dunk segment",
+                "input_requirements": [
+                  "text captions from step 2"
+                ]
+              },
+              "dependencies": [
+                2
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 4,
+              "action_description": "Search for the segment where the man is flying up to dunk",
+              "tool": {
+                "name": "segment_caption_search",
+                "purpose": "Locate the specific segment(s) where the man is flying up to dunk a basketball",
+                "input_requirements": [
+                  "query: 'man flying up to dunk basketball'",
+                  "text embeddings from step 3"
+                ]
+              },
+              "dependencies": [
+                3
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 5,
+              "action_description": "Inspect the frames in the identified segment to observe what the rabbit does while the man is flying up to dunk",
+              "tool": {
+                "name": "frame_inspect",
+                "purpose": "Perform detailed visual analysis on the specific frames to determine the rabbit's actions during the man's dunk attempt",
+                "input_requirements": [
+                  "timestamps from step 4",
+                  "question: 'What is the rabbit doing while the man is flying up to dunk? Describe the rabbit's actions in detail.'"
+                ]
+              },
+              "dependencies": [
+                4
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 6,
+              "action_description": "If needed, inspect additional surrounding frames to get a complete picture of the rabbit's actions during the dunk sequence",
+              "tool": {
+                "name": "frame_inspect",
+                "purpose": "Check frames slightly before and after the dunk moment to capture the full sequence of the rabbit's behavior",
+                "input_requirements": [
+                  "expanded time range around timestamps from step 4",
+                  "question: 'What is the rabbit doing in this scene? Is the rabbit reacting to the man dunking? Describe all of the rabbit's movements and actions.'"
+                ]
+              },
+              "dependencies": [
+                5
+              ],
+              "status": "pending",
+              "output": ""
+            }
+          ]
+        }
+      }
+    },
+    {
+      "case_id": "videomme_434_3",
+      "plan": {
+        "task_analysis": "The user wants to know which position Vayne is playing in a gaming video (likely League of Legends). I need to segment the video, generate captions, and inspect frames to identify Vayne's in-game position/role. Since this involves reading on-screen game UI elements and text, OCR and frame inspection will be important.",
+        "execution_plan": {
+          "total_steps": 5,
+          "steps": [
+            {
+              "step_number": 1,
+              "action_description": "Segment the video into uniform 5-second clips for processing",
+              "tool": {
+                "name": "temporal_segmentation_uniform",
+                "purpose": "Split the video into fixed-duration segments as prerequisite for further analysis",
+                "input_requirements": [
+                  "raw_video: ./video.mp4"
+                ]
+              },
+              "dependencies": [],
+              "status": "ongoing",
+              "output": ""
+            },
+            {
+              "step_number": 2,
+              "action_description": "Generate text captions for each video segment to understand the game context and identify Vayne's role",
+              "tool": {
+                "name": "caption_generation",
+                "purpose": "Convert visual content to text descriptions to understand what is happening in the game and identify Vayne's position",
+                "input_requirements": [
+                  "video segments from step 1"
+                ]
+              },
+              "dependencies": [
+                1
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 3,
+              "action_description": "Extract on-screen text from video frames to read game UI elements such as scoreboard, champion names, role indicators, and lane assignments",
+              "tool": {
+                "name": "ocr",
+                "purpose": "Read in-game text overlays including scoreboard, champion select screen, role/position indicators, and any UI text that shows Vayne's assigned position",
+                "input_requirements": [
+                  "video segments from step 1"
+                ]
+              },
+              "dependencies": [
+                1
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 4,
+              "action_description": "Search for segments specifically related to Vayne's position or role assignment using captions",
+              "tool": {
+                "name": "text_embedding",
+                "purpose": "Encode captions into embeddings to enable semantic search for Vayne's position information",
+                "input_requirements": [
+                  "text captions from step 2"
+                ]
+              },
+              "dependencies": [
+                2
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 5,
+              "action_description": "Inspect specific frames to visually identify Vayne's position in the game by examining the game UI, scoreboard, champion select screen, minimap position, or lane assignment. Look for indicators such as: role icons, lane position on minimap, team composition layout, or any text/UI showing Vayne's assigned role (Top, Jungle, Mid, ADC/Bot, Support).",
+              "tool": {
+                "name": "frame_inspect",
+                "purpose": "Perform detailed visual analysis on key frames to determine Vayne's in-game position by examining game UI elements, scoreboard layout, minimap, and role indicators",
+                "input_requirements": [
+                  "timestamps from steps 3 and 4 where Vayne or role/position information is visible",
+                  "question: 'In this League of Legends game, what position/role is Vayne playing? Look at the game UI, scoreboard, minimap, champion select screen, or any indicators showing Vayne's assigned position (Top, Jungle, Mid, ADC/Bot, Support). What lane is Vayne in?'"
+                ]
+              },
+              "dependencies": [
+                3,
+                4
+              ],
+              "status": "pending",
+              "output": ""
+            }
+          ]
+        }
+      }
+    },
+    {
+      "case_id": "videomme_384_3",
+      "plan": {
+        "task_analysis": "Visual detail question about car seat color. Need to segment video, generate captions, search for segments showing car interior/seats, and inspect frames for the specific color detail.",
+        "execution_plan": {
+          "total_steps": 5,
+          "steps": [
+            {
+              "step_number": 1,
+              "action_description": "Segment the video into uniform 5-second clips for processing",
+              "tool": {
+                "name": "temporal_segmentation_uniform",
+                "purpose": "Split the video into fixed-duration segments as prerequisite for caption generation and content search",
+                "input_requirements": [
+                  "raw_video: ./video.mp4"
+                ]
+              },
+              "dependencies": [],
+              "status": "ongoing",
+              "output": ""
+            },
+            {
+              "step_number": 2,
+              "action_description": "Generate text captions for each video segment to describe visual content",
+              "tool": {
+                "name": "caption_generation",
+                "purpose": "Convert visual content into searchable text descriptions to identify segments showing car interior and seats",
+                "input_requirements": [
+                  "video segments from step 1"
+                ]
+              },
+              "dependencies": [
+                1
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 3,
+              "action_description": "Encode captions into text embeddings for semantic search",
+              "tool": {
+                "name": "text_embedding",
+                "purpose": "Create text embeddings to enable semantic search for car interior/seat segments",
+                "input_requirements": [
+                  "text captions from step 2"
+                ]
+              },
+              "dependencies": [
+                2
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 4,
+              "action_description": "Search for video segments showing car seats or car interior",
+              "tool": {
+                "name": "segment_caption_search",
+                "purpose": "Find segments that show the car interior and seats to identify their color",
+                "input_requirements": [
+                  "query: 'car seats interior seat color inside the car'",
+                  "text embeddings from step 3"
+                ]
+              },
+              "dependencies": [
+                3
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 5,
+              "action_description": "Inspect the retrieved frames closely to determine the exact color of the car seats",
+              "tool": {
+                "name": "frame_inspect",
+                "purpose": "Perform detailed visual inspection of frames showing car seats to accurately determine their color",
+                "input_requirements": [
+                  "timestamps from step 4 (top relevant segments showing car interior)",
+                  "question: 'What color are the seats in the car? Describe the seat color in detail, including any patterns or multiple colors if present.'"
+                ]
+              },
+              "dependencies": [
+                4
+              ],
+              "status": "pending",
+              "output": ""
+            }
+          ]
+        }
+      }
+    },
+    {
+      "case_id": "videomme_154_2",
+      "plan": {
+        "task_analysis": "The task requires identifying a man in the video and describing the background scene behind him. This involves segmenting the video, generating captions to locate the man, searching for relevant segments, and then performing detailed frame inspection to describe the background scene. Since this is a visual detail question about background scenery, frame_inspect will be critical for accurate description.",
+        "execution_plan": {
+          "total_steps": 5,
+          "steps": [
+            {
+              "step_number": 1,
+              "action_description": "Segment the video into uniform 5-second clips for processing",
+              "tool": {
+                "name": "temporal_segmentation_uniform",
+                "purpose": "Split the video into fixed-duration segments as prerequisite for caption generation and content analysis",
+                "input_requirements": [
+                  "raw_video: ./video.mp4"
+                ]
+              },
+              "dependencies": [],
+              "status": "ongoing",
+              "output": ""
+            },
+            {
+              "step_number": 2,
+              "action_description": "Generate text captions for each video segment to identify segments containing a man",
+              "tool": {
+                "name": "caption_generation",
+                "purpose": "Convert visual content to text descriptions to locate segments featuring a man and capture background details",
+                "input_requirements": [
+                  "video segments from step 1"
+                ]
+              },
+              "dependencies": [
+                1
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 3,
+              "action_description": "Encode captions into text embeddings for semantic search",
+              "tool": {
+                "name": "text_embedding",
+                "purpose": "Create searchable text embeddings from captions to enable segment retrieval",
+                "input_requirements": [
+                  "text captions from step 2"
+                ]
+              },
+              "dependencies": [
+                2
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 4,
+              "action_description": "Search for segments showing a man with visible background scenery",
+              "tool": {
+                "name": "segment_caption_search",
+                "purpose": "Find the most relevant segments where a man is visible with a clear background scene",
+                "input_requirements": [
+                  "query: 'a man with background scene behind him'",
+                  "text embeddings from step 3"
+                ]
+              },
+              "dependencies": [
+                3
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 5,
+              "action_description": "Inspect the frames in detail to describe the background scene behind the man",
+              "tool": {
+                "name": "frame_inspect",
+                "purpose": "Perform detailed visual analysis of the background scene behind the man to accurately describe what is visible",
+                "input_requirements": [
+                  "timestamps from step 4",
+                  "question: 'Describe in detail the scene in the background behind the man. What objects, structures, landscape, or environment are visible behind him? Include details about colors, lighting, indoor/outdoor setting, and any notable features.'"
+                ]
+              },
+              "dependencies": [
+                4
+              ],
+              "status": "pending",
+              "output": ""
+            }
+          ]
+        }
+      }
+    },
+    {
+      "case_id": "videomme_451_2",
+      "plan": {
+        "task_analysis": "The user wants to know what happens after the score reaches 2-1 in the video. This requires: (1) segmenting the video, (2) generating captions to understand content, (3) using OCR to detect score displays, (4) building a text search index, (5) searching for the 2-1 score moment, and (6) inspecting frames around that moment to see what happens next.",
+        "execution_plan": {
+          "total_steps": 7,
+          "steps": [
+            {
+              "step_number": 1,
+              "action_description": "Segment the video into uniform 5-second clips for processing",
+              "tool": {
+                "name": "temporal_segmentation_uniform",
+                "purpose": "Split the long video into fixed-duration segments as prerequisite for caption generation and OCR",
+                "input_requirements": [
+                  "raw_video: ./video.mp4"
+                ]
+              },
+              "dependencies": [],
+              "status": "ongoing",
+              "output": ""
+            },
+            {
+              "step_number": 2,
+              "action_description": "Generate text captions for each video segment to understand the content and events",
+              "tool": {
+                "name": "caption_generation",
+                "purpose": "Convert visual content to searchable text descriptions, capturing game events, score changes, and actions",
+                "input_requirements": [
+                  "video segments from step 1"
+                ]
+              },
+              "dependencies": [
+                1
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 3,
+              "action_description": "Extract on-screen text including score overlays, scoreboards, and any text displays from video frames",
+              "tool": {
+                "name": "ocr",
+                "purpose": "Detect and read score displays (e.g., '2-1') shown on screen to precisely locate when the score is 2-1",
+                "input_requirements": [
+                  "video segments from step 1"
+                ]
+              },
+              "dependencies": [
+                1
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 4,
+              "action_description": "Encode captions into text embeddings for semantic search",
+              "tool": {
+                "name": "text_embedding",
+                "purpose": "Build searchable text index from captions to enable segment retrieval by query",
+                "input_requirements": [
+                  "text captions from step 2"
+                ]
+              },
+              "dependencies": [
+                2
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 5,
+              "action_description": "Search for video segments where the score is 2-1 using text query",
+              "tool": {
+                "name": "segment_caption_search",
+                "purpose": "Locate the specific segments where the score is 2-1 by searching captions and OCR results",
+                "input_requirements": [
+                  "query: 'score is 2-1'",
+                  "text embeddings from step 4"
+                ]
+              },
+              "dependencies": [
+                4
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 6,
+              "action_description": "Inspect frames at and around the 2-1 score moment to confirm the score and observe what is happening",
+              "tool": {
+                "name": "frame_inspect",
+                "purpose": "Verify the score is indeed 2-1 at the identified timestamp and observe the current game state",
+                "input_requirements": [
+                  "timestamps from step 5 (combined with OCR results from step 3 to pinpoint exact moments showing score 2-1)",
+                  "question: 'What is the current score displayed on screen? Is it 2-1? What is happening in the game at this moment?'"
+                ]
+              },
+              "dependencies": [
+                3,
+                5
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 7,
+              "action_description": "Inspect the frames immediately following the 2-1 score moment to determine what happens next",
+              "tool": {
+                "name": "frame_inspect",
+                "purpose": "Analyze the video content in the segments right after the confirmed 2-1 score moment to answer what happens next",
+                "input_requirements": [
+                  "time range: segments immediately after the 2-1 score timestamp identified in step 6",
+                  "question: 'What happens next after the score is 2-1? Describe the actions, events, plays, or any score changes that occur immediately following this moment.'"
+                ]
+              },
+              "dependencies": [
+                6
+              ],
+              "status": "pending",
+              "output": ""
+            }
+          ]
+        }
+      }
+    },
+    {
+      "case_id": "videomme_840_3",
+      "plan": {
+        "task_analysis": "The question asks about a specific moment in the video where one team is eating pizza, and we need to determine how many tasks the other team has completed. This requires: (1) understanding the video content to find the pizza-eating scene, (2) identifying the two teams, and (3) determining the task completion count. I'll segment the video, generate captions, build a search index, locate the pizza scene, and inspect frames for details.",
+        "execution_plan": {
+          "total_steps": 7,
+          "steps": [
+            {
+              "step_number": 1,
+              "action_description": "Segment the video into uniform 5-second clips for processing",
+              "tool": {
+                "name": "temporal_segmentation_uniform",
+                "purpose": "Split long video into fixed-duration segments as prerequisite for caption generation and search",
+                "input_requirements": [
+                  "raw_video: ./video.mp4"
+                ]
+              },
+              "dependencies": [],
+              "status": "ongoing",
+              "output": ""
+            },
+            {
+              "step_number": 2,
+              "action_description": "Transcribe speech audio to capture any narration, commentary, or dialogue about teams, tasks, and scores",
+              "tool": {
+                "name": "audio_transcription",
+                "purpose": "Extract speech content that may mention team names, task counts, scores, and pizza-related dialogue",
+                "input_requirements": [
+                  "audio stream from ./video.mp4"
+                ]
+              },
+              "dependencies": [],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 3,
+              "action_description": "Generate text captions for each video segment, incorporating speech transcription for richer context",
+              "tool": {
+                "name": "caption_generation",
+                "purpose": "Convert visual content to searchable text descriptions, enriched with speech context about teams and tasks",
+                "input_requirements": [
+                  "video segments from step 1",
+                  "speech transcription from step 2"
+                ]
+              },
+              "dependencies": [
+                1,
+                2
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 4,
+              "action_description": "Encode captions into text embeddings for semantic search",
+              "tool": {
+                "name": "text_embedding",
+                "purpose": "Build searchable index from captions to enable finding the pizza-eating scene",
+                "input_requirements": [
+                  "text captions from step 3"
+                ]
+              },
+              "dependencies": [
+                3
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 5,
+              "action_description": "Search for segments where a team is eating or enjoying pizza",
+              "tool": {
+                "name": "segment_caption_search",
+                "purpose": "Locate the specific scene where one team is eating/enjoying pizza",
+                "input_requirements": [
+                  "query: 'team eating pizza enjoying pizza'",
+                  "text embeddings from step 4"
+                ]
+              },
+              "dependencies": [
+                4
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 6,
+              "action_description": "Inspect the frames around the pizza-eating scene to identify teams and any visible task completion indicators, scoreboards, or mentions of tasks completed",
+              "tool": {
+                "name": "frame_inspect",
+                "purpose": "Examine the pizza-eating scene closely to determine which team is eating pizza and how many tasks the other team has completed. Look for scoreboards, on-screen text, task counters, or any visual/textual indicators of task completion counts.",
+                "input_requirements": [
+                  "timestamps from step 5",
+                  "question: 'One team is eating/enjoying pizza. Look carefully at the scene: Which team is eating pizza? Is there a scoreboard, task counter, or any on-screen text showing how many tasks the other team has completed? How many tasks has the other team completed?'"
+                ]
+              },
+              "dependencies": [
+                5
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 7,
+              "action_description": "Search for segments mentioning task completion counts or scoreboards to cross-reference with the pizza scene",
+              "tool": {
+                "name": "segment_caption_search",
+                "purpose": "Find additional context about task completion counts near the pizza-eating scene",
+                "input_requirements": [
+                  "query: 'tasks completed scoreboard task count team progress'",
+                  "text embeddings from step 4"
+                ]
+              },
+              "dependencies": [
+                4
+              ],
+              "status": "pending",
+              "output": ""
+            }
+          ]
+        }
+      }
+    },
+    {
+      "case_id": "videomme_278_1",
+      "plan": {
+        "task_analysis": "The task requires counting the number of foxes appearing in the video. This involves segmenting the video, detecting fox objects across segments, and accurately counting them. I'll use uniform segmentation, object detection for foxes, and then aggregate counts. Entity tracking will help distinguish unique foxes across segments.",
+        "execution_plan": {
+          "total_steps": 7,
+          "steps": [
+            {
+              "step_number": 1,
+              "action_description": "Segment the video into uniform clips for systematic processing across the entire video duration",
+              "tool": {
+                "name": "temporal_segmentation_uniform",
+                "purpose": "Split the long video into fixed-duration segments to enable frame-by-frame analysis for fox detection",
+                "input_requirements": [
+                  "raw_video: ./video.mp4"
+                ]
+              },
+              "dependencies": [],
+              "status": "ongoing",
+              "output": ""
+            },
+            {
+              "step_number": 2,
+              "action_description": "Generate text captions for each video segment to describe visual content including any animals/foxes present",
+              "tool": {
+                "name": "caption_generation",
+                "purpose": "Convert visual content to text descriptions to identify segments containing foxes and support entity tracking",
+                "input_requirements": [
+                  "video segments from step 1"
+                ]
+              },
+              "dependencies": [
+                1
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 3,
+              "action_description": "Detect foxes in all video segments using object detection with target category 'fox'",
+              "tool": {
+                "name": "object_detection",
+                "purpose": "Detect and locate foxes in video frames with bounding boxes to identify all fox appearances",
+                "input_requirements": [
+                  "video segments from step 1",
+                  "target object categories: ['fox', 'animal']"
+                ]
+              },
+              "dependencies": [
+                1
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 4,
+              "action_description": "Track and cluster fox entities across all video segments to distinguish unique foxes and avoid double-counting",
+              "tool": {
+                "name": "entity_tracking",
+                "purpose": "Build entity registry to track unique foxes across scenes and maintain consistent IDs, distinguishing individual foxes",
+                "input_requirements": [
+                  "captions from step 2"
+                ]
+              },
+              "dependencies": [
+                2
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 5,
+              "action_description": "Search for all segments where foxes appear using entity search",
+              "tool": {
+                "name": "entity_search",
+                "purpose": "Find all segments containing foxes to compile a complete list of fox appearances",
+                "input_requirements": [
+                  "entity name: 'fox'",
+                  "entity registry from step 4"
+                ]
+              },
+              "dependencies": [
+                4
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 6,
+              "action_description": "Inspect key frames from segments where foxes were detected to verify fox presence and count the number of distinct foxes visible",
+              "tool": {
+                "name": "frame_inspect",
+                "purpose": "Visually verify fox appearances and count distinct foxes in each identified segment to ensure accurate counting",
+                "input_requirements": [
+                  "timestamps from step 5",
+                  "question: 'How many foxes are visible in this frame/segment? Describe each fox (color, size, position) to help distinguish unique individuals.'"
+                ]
+              },
+              "dependencies": [
+                5
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 7,
+              "action_description": "Aggregate all fox detection results and compute the total number of unique foxes appearing in the video",
+              "tool": {
+                "name": "object_counting",
+                "purpose": "Accurately count the total number of foxes using detection results and entity tracking data to avoid VLM counting errors",
+                "input_requirements": [
+                  "detection results from step 3",
+                  "entity tracking results from step 4",
+                  "frame inspection results from step 6",
+                  "counting criteria: unique foxes appearing across the entire video"
+                ]
+              },
+              "dependencies": [
+                3,
+                4,
+                6
+              ],
+              "status": "pending",
+              "output": ""
+            }
+          ]
+        }
+      }
+    },
+    {
+      "case_id": "videomme_317_3",
+      "plan": {
+        "task_analysis": "This is a temporal ordering task requiring identification of when four specific painting events occur in the video. I need to segment the video, generate captions to understand the content, build a searchable index, then search for each event to determine their timestamps and establish the correct chronological order.",
+        "execution_plan": {
+          "total_steps": 10,
+          "steps": [
+            {
+              "step_number": 1,
+              "action_description": "Segment the video into uniform 5-second clips for systematic processing of the painting tutorial",
+              "tool": {
+                "name": "temporal_segmentation_uniform",
+                "purpose": "Split the long video into fixed-duration segments as prerequisite for caption generation and temporal analysis",
+                "input_requirements": [
+                  "raw_video: ./video.mp4"
+                ]
+              },
+              "dependencies": [],
+              "status": "ongoing",
+              "output": ""
+            },
+            {
+              "step_number": 2,
+              "action_description": "Generate text captions for each video segment to describe the painting activities happening in each clip",
+              "tool": {
+                "name": "caption_generation",
+                "purpose": "Convert visual content of painting process into searchable text descriptions",
+                "input_requirements": [
+                  "video segments from step 1"
+                ]
+              },
+              "dependencies": [
+                1
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 3,
+              "action_description": "Encode captions into text embeddings for semantic search capability",
+              "tool": {
+                "name": "text_embedding",
+                "purpose": "Create searchable embeddings from captions to enable semantic search for specific painting events",
+                "input_requirements": [
+                  "text captions from step 2"
+                ]
+              },
+              "dependencies": [
+                2
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 4,
+              "action_description": "Search for segments where the artist is creating the basic background of the painting",
+              "tool": {
+                "name": "segment_caption_search",
+                "purpose": "Locate the timestamp(s) when the artist is creating/painting the basic background",
+                "input_requirements": [
+                  "query: 'creating basic background, painting the background, laying down base colors, initial background layer'",
+                  "text embeddings from step 3"
+                ]
+              },
+              "dependencies": [
+                3
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 5,
+              "action_description": "Search for segments where the artist is adding flowers to the painting",
+              "tool": {
+                "name": "segment_caption_search",
+                "purpose": "Locate the timestamp(s) when the artist adds flowers to the painting",
+                "input_requirements": [
+                  "query: 'adding flowers to the painting, painting flowers, drawing flowers'",
+                  "text embeddings from step 3"
+                ]
+              },
+              "dependencies": [
+                3
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 6,
+              "action_description": "Search for segments where the artist is building up texture in the painting",
+              "tool": {
+                "name": "segment_caption_search",
+                "purpose": "Locate the timestamp(s) when the artist builds up texture, adds more texture, thickens paint layers",
+                "input_requirements": [
+                  "query: 'building up texture, adding texture, thickening paint, layering texture on painting'",
+                  "text embeddings from step 3"
+                ]
+              },
+              "dependencies": [
+                3
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 7,
+              "action_description": "Search for segments where the artist is drawing the pads of the water lilies",
+              "tool": {
+                "name": "segment_caption_search",
+                "purpose": "Locate the timestamp(s) when the artist draws/paints water lily pads, lily pads",
+                "input_requirements": [
+                  "query: 'drawing water lily pads, painting lily pads, water lily leaves, painting pads of water lilies'",
+                  "text embeddings from step 3"
+                ]
+              },
+              "dependencies": [
+                3
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 8,
+              "action_description": "Inspect frames at the timestamps found for 'creating basic background' to verify the event",
+              "tool": {
+                "name": "frame_inspect",
+                "purpose": "Verify that the identified segments indeed show the artist creating the basic background",
+                "input_requirements": [
+                  "timestamps from step 4",
+                  "question: 'Is the artist creating or painting the basic background in this frame? Describe what painting activity is happening.'"
+                ]
+              },
+              "dependencies": [
+                4
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 9,
+              "action_description": "Inspect frames at the timestamps found for 'adding flowers' and 'drawing water lily pads' to verify and distinguish these events",
+              "tool": {
+                "name": "frame_inspect",
+                "purpose": "Verify the segments showing adding flowers and drawing lily pads to confirm correct identification",
+                "input_requirements": [
+                  "timestamps from step 5 and step 7",
+                  "question: 'What specific painting activity is happening? Is the artist adding flowers, or drawing/painting water lily pads? Describe the details.'"
+                ]
+              },
+              "dependencies": [
+                5,
+                7
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 10,
+              "action_description": "Inspect frames at the timestamps found for 'building up texture' to verify the event and compile the final chronological order",
+              "tool": {
+                "name": "frame_inspect",
+                "purpose": "Verify the texture building segments and determine the final chronological ordering of all four events",
+                "input_requirements": [
+                  "timestamps from step 6",
+                  "question: 'Is the artist building up texture on the painting in this frame? Describe the painting activity and the current state of the painting.'"
+                ]
+              },
+              "dependencies": [
+                6
+              ],
+              "status": "pending",
+              "output": ""
+            }
+          ]
+        }
+      }
+    },
+    {
+      "case_id": "videomme_027_3",
+      "plan": {
+        "task_analysis": "This is a general video understanding/inference task. Since we need to determine what can be inferred from the video, we need comprehensive content understanding including visual content, speech/dialogue, and overall narrative. I'll segment the video, generate captions, transcribe audio, build scene summaries, and create a global summary to support inference.",
+        "execution_plan": {
+          "total_steps": 7,
+          "steps": [
+            {
+              "step_number": 1,
+              "action_description": "Segment the video into uniform 5-second clips for systematic processing",
+              "tool": {
+                "name": "temporal_segmentation_uniform",
+                "purpose": "Split the long video into fixed-duration segments as prerequisite for caption generation and audio analysis",
+                "input_requirements": [
+                  "raw_video: ./video.mp4"
+                ]
+              },
+              "dependencies": [],
+              "status": "ongoing",
+              "output": ""
+            },
+            {
+              "step_number": 2,
+              "action_description": "Transcribe all speech and dialogue in the video to capture verbal information",
+              "tool": {
+                "name": "audio_transcription",
+                "purpose": "Extract speech content which is critical for understanding what is being discussed or narrated in the video",
+                "input_requirements": [
+                  "audio stream from ./video.mp4"
+                ]
+              },
+              "dependencies": [
+                1
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 3,
+              "action_description": "Generate detailed text captions for each video segment, incorporating speech transcription for richer descriptions",
+              "tool": {
+                "name": "caption_generation",
+                "purpose": "Convert visual content into searchable text descriptions, enhanced with speech context from audio transcription",
+                "input_requirements": [
+                  "video segments from step 1",
+                  "speech transcription from step 2"
+                ]
+              },
+              "dependencies": [
+                1,
+                2
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 4,
+              "action_description": "Aggregate segments into coherent scenes and generate scene-level summaries",
+              "tool": {
+                "name": "scene_aggregation",
+                "purpose": "Group related segments into scenes for higher-level understanding of the video structure and narrative",
+                "input_requirements": [
+                  "sequential video segments with captions from step 3"
+                ]
+              },
+              "dependencies": [
+                3
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 5,
+              "action_description": "Generate a global summary of the entire video to understand the overall content and narrative",
+              "tool": {
+                "name": "global_summary",
+                "purpose": "Create a high-level overview of the entire video to support inference about what can be concluded from the video",
+                "input_requirements": [
+                  "scene summaries from step 4"
+                ]
+              },
+              "dependencies": [
+                4
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 6,
+              "action_description": "Browse the video content globally to get a comprehensive event-level understanding and scene storyline",
+              "tool": {
+                "name": "global_browsing",
+                "purpose": "Provide a detailed overview of the video's narrative structure, events, and storyline to support comprehensive inference",
+                "input_requirements": [
+                  "global summary from step 5",
+                  "query: 'What are the key events, facts, and conclusions that can be inferred from this video?'"
+                ]
+              },
+              "dependencies": [
+                5
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 7,
+              "action_description": "Use code execution to compile all gathered information and systematically analyze what statements can be inferred from the video",
+              "tool": {
+                "name": "code_execution",
+                "purpose": "Synthesize all information from previous steps to determine which statements can be logically inferred from the video content",
+                "input_requirements": [
+                  "global summary from step 5",
+                  "global browsing results from step 6",
+                  "audio transcription from step 2",
+                  "captions from step 3"
+                ]
+              },
+              "dependencies": [
+                6
+              ],
+              "status": "pending",
+              "output": ""
+            }
+          ]
+        }
+      }
+    },
+    {
+      "case_id": "videomme_688_3",
+      "plan": {
+        "task_analysis": "The user wants to identify a specific tech product from the video that is purely software or purely hardware, not a combination of both. This requires understanding the video content, identifying all tech products presented, and analyzing their nature. I'll segment the video, generate captions, build a searchable index, search for tech product presentations, and inspect relevant frames for details.",
+        "execution_plan": {
+          "total_steps": 7,
+          "steps": [
+            {
+              "step_number": 1,
+              "action_description": "Segment the video into uniform 5-second clips for processing",
+              "tool": {
+                "name": "temporal_segmentation_uniform",
+                "purpose": "Split long video into fixed-duration segments as prerequisite for caption generation and content analysis",
+                "input_requirements": [
+                  "raw_video: ./video.mp4"
+                ]
+              },
+              "dependencies": [],
+              "status": "ongoing",
+              "output": ""
+            },
+            {
+              "step_number": 2,
+              "action_description": "Transcribe speech audio to capture spoken descriptions of tech products",
+              "tool": {
+                "name": "audio_transcription",
+                "purpose": "Extract speech content that likely describes the tech products and their features (software, hardware, or combination)",
+                "input_requirements": [
+                  "audio stream from ./video.mp4"
+                ]
+              },
+              "dependencies": [],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 3,
+              "action_description": "Generate text captions for each video segment, enriched with speech transcription for better context",
+              "tool": {
+                "name": "caption_generation",
+                "purpose": "Convert visual content to searchable text descriptions, incorporating speech context to capture product names and descriptions",
+                "input_requirements": [
+                  "video segments from step 1",
+                  "speech transcription from step 2"
+                ]
+              },
+              "dependencies": [
+                1,
+                2
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 4,
+              "action_description": "Encode captions into text embeddings for semantic search",
+              "tool": {
+                "name": "text_embedding",
+                "purpose": "Build searchable index of captions to enable finding segments about tech products",
+                "input_requirements": [
+                  "text captions from step 3"
+                ]
+              },
+              "dependencies": [
+                3
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 5,
+              "action_description": "Search for segments where tech products are presented or introduced",
+              "tool": {
+                "name": "segment_caption_search",
+                "purpose": "Find all segments that discuss or show tech products being presented",
+                "input_requirements": [
+                  "query: 'tech product presentation, introducing new technology product, software hardware device'",
+                  "text embeddings from step 4"
+                ]
+              },
+              "dependencies": [
+                4
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 6,
+              "action_description": "Inspect frames of the retrieved segments to identify all tech products and their nature (software, hardware, or combination)",
+              "tool": {
+                "name": "frame_inspect",
+                "purpose": "Examine the visual details of each tech product presentation to determine which products are shown and whether they are software-only, hardware-only, or a combination",
+                "input_requirements": [
+                  "timestamps from step 5",
+                  "question: 'What tech product is being presented in this segment? Is it a software product, a hardware product, or a combination of software and hardware? Describe the product and its nature in detail.'"
+                ]
+              },
+              "dependencies": [
+                5
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 7,
+              "action_description": "Synthesize findings to determine which tech product is not a combination of software and hardware",
+              "tool": {
+                "name": "code_execution",
+                "purpose": "Compile all identified tech products and their classifications to determine the final answer",
+                "input_requirements": [
+                  "product analysis results from step 6",
+                  "speech transcription from step 2",
+                  "Python code to organize and analyze the product information"
+                ]
+              },
+              "dependencies": [
+                6
+              ],
+              "status": "pending",
+              "output": ""
+            }
+          ]
+        }
+      }
+    },
+    {
+      "case_id": "videomme_043_1",
+      "plan": {
+        "task_analysis": "The user wants to understand why a roof object flies in the video. This requires locating the relevant segment where a roof object flies, then inspecting the frames in detail to understand the cause. I'll segment the video, generate captions, build a search index, search for the roof flying event, and then inspect the frames closely.",
+        "execution_plan": {
+          "total_steps": 6,
+          "steps": [
+            {
+              "step_number": 1,
+              "action_description": "Segment the video into uniform 5-second clips for processing",
+              "tool": {
+                "name": "temporal_segmentation_uniform",
+                "purpose": "Split the long video into fixed-duration segments as prerequisite for caption generation and content analysis",
+                "input_requirements": [
+                  "raw_video: ./video.mp4"
+                ]
+              },
+              "dependencies": [],
+              "status": "ongoing",
+              "output": ""
+            },
+            {
+              "step_number": 2,
+              "action_description": "Generate text captions for each video segment to describe visual content",
+              "tool": {
+                "name": "caption_generation",
+                "purpose": "Convert visual content into searchable text descriptions to identify segments involving a roof object flying",
+                "input_requirements": [
+                  "video segments from step 1"
+                ]
+              },
+              "dependencies": [
+                1
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 3,
+              "action_description": "Encode captions into text embeddings for semantic search",
+              "tool": {
+                "name": "text_embedding",
+                "purpose": "Build searchable text index from captions to enable segment retrieval",
+                "input_requirements": [
+                  "text captions from step 2"
+                ]
+              },
+              "dependencies": [
+                2
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 4,
+              "action_description": "Search for segments where a roof object flies or is launched into the air",
+              "tool": {
+                "name": "segment_caption_search",
+                "purpose": "Locate the specific segments showing the roof object flying event and any preceding context that explains the cause",
+                "input_requirements": [
+                  "query: 'roof object flying in the air, roof blown off, roof launched'",
+                  "text embeddings from step 3"
+                ]
+              },
+              "dependencies": [
+                3
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 5,
+              "action_description": "Inspect the frames around the roof flying event to understand the cause and context",
+              "tool": {
+                "name": "frame_inspect",
+                "purpose": "Perform detailed visual analysis on the identified segments to determine why the roof object flies — looking for causes such as wind, explosion, impact, or other forces",
+                "input_requirements": [
+                  "timestamps from step 4 (top relevant segments)",
+                  "question: 'What is happening in this scene? Is there a roof or roof-like object flying? What caused it to fly? Look for any forces, events, or actions that made the roof object go airborne (e.g., wind, storm, explosion, collision, someone throwing it).'"
+                ]
+              },
+              "dependencies": [
+                4
+              ],
+              "status": "pending",
+              "output": ""
+            },
+            {
+              "step_number": 6,
+              "action_description": "Inspect frames just before the roof flying event to identify the preceding cause",
+              "tool": {
+                "name": "frame_inspect",
+                "purpose": "Examine the moments leading up to the roof flying to confirm the root cause and provide a complete explanation",
+                "input_requirements": [
+                  "timestamps: time range slightly before the flying event identified in step 5",
+                  "question: 'What is happening just before the roof object flies? What force or event is causing the roof to become airborne? Describe the sequence of events leading to the roof flying.'"
+                ]
+              },
+              "dependencies": [
+                5
+              ],
+              "status": "pending",
+              "output": ""
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

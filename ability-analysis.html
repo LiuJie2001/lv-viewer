@@ -11,6 +11,11 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
 
+    <!-- Markdown 渲染 -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- JSON 树视图 -->
+    <script src="https://cdn.jsdelivr.net/npm/renderjson@1.4.0/renderjson.js"></script>
+
     <style>
         :root {
             --color-text: #1a1a1a;
@@ -1172,6 +1177,541 @@
             margin-right: 0.5rem;
         }
 
+        /* ========== 实验模板面板 ========== */
+        .experiment-panels {
+            margin-bottom: 1.5rem;
+        }
+
+        .experiment-panel {
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+            overflow: hidden;
+        }
+
+        .experiment-panel-header {
+            background: var(--color-bg-alt);
+            padding: 0.6rem 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--color-text-secondary);
+        }
+
+        .experiment-panel-header:hover {
+            background: #eef2ff;
+        }
+
+        .experiment-panel-toggle {
+            font-size: 0.75rem;
+            color: var(--color-accent);
+        }
+
+        .experiment-panel-body {
+            display: none;
+            height: 400px;
+            overflow-y: auto;
+            padding: 1rem;
+            border-top: 1px solid var(--color-border);
+            font-size: 0.85rem;
+            line-height: 1.7;
+        }
+
+        .experiment-panel-body.expanded {
+            display: block;
+        }
+
+        .experiment-panel-body h1,
+        .experiment-panel-body h2,
+        .experiment-panel-body h3,
+        .experiment-panel-body h4 {
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+            color: var(--color-text);
+        }
+
+        .experiment-panel-body h1 { font-size: 1.1rem; }
+        .experiment-panel-body h2 { font-size: 1rem; }
+        .experiment-panel-body h3 { font-size: 0.9rem; }
+        .experiment-panel-body h4 { font-size: 0.85rem; }
+
+        .experiment-panel-body ul,
+        .experiment-panel-body ol {
+            padding-left: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .experiment-panel-body li {
+            margin-bottom: 0.25rem;
+        }
+
+        .experiment-panel-body p {
+            margin-bottom: 0.5rem;
+        }
+
+        .experiment-panel-body hr {
+            border: none;
+            border-top: 1px solid var(--color-border);
+            margin: 0.75rem 0;
+        }
+
+        .experiment-panel-body code {
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            background: var(--color-bg-alt);
+            padding: 0.1rem 0.3rem;
+            border-radius: 3px;
+        }
+
+        /* 工具标注行（提示词模板中，标签在工具前） */
+        .tool-annotation-line {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.25rem;
+            margin-bottom: 0.15rem;
+            margin-top: 0.5rem;
+        }
+
+        /* 来源标签 */
+        .source-tag {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.1rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            background: rgba(37, 99, 235, 0.08);
+            color: var(--color-accent);
+            cursor: pointer;
+            transition: background 0.2s;
+            white-space: nowrap;
+        }
+
+        .source-tag:hover {
+            background: rgba(37, 99, 235, 0.18);
+        }
+
+        /* 能力标签（plan/模板中的小号标签） */
+        .plan-ability-tag {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.1rem 0.35rem;
+            border-radius: 3px;
+            font-size: 0.65rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            white-space: nowrap;
+        }
+
+        .plan-ability-tag:hover {
+            opacity: 0.8;
+        }
+
+        .plan-ability-tag[data-ability="visual_perception"] { background: rgba(76, 175, 80, 0.15); color: #2e7d32; }
+        .plan-ability-tag[data-ability="temporal_dynamics"] { background: rgba(33, 150, 243, 0.15); color: #1565c0; }
+        .plan-ability-tag[data-ability="high_level_reasoning"] { background: rgba(244, 67, 54, 0.15); color: #c62828; }
+        .plan-ability-tag[data-ability="spatial_object_dynamics"] { background: rgba(255, 152, 0, 0.15); color: #e65100; }
+        .plan-ability-tag[data-ability="audiovisual_joint"] { background: rgba(156, 39, 176, 0.15); color: #6a1b9a; }
+
+        /* ========== Plan 对比区 ========== */
+        .case-plan-comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .plan-column {
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .plan-column-header {
+            background: var(--color-bg-alt);
+            padding: 0.5rem 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .plan-column-title {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--color-text-secondary);
+        }
+
+        .plan-view-toggle {
+            display: flex;
+            gap: 0;
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .plan-view-btn {
+            padding: 0.15rem 0.4rem;
+            font-size: 0.65rem;
+            border: none;
+            background: var(--color-bg);
+            color: var(--color-text-muted);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .plan-view-btn.active {
+            background: var(--color-accent);
+            color: white;
+        }
+
+        .plan-column-body {
+            padding: 0.75rem;
+            max-height: 500px;
+            overflow-y: auto;
+            font-size: 0.8rem;
+        }
+
+        .plan-column-body.placeholder {
+            color: var(--color-text-muted);
+            font-style: italic;
+            padding: 1rem;
+        }
+
+        /* 任务分析 */
+        .plan-task-analysis {
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--color-border);
+            font-size: 0.8rem;
+            color: var(--color-text-secondary);
+            line-height: 1.5;
+        }
+
+        .plan-task-analysis-label {
+            font-weight: 600;
+            color: var(--color-text);
+            margin-bottom: 0.25rem;
+            display: block;
+            font-size: 0.75rem;
+        }
+
+        /* Step 卡片 */
+        .plan-steps-header {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--color-text);
+            margin-bottom: 0.5rem;
+        }
+
+        .plan-step-card {
+            margin-bottom: 0.5rem;
+            background: var(--color-bg-alt);
+            border-radius: 4px;
+            border-left: 3px solid var(--color-accent);
+            overflow: hidden;
+        }
+
+        .plan-step-card-header {
+            padding: 0.4rem 0.5rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .plan-step-card-header:hover {
+            background: rgba(37, 99, 235, 0.04);
+        }
+
+        .plan-step-card-title {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            margin-bottom: 0.2rem;
+        }
+
+        .plan-step-num {
+            background: var(--color-accent);
+            color: white;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .plan-step-tool-name {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--color-accent);
+        }
+
+        .plan-step-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.2rem;
+            margin-left: 26px;
+            margin-bottom: 0.2rem;
+        }
+
+        .plan-step-desc-text {
+            margin-left: 26px;
+            font-size: 0.75rem;
+            color: var(--color-text-secondary);
+        }
+
+        .plan-step-toggle {
+            margin-left: 26px;
+            font-size: 0.7rem;
+            color: var(--color-accent);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.2rem;
+        }
+
+        .plan-step-card-details {
+            display: none;
+            margin: 0 0.5rem 0.5rem;
+            padding: 0.4rem 0.5rem;
+            margin-left: 26px;
+            background: var(--color-bg);
+            border-radius: 4px;
+            border: 1px dashed var(--color-border);
+            font-size: 0.7rem;
+        }
+
+        .plan-step-card-details.expanded {
+            display: block;
+        }
+
+        .plan-step-detail-row {
+            display: flex;
+            margin-bottom: 0.2rem;
+        }
+
+        .plan-step-detail-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .plan-step-detail-label {
+            color: var(--color-text-muted);
+            min-width: 60px;
+            flex-shrink: 0;
+            font-weight: 500;
+        }
+
+        .plan-step-detail-value {
+            color: var(--color-text-secondary);
+            word-break: break-word;
+        }
+
+        .plan-step-dep-label {
+            margin-left: 26px;
+            font-size: 0.65rem;
+            color: var(--color-text-muted);
+        }
+
+        /* 工具链 */
+        .plan-tool-chain-summary {
+            margin-top: 0.75rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid var(--color-border);
+            font-size: 0.7rem;
+            color: var(--color-text-muted);
+        }
+
+        .plan-tool-chain-summary .label {
+            font-weight: 500;
+            margin-right: 0.25rem;
+        }
+
+        /* renderjson 覆盖样式 */
+        .plan-json-view {
+            display: none;
+        }
+
+        .plan-json-view.active {
+            display: block;
+        }
+
+        .plan-structured-view.hidden {
+            display: none;
+        }
+
+        .plan-json-view .renderjson {
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            line-height: 1.5;
+        }
+
+        .plan-json-view .renderjson a {
+            text-decoration: none;
+            color: var(--color-accent);
+        }
+
+        /* ========== JSON 工具栏（通用） ========== */
+        .json-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.3rem 0.6rem;
+            background: var(--color-bg-alt);
+            border-bottom: 1px solid var(--color-border);
+            font-size: 0.7rem;
+        }
+
+        .json-toolbar button {
+            padding: 0.15rem 0.4rem;
+            border: 1px solid var(--color-border);
+            border-radius: 3px;
+            background: var(--color-bg);
+            color: var(--color-text-secondary);
+            cursor: pointer;
+            font-size: 0.65rem;
+            transition: all 0.2s;
+        }
+
+        .json-toolbar button:hover {
+            background: var(--color-accent-light);
+            border-color: var(--color-accent);
+            color: var(--color-accent);
+        }
+
+        .json-toolbar button.active {
+            background: var(--color-accent);
+            color: white;
+            border-color: var(--color-accent);
+        }
+
+        .json-toolbar input[type="range"] {
+            width: 80px;
+            height: 4px;
+            cursor: pointer;
+            accent-color: var(--color-accent);
+        }
+
+        .json-toolbar .level-label {
+            color: var(--color-text-muted);
+            font-family: var(--font-mono);
+            min-width: 28px;
+        }
+
+        .json-content {
+            padding: 0.5rem;
+        }
+
+        /* JSON 换行模式 */
+        .json-wrap .renderjson,
+        .json-wrap .json-content {
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        /* ========== 提示词模板 JSON 块 ========== */
+        .prompt-json-block {
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            margin: 0.75rem 0;
+            overflow: hidden;
+        }
+
+        .prompt-json-block .json-content {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .prompt-json-block .renderjson {
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            line-height: 1.5;
+        }
+
+        .prompt-json-block .renderjson a {
+            text-decoration: none;
+            color: var(--color-accent);
+        }
+
+        /* ========== 实验面板说明文字 ========== */
+        .experiment-panels-desc {
+            font-size: 0.85rem;
+            color: var(--color-text-secondary);
+            margin-bottom: 0.75rem;
+            line-height: 1.6;
+        }
+
+        /* ========== 返回 Case 浮动按钮 ========== */
+        .return-to-case-btn {
+            display: none;
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 200;
+            background: rgba(37, 99, 235, 0.85);
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            font-size: 0.85rem;
+            overflow: hidden;
+            cursor: default;
+        }
+
+        .return-to-case-btn.visible {
+            display: flex;
+            align-items: center;
+        }
+
+        .return-text {
+            padding: 0.5rem 0.75rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .return-text:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .return-close {
+            padding: 0.5rem 0.6rem;
+            cursor: pointer;
+            border-left: 1px solid rgba(255, 255, 255, 0.3);
+            transition: background 0.2s;
+            font-size: 1rem;
+            line-height: 1;
+        }
+
+        .return-close:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* ========== Case 复制链接按钮 ========== */
+        .case-copy-link {
+            color: var(--color-accent);
+            text-decoration: none;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: transform 0.2s;
+            user-select: none;
+        }
+
+        .case-copy-link:hover {
+            transform: scale(1.1);
+        }
+
+        /* Case 高亮效果（URL 定位时） */
+        .case-card.hash-highlight {
+            outline: 2px solid var(--color-accent);
+            outline-offset: 2px;
+        }
+
         /* ========== 响应式 ========== */
         @media (max-width: 1200px) {
             .paper-info-grid {
@@ -1209,7 +1749,7 @@
                 grid-template-columns: 1fr;
             }
 
-            .case-subtitle-plan-section {
+            .case-plan-comparison {
                 grid-template-columns: 1fr;
             }
         }
@@ -1567,6 +2107,10 @@
                 <span class="section-number">03</span>
                 <h2 class="section-title">Case 展示</h2>
                 <span class="section-count" id="cases-total-count"></span>
+                <span class="case-copy-link" title="复制 Case 区域链接" onclick="copySectionLink('cases', this)" style="margin-left: 0.5rem;">🔗</span>
+            </div>
+            <div id="experiment-panels" class="experiment-panels">
+                <!-- 实验模板面板由 JS 渲染 -->
             </div>
             <div id="cases-container">
                 <div class="loading">加载数据中</div>
@@ -1574,13 +2118,31 @@
         </section>
     </main>
 
-    <script>
-        // 全局数据
-        let data = null;
-        let planData = null;  // plan 数据
-        let selectedAbilities = new Set();
+    <!-- Return to Case Button -->
+    <div class="return-to-case-btn" id="returnToCaseBtn">
+        <span class="return-text" id="returnText" onclick="returnToCase()"></span>
+        <span class="return-close" onclick="hideReturnButton()">×</span>
+    </div>
 
-        // 能力名称映射 - 完整名称
+    <script>
+        // ==================== 全局数据 ====================
+        let data = null;
+        let toolsData = null;       // long_video_understanding_tools.json
+        let experiments = [];       // experiment_index 中的实验列表
+        let experimentResults = {}; // experiment_id -> {meta, results: Map<case_id, plan>}
+        let experimentPrompts = {}; // experiment_id -> system_prompt 文本
+        let toolLookup = new Map(); // 工具名 -> {sources, layer}
+        let selectedAbilities = new Set();
+        let returnCaseId = null;     // 标签跳转前的 case id
+
+        // UniVA 工具名映射: plan 中工具名 -> data.json 中 UniVA tool name
+        const UNIVA_TOOL_MAP = {
+            'vision2text_gen': 'Video Understanding-vision2text_gen',
+            'video_timestamp_analysis': 'Video Understanding-video_timestamp_analysis',
+            'main_object_analysis': 'Video Understanding-main_object_analysis',
+            'video_referring_segmentation': 'Video Tracking-video_referring_segmentation'
+        };
+
         const abilityNames = {
             'visual_perception': '视觉感知',
             'temporal_dynamics': '时间动态理解',
@@ -1588,40 +2150,216 @@
             'spatial_object_dynamics': '空间与物体动态',
             'audiovisual_joint': '视听联合理解'
         };
+        const abilityFullNames = abilityNames;
 
-        const abilityFullNames = {
-            'visual_perception': '视觉感知',
-            'temporal_dynamics': '时间动态理解',
-            'high_level_reasoning': '高层推理',
-            'spatial_object_dynamics': '空间与物体动态',
-            'audiovisual_joint': '视听联合理解'
-        };
+        // 提取工具名的二级名称
+        function getToolShortName(fullName) {
+            if (!fullName) return '';
+            return fullName.includes('-') ? fullName.split('-').slice(1).join('-').trim() : fullName;
+        }
 
-        // 初始化
+        // 构建工具查找表
+        function buildToolLookup() {
+            toolLookup = new Map();
+            // 1. 从 long_video_understanding_tools.json
+            if (toolsData && toolsData.tools) {
+                for (const tool of toolsData.tools) {
+                    const sources = (tool.sources || []).map(s => {
+                        const paper = data.papers.find(p => p.name === s.paper);
+                        const paperTool = paper?.tools?.find(t => t.name === s.tool);
+                        return {
+                            paper: s.paper,
+                            paperId: paper?.id || '',
+                            originalTool: s.tool,
+                            shortName: getToolShortName(s.tool),
+                            abilities: paperTool?.abilities || []
+                        };
+                    });
+                    toolLookup.set(tool.name, { sources, layer: tool.layer });
+                }
+            }
+            // 2. UniVA 手动映射
+            const univaPaper = data.papers.find(p => p.id === 'univa');
+            if (univaPaper) {
+                for (const [planName, dataName] of Object.entries(UNIVA_TOOL_MAP)) {
+                    if (!toolLookup.has(planName)) {
+                        const paperTool = univaPaper.tools?.find(t => t.name === dataName);
+                        toolLookup.set(planName, {
+                            sources: [{
+                                paper: 'UniVA',
+                                paperId: 'univa',
+                                originalTool: dataName,
+                                shortName: getToolShortName(dataName),
+                                abilities: paperTool?.abilities || []
+                            }],
+                            layer: null
+                        });
+                    }
+                }
+            }
+        }
+
+        // 生成工具标签 HTML（caseId 可选，用于返回按钮）
+        function renderToolTags(toolName, caseId) {
+            const info = toolLookup.get(toolName);
+            if (!info) return '';
+            let html = '';
+            const allAbilities = new Set();
+            const caseArg = caseId ? `, '${caseId}'` : '';
+            for (const src of info.sources) {
+                const toolId = `tool-${src.paperId}-${src.originalTool.replace(/[^a-zA-Z0-9\u4e00-\u9fff]/g, '-').toLowerCase()}`;
+                html += `<span class="source-tag" onclick="scrollToToolCard('${toolId}'${caseArg})" title="${src.paper}: ${src.originalTool}">${src.paper}: ${src.shortName}</span>`;
+                src.abilities.forEach(a => allAbilities.add(a));
+            }
+            for (const a of allAbilities) {
+                html += `<span class="plan-ability-tag" data-ability="${a}" onclick="filterByAbility('${a}'${caseArg})">${abilityNames[a] || a}</span>`;
+            }
+            return html;
+        }
+
+        // 滚动到论文 tool 卡片
+        function scrollToToolCard(toolId, fromCaseId) {
+            const el = document.getElementById(toolId);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                el.style.outline = '2px solid var(--color-accent)';
+                setTimeout(() => { el.style.outline = ''; }, 2000);
+            }
+            if (fromCaseId) showReturnButton(fromCaseId);
+        }
+
+        // 返回 Case 浮动按钮
+        function showReturnButton(caseId) {
+            returnCaseId = caseId;
+            const btn = document.getElementById('returnToCaseBtn');
+            document.getElementById('returnText').textContent = `↩ 返回 ${caseId}`;
+            btn.classList.add('visible');
+        }
+
+        function hideReturnButton() {
+            document.getElementById('returnToCaseBtn').classList.remove('visible');
+            returnCaseId = null;
+        }
+
+        function returnToCase() {
+            if (returnCaseId) {
+                const el = document.getElementById('case-' + returnCaseId);
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            hideReturnButton();
+        }
+
+        // ==================== JSON 视图通用工具 ====================
+        // 存储每个 JSON 视图的数据和状态
+        const jsonViewRegistry = {};
+
+        function createJsonToolbar(containerId, defaultLevel) {
+            const toolbar = document.createElement('div');
+            toolbar.className = 'json-toolbar';
+            toolbar.innerHTML = `
+                <button onclick="jsonSetLevel('${containerId}', 0)">全部收起</button>
+                <button onclick="jsonSetLevel('${containerId}', 'all')">全部展开</button>
+                <input type="range" min="0" max="6" value="${defaultLevel === 'all' ? 6 : defaultLevel}" oninput="jsonSliderChange('${containerId}', this.value)">
+                <span class="level-label">Lv.${defaultLevel === 'all' ? 6 : defaultLevel}</span>
+                <button onclick="jsonToggleWrap('${containerId}', this)">换行</button>
+            `;
+            return toolbar;
+        }
+
+        function renderJsonContent(containerId, jsonData, level) {
+            const reg = jsonViewRegistry[containerId];
+            if (!reg) return;
+            const contentEl = reg.contentEl;
+            contentEl.innerHTML = '';
+            const showLevel = level === 'all' ? 'all' : parseInt(level);
+            renderjson.set_show_to_level(showLevel);
+            renderjson.set_icons('+', '-');
+            contentEl.appendChild(renderjson(jsonData));
+            renderjson.set_show_to_level(2); // 恢复默认
+        }
+
+        function jsonSetLevel(containerId, level) {
+            const reg = jsonViewRegistry[containerId];
+            if (!reg) return;
+            renderJsonContent(containerId, reg.data, level);
+            // 更新滑块和标签
+            const toolbar = reg.toolbarEl;
+            const slider = toolbar.querySelector('input[type="range"]');
+            const label = toolbar.querySelector('.level-label');
+            if (level === 'all') {
+                slider.value = 6;
+                label.textContent = 'Lv.6';
+            } else {
+                slider.value = level;
+                label.textContent = `Lv.${level}`;
+            }
+        }
+
+        function jsonSliderChange(containerId, value) {
+            const reg = jsonViewRegistry[containerId];
+            if (!reg) return;
+            const intVal = parseInt(value);
+            const level = intVal >= 6 ? 'all' : intVal;
+            renderJsonContent(containerId, reg.data, level);
+            const label = reg.toolbarEl.querySelector('.level-label');
+            label.textContent = `Lv.${value}`;
+        }
+
+        function jsonToggleWrap(containerId, btn) {
+            const reg = jsonViewRegistry[containerId];
+            if (!reg) return;
+            const container = reg.containerEl;
+            container.classList.toggle('json-wrap');
+            btn.classList.toggle('active');
+        }
+
+        function initJsonView(containerId, containerEl, jsonData, defaultLevel) {
+            const toolbar = createJsonToolbar(containerId, defaultLevel);
+            const content = document.createElement('div');
+            content.className = 'json-content';
+            containerEl.appendChild(toolbar);
+            containerEl.appendChild(content);
+            jsonViewRegistry[containerId] = {
+                containerEl: containerEl,
+                toolbarEl: toolbar,
+                contentEl: content,
+                data: jsonData
+            };
+            renderJsonContent(containerId, jsonData, defaultLevel);
+        }
+
+        // ==================== 初始化 ====================
         document.addEventListener('DOMContentLoaded', async () => {
             try {
-                // 并行加载主数据和 plan 数据
-                const [dataResponse, planResponse] = await Promise.all([
+                const [dataResp, toolsResp, expIndexResp] = await Promise.all([
                     fetch('data/data.json'),
-                    fetch('data/understanding_plan_results.json').catch(() => null)
+                    fetch('data/long_video_understanding_tools.json'),
+                    fetch('data/experiment_index.json')
                 ]);
+                data = await dataResp.json();
+                toolsData = await toolsResp.json();
+                const expIndex = await expIndexResp.json();
+                experiments = expIndex.experiments || [];
 
-                data = await dataResponse.json();
+                // 加载各实验的结果和提示词
+                const loadPromises = experiments.flatMap(exp => [
+                    fetch(`data/${exp.data_file}`).then(r => r.json()).then(d => {
+                        const resultsMap = new Map();
+                        (d.results || []).forEach(r => resultsMap.set(r.case_id, r.plan));
+                        experimentResults[exp.id] = { meta: d.meta, results: resultsMap };
+                    }),
+                    fetch(`data/${exp.prompts.system}`).then(r => r.text()).then(t => {
+                        experimentPrompts[exp.id] = t;
+                    }).catch(() => { experimentPrompts[exp.id] = ''; })
+                ]);
+                await Promise.all(loadPromises);
 
-                // plan 数据可能不存在，处理为 Map 便于查找
-                if (planResponse && planResponse.ok) {
-                    const planJson = await planResponse.json();
-                    planData = new Map();
-                    (planJson.results || []).forEach(item => {
-                        if (item.id && item.plan_summary) {
-                            planData.set(item.id, item.plan_summary);
-                        }
-                    });
-                }
-
+                buildToolLookup();
                 renderPapers();
+                renderExperimentPanels();
                 renderCases();
                 updateCounts();
+                handleUrlHash();
             } catch (error) {
                 console.error('加载数据失败:', error);
                 document.getElementById('papers-container').innerHTML = '<p style="color: red;">加载数据失败，请刷新页面重试</p>';
@@ -1629,30 +2367,22 @@
             }
         });
 
-        // 渲染论文卡片
+        // ==================== 论文渲染 ====================
         function renderPapers() {
             const container = document.getElementById('papers-container');
             container.innerHTML = '';
-
             data.papers.forEach(paper => {
-                const card = createPaperCard(paper);
-                container.appendChild(card);
+                container.appendChild(createPaperCard(paper));
             });
-
             document.getElementById('papers-total-count').textContent = `共 ${data.papers.length} 篇论文`;
         }
 
-        // 创建论文卡片
         function createPaperCard(paper) {
             const card = document.createElement('div');
             card.className = 'paper-card';
             card.dataset.paperId = paper.id;
-
-            // 收集所有能力
             const allAbilities = new Set();
-            paper.tools?.forEach(tool => {
-                tool.abilities?.forEach(a => allAbilities.add(a));
-            });
+            paper.tools?.forEach(tool => tool.abilities?.forEach(a => allAbilities.add(a)));
             paper.memory?.abilities?.forEach(a => allAbilities.add(a));
             card.dataset.abilities = JSON.stringify([...allAbilities]);
 
@@ -1669,11 +2399,7 @@
                     </div>
                     <div class="paper-info-cell">
                         <div class="paper-info-label">主要方法</div>
-                        <div class="paper-info-value">
-                            <ul>
-                                ${(paper.methods || []).map(m => `<li>${m}</li>`).join('')}
-                            </ul>
-                        </div>
+                        <div class="paper-info-value"><ul>${(paper.methods || []).map(m => `<li>${m}</li>`).join('')}</ul></div>
                     </div>
                     <div class="paper-info-cell">
                         <div class="paper-info-label">基座模型</div>
@@ -1702,102 +2428,182 @@
                 <div class="tools-memory-section">
                     <div class="tools-memory-header">Tools & Memory</div>
                     <div class="tools-memory-grid" data-paper-id="${paper.id}">
-                        ${renderToolCards(paper.tools || [])}
+                        ${renderToolCards(paper.tools || [], paper.id)}
                         ${paper.memory ? renderMemoryCard(paper.memory) : ''}
                     </div>
                 </div>
             `;
-
             return card;
         }
 
-        // 渲染 Tool 卡片
-        function renderToolCards(tools) {
-            return tools.map(tool => `
-                <div class="tool-card" data-abilities='${JSON.stringify(tool.abilities || [])}'>
+        function renderToolCards(tools, paperId) {
+            return tools.map(tool => {
+                const toolId = `tool-${paperId}-${tool.name.replace(/[^a-zA-Z0-9\u4e00-\u9fff]/g, '-').toLowerCase()}`;
+                return `
+                <div class="tool-card" id="${toolId}" data-abilities='${JSON.stringify(tool.abilities || [])}'>
                     <div class="tool-card-header">
                         <span>🔧</span>
                         <span>${tool.name}</span>
                     </div>
                     <div class="tool-card-body">
-                        <div class="tool-card-row">
-                            <span class="tool-card-label">实现:</span>
-                            <span class="tool-card-value">${tool.implementation || '-'}</span>
-                        </div>
-                        <div class="tool-card-row">
-                            <span class="tool-card-label">输入:</span>
-                            <span class="tool-card-value">${tool.input || '-'}</span>
-                        </div>
-                        <div class="tool-card-row">
-                            <span class="tool-card-label">输出:</span>
-                            <span class="tool-card-value">${tool.output || '-'}</span>
-                        </div>
-                        <div class="tool-card-row">
-                            <span class="tool-card-label">用途:</span>
-                            <span class="tool-card-value">${tool.purpose || '-'}</span>
-                        </div>
+                        <div class="tool-card-row"><span class="tool-card-label">实现:</span><span class="tool-card-value">${tool.implementation || '-'}</span></div>
+                        <div class="tool-card-row"><span class="tool-card-label">输入:</span><span class="tool-card-value">${tool.input || '-'}</span></div>
+                        <div class="tool-card-row"><span class="tool-card-label">输出:</span><span class="tool-card-value">${tool.output || '-'}</span></div>
+                        <div class="tool-card-row"><span class="tool-card-label">用途:</span><span class="tool-card-value">${tool.purpose || '-'}</span></div>
                     </div>
                     <div class="tool-card-abilities">
                         ${(tool.abilities || []).map(a => `<span class="ability-tag" data-ability="${a}" onclick="filterByAbility('${a}')">${abilityNames[a] || a}</span>`).join('')}
                     </div>
-                </div>
-            `).join('');
+                </div>`;
+            }).join('');
         }
 
-        // 渲染 Memory 卡片
         function renderMemoryCard(memory) {
             return `
                 <div class="memory-card" data-abilities='${JSON.stringify(memory.abilities || [])}'>
-                    <div class="memory-card-header">
-                        <span>📦</span>
-                        <span>Memory</span>
-                    </div>
+                    <div class="memory-card-header"><span>📦</span><span>Memory</span></div>
                     <div class="memory-card-body">
-                        <div class="memory-card-row">
-                            <span class="memory-card-label">处理:</span>
-                            <span class="memory-card-value">${memory.contextHandling || '-'}</span>
-                        </div>
-                        <div class="memory-card-row">
-                            <span class="memory-card-label">机制:</span>
-                            <span class="memory-card-value">${memory.mechanism || '-'}</span>
-                        </div>
-                        <div class="memory-card-row">
-                            <span class="memory-card-label">设计:</span>
-                            <span class="memory-card-value">${memory.keyDesign || '-'}</span>
-                        </div>
+                        <div class="memory-card-row"><span class="memory-card-label">处理:</span><span class="memory-card-value">${memory.contextHandling || '-'}</span></div>
+                        <div class="memory-card-row"><span class="memory-card-label">机制:</span><span class="memory-card-value">${memory.mechanism || '-'}</span></div>
+                        <div class="memory-card-row"><span class="memory-card-label">设计:</span><span class="memory-card-value">${memory.keyDesign || '-'}</span></div>
                     </div>
                     <div class="memory-card-abilities">
                         ${(memory.abilities || []).map(a => `<span class="ability-tag" data-ability="${a}" onclick="filterByAbility('${a}')">${abilityNames[a] || a}</span>`).join('')}
                     </div>
-                </div>
-            `;
+                </div>`;
         }
 
-        // 渲染 Case 卡片
+        // ==================== 实验模板面板 ====================
+        function renderExperimentPanels() {
+            const container = document.getElementById('experiment-panels');
+            container.innerHTML = '';
+            // 说明文字
+            const desc = document.createElement('p');
+            desc.className = 'experiment-panels-desc';
+            desc.innerHTML = '以下为<strong>生成轨迹（仅 Plan 阶段）</strong>所用的 System Prompt，定义了可选的工具集。其中「分层 21 工具集」的工具定义聚合自上方「02 论文方法展示」中各论文提出的工具，每个工具均标注了来源论文与对应能力（仅展示）。';
+            container.appendChild(desc);
+            experiments.forEach(exp => {
+                const panel = document.createElement('div');
+                panel.className = 'experiment-panel';
+                const promptText = experimentPrompts[exp.id] || '';
+                panel.innerHTML = `
+                    <div class="experiment-panel-header" onclick="toggleExperimentPanel(this)">
+                        <span>${exp.name}</span>
+                        <span class="experiment-panel-toggle">展开 ▼</span>
+                    </div>
+                    <div class="experiment-panel-body" id="exp-panel-${exp.id}"></div>
+                `;
+                container.appendChild(panel);
+                // 渲染 markdown + 工具标注
+                renderPromptTemplate(exp.id, promptText);
+            });
+        }
+
+        function toggleExperimentPanel(header) {
+            const body = header.nextElementSibling;
+            const toggle = header.querySelector('.experiment-panel-toggle');
+            if (body.classList.contains('expanded')) {
+                body.classList.remove('expanded');
+                toggle.textContent = '展开 ▼';
+            } else {
+                body.classList.add('expanded');
+                toggle.textContent = '收起 ▲';
+            }
+        }
+
+        function renderPromptTemplate(expId, promptText) {
+            const container = document.getElementById(`exp-panel-${expId}`);
+            if (!promptText) { container.innerHTML = '<em>暂无模板内容</em>'; return; }
+            // marked.js 渲染
+            container.innerHTML = marked.parse(promptText);
+            // DOM 后处理 1：找所有 <strong>tool_name</strong> 并注入标签
+            const strongElements = container.querySelectorAll('strong');
+            strongElements.forEach(el => {
+                const toolName = el.textContent.trim();
+                const info = toolLookup.get(toolName);
+                if (!info) return;
+                const parent = el.closest('li') || el.closest('p') || el.parentElement;
+                if (!parent) return;
+                const tagLine = document.createElement('div');
+                tagLine.className = 'tool-annotation-line';
+                tagLine.innerHTML = renderToolTags(toolName);
+                parent.insertBefore(tagLine, parent.firstChild);
+            });
+            // DOM 后处理 2：提取 Example format JSON 并用 renderjson 渲染
+            extractAndRenderExampleJson(container, expId);
+        }
+
+        function extractAndRenderExampleJson(container, expId) {
+            // 找到包含 "Example format:" 的元素
+            let exampleEl = null;
+            const allElements = container.querySelectorAll('p, h2, h3, h4');
+            for (const el of allElements) {
+                if (el.textContent.trim().startsWith('Example format')) {
+                    exampleEl = el;
+                    break;
+                }
+            }
+            if (!exampleEl) return;
+
+            // 收集 exampleEl 之后到 "Planning Updates" h2 之间的所有元素
+            const toRemove = [];
+            let jsonText = '';
+            let sibling = exampleEl.nextElementSibling;
+            while (sibling) {
+                if (sibling.tagName === 'H2' && sibling.textContent.includes('Planning Updates')) break;
+                jsonText += sibling.textContent + '\n';
+                toRemove.push(sibling);
+                sibling = sibling.nextElementSibling;
+            }
+
+            // 清理并解析 JSON
+            jsonText = jsonText.trim();
+            if (!jsonText) return;
+
+            let parsed = null;
+            try {
+                parsed = JSON.parse(jsonText);
+            } catch (e) {
+                // UniVA JSON 有 trailing commas，容错处理
+                try {
+                    parsed = JSON.parse(jsonText.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']'));
+                } catch (e2) {
+                    console.warn('无法解析 Example format JSON:', e2);
+                    return;
+                }
+            }
+
+            // 移除原始文本节点
+            toRemove.forEach(el => el.remove());
+
+            // 插入 renderjson 视图
+            const block = document.createElement('div');
+            block.className = 'prompt-json-block';
+            exampleEl.after(block);
+
+            const viewId = `prompt-json-${expId}`;
+            initJsonView(viewId, block, parsed, 'all');
+        }
+
+        // ==================== Case 渲染 ====================
         function renderCases() {
             const container = document.getElementById('cases-container');
             container.innerHTML = '';
-
             data.cases.forEach(caseItem => {
-                const card = createCaseCard(caseItem);
-                container.appendChild(card);
+                container.appendChild(createCaseCard(caseItem));
             });
-
             document.getElementById('cases-total-count').textContent = `共 ${data.cases.length} 个 Case`;
         }
 
-        // 创建 Case 卡片
         function createCaseCard(caseItem) {
             const card = document.createElement('div');
             card.className = 'case-card';
+            card.id = `case-${caseItem.id}`;
             card.dataset.caseId = caseItem.id;
             card.dataset.abilities = JSON.stringify(caseItem.abilities || []);
 
             const options = caseItem.options || [];
             const answer = caseItem.answer || '';
-
-            // 获取 plan 数据
-            const planSummary = planData ? planData.get(caseItem.id) : null;
 
             card.innerHTML = `
                 <div class="case-header">
@@ -1806,6 +2612,7 @@
                         <span class="case-id">${caseItem.id}</span>
                     </div>
                     <div class="case-header-right">
+                        <span class="case-copy-link" title="复制 Case 链接" onclick="copyCaseLink('${caseItem.id}', this)">🔗</span>
                         ${caseItem.youtubeLink ? `<a href="${caseItem.youtubeLink}" target="_blank" class="case-link" title="观看视频">▶️</a>` : ''}
                     </div>
                 </div>
@@ -1815,18 +2622,9 @@
                             <div class="case-info-cell">
                                 <div class="case-info-label">分类信息</div>
                                 <div class="case-info-value">
-                                    <div class="case-info-field">
-                                        <span class="case-info-field-name">Benchmark:</span>
-                                        <span class="case-info-field-value">${caseItem.benchmark || '-'}</span>
-                                    </div>
-                                    <div class="case-info-field">
-                                        <span class="case-info-field-name">Domain:</span>
-                                        <span class="case-info-field-value">${caseItem.domain || '-'}</span>
-                                    </div>
-                                    <div class="case-info-field">
-                                        <span class="case-info-field-name">SubCategory:</span>
-                                        <span class="case-info-field-value">${caseItem.subCategory || '-'}</span>
-                                    </div>
+                                    <div class="case-info-field"><span class="case-info-field-name">Benchmark:</span><span class="case-info-field-value">${caseItem.benchmark || '-'}</span></div>
+                                    <div class="case-info-field"><span class="case-info-field-name">Domain:</span><span class="case-info-field-value">${caseItem.domain || '-'}</span></div>
+                                    <div class="case-info-field"><span class="case-info-field-name">SubCategory:</span><span class="case-info-field-value">${caseItem.subCategory || '-'}</span></div>
                                 </div>
                             </div>
                             <div class="case-info-cell">
@@ -1849,7 +2647,7 @@
                                     </div>
                                     <div class="case-abilities">
                                         <span class="case-abilities-label">所需能力:</span>
-                                        ${(caseItem.abilities || []).map(a => `<span class="ability-tag" data-ability="${a}" onclick="filterByAbility('${a}')">${abilityFullNames[a] || a}</span>`).join('')}
+                                        ${(caseItem.abilities || []).map(a => `<span class="ability-tag" data-ability="${a}" onclick="filterByAbility('${a}', '${caseItem.id}')">${abilityFullNames[a] || a}</span>`).join('')}
                                     </div>
                                 </div>
                             </div>
@@ -1863,117 +2661,157 @@
                                 <div class="reasoning-content">${caseItem.humanReasoningSteps || '-'}</div>
                             </div>
                             <div class="reasoning-column">
-                                <div class="reasoning-header">UniVA Plan Agent 输出总结（仅输入 Question）</div>
-                                <div class="reasoning-content${planSummary ? '' : ' placeholder'}">${planSummary ? renderPlanSummary(planSummary) : '暂无数据...'}</div>
+                                <div class="reasoning-header">字幕内容</div>
+                                <div class="reasoning-content${caseItem.subtitle ? '' : ' placeholder'}">${caseItem.subtitle || '暂无字幕'}</div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="case-subtitle-plan-section">
-                        ${caseItem.subtitle ? `
-                        <div class="case-subtitle-section">
-                            <div class="subtitle-header" onclick="toggleSubtitle(this)">
-                                <span class="subtitle-title">字幕内容</span>
-                                <span class="subtitle-toggle">展开 ▼</span>
-                            </div>
-                            <div class="subtitle-preview">${(caseItem.subtitle || '').substring(0, 100)}...</div>
-                            <div class="subtitle-content">${caseItem.subtitle || ''}</div>
-                        </div>
-                        ` : '<div></div>'}
-                        <div class="case-plan-section">
-                            <div class="plan-header">
-                                <span class="plan-title">Plan 详情 (JSON)</span>
-                            </div>
-                            <div class="plan-content${planSummary ? '' : ' placeholder'}">
-                                ${planSummary ? renderPlanDetails(planSummary) : '暂无数据...'}
-                            </div>
-                        </div>
+                    <div class="case-plan-comparison" id="plan-compare-${caseItem.id}">
                     </div>
                 </div>
             `;
 
+            // 渲染 plan 对比列
+            const planContainer = card.querySelector(`#plan-compare-${caseItem.id}`);
+            experiments.forEach(exp => {
+                const expData = experimentResults[exp.id];
+                const plan = expData?.results?.get(caseItem.id);
+                const col = createPlanColumn(exp, plan, caseItem.id);
+                planContainer.appendChild(col);
+            });
+
             return card;
         }
 
-        // 渲染 Plan 摘要（用于推理对照区）
-        function renderPlanSummary(plan) {
-            if (!plan) return '';
+        // ==================== Plan 结构化渲染 ====================
+        function createPlanColumn(exp, plan, caseId) {
+            const col = document.createElement('div');
+            col.className = 'plan-column';
+            const uniqueId = `${exp.id}-${caseId}`;
 
-            let html = '';
-            if (plan.任务) {
-                html += `<div class="plan-task">📋 ${plan.任务}</div>`;
+            col.innerHTML = `
+                <div class="plan-column-header">
+                    <span class="plan-column-title">${exp.name} (${exp.model})</span>
+                    <div class="plan-view-toggle">
+                        <button class="plan-view-btn active" onclick="switchPlanView('${uniqueId}', 'structured')">结构化</button>
+                        <button class="plan-view-btn" onclick="switchPlanView('${uniqueId}', 'json')">JSON</button>
+                    </div>
+                </div>
+                <div class="plan-column-body">
+                    <div class="plan-structured-view" id="structured-${uniqueId}">
+                        ${plan ? renderStructuredPlan(plan, caseId) : '<span class="placeholder">暂无数据</span>'}
+                    </div>
+                    <div class="plan-json-view" id="json-${uniqueId}"></div>
+                </div>
+            `;
+
+            // 延迟初始化 renderjson（仅在切换时）
+            if (plan) {
+                col._planData = plan;
+                col._uniqueId = uniqueId;
             }
-            if (plan.工具链) {
-                html += `<div class="plan-tool-chain"><span class="plan-tool-chain-label">工具链:</span>${plan.工具链}</div>`;
-            }
-            return html || '-';
+
+            return col;
         }
 
-        // 渲染 Plan 详情（用于下方 JSON 区域）
-        function renderPlanDetails(plan) {
-            if (!plan) return '';
-
+        function renderStructuredPlan(plan, caseId) {
             let html = '';
 
-            if (plan.任务) {
-                html += `<div class="plan-task">📋 任务: ${plan.任务}</div>`;
+            // 任务分析
+            if (plan.task_analysis) {
+                html += `<div class="plan-task-analysis">
+                    <span class="plan-task-analysis-label">任务分析</span>
+                    ${plan.task_analysis}
+                </div>`;
             }
 
-            if (plan.执行步骤 && plan.执行步骤.length > 0) {
-                html += '<ul class="plan-steps">';
-                plan.执行步骤.forEach(step => {
+            // 执行步骤
+            const ep = plan.execution_plan;
+            if (ep && ep.steps && ep.steps.length > 0) {
+                html += `<div class="plan-steps-header">执行计划 (${ep.total_steps || ep.steps.length} 步)</div>`;
+                ep.steps.forEach((step, idx) => {
+                    const toolName = step.tool?.name || '';
+                    const tags = renderToolTags(toolName, caseId);
+                    const isFirst = idx === 0;
+                    const deps = step.dependencies && step.dependencies.length > 0
+                        ? `<div class="plan-step-dep-label">依赖: ${step.dependencies.map(d => '&#9312;'.replace('&#9312;', circleNum(d))).join(' ')}</div>`
+                        : '';
+
                     html += `
-                        <li class="plan-step">
-                            <div class="plan-step-header">
-                                <span class="plan-step-number">${step.步骤}</span>
-                                <span class="plan-step-desc">${step.描述}</span>
+                    <div class="plan-step-card">
+                        <div class="plan-step-card-header" onclick="toggleStepDetails(this)">
+                            <div class="plan-step-card-title">
+                                <span class="plan-step-num">${step.step_number}</span>
+                                <span class="plan-step-tool-name">${toolName}</span>
                             </div>
-                            <div class="plan-step-details">
-                                <span class="plan-step-tool">${step.工具}</span>
-                                ${step.目的 ? `<span class="plan-step-purpose">${step.目的}</span>` : ''}
-                                ${step.依赖 ? `<span class="plan-step-dep">依赖: ${step.依赖.join(', ')}</span>` : ''}
-                            </div>
-                            ${(step.输入 || step.输出) ? `
-                            <div class="plan-step-io">
-                                ${step.输入 ? `<div class="plan-io-row"><span class="plan-io-label">输入:</span><span class="plan-io-value">${step.输入}</span></div>` : ''}
-                                ${step.输出 ? `<div class="plan-io-row"><span class="plan-io-label">输出:</span><span class="plan-io-value">${step.输出}</span></div>` : ''}
-                            </div>
-                            ` : ''}
-                        </li>
-                    `;
+                            ${tags ? `<div class="plan-step-tags">${tags}</div>` : ''}
+                            <div class="plan-step-desc-text">${step.action_description || ''}</div>
+                            ${deps}
+                            <span class="plan-step-toggle">${isFirst ? '▾ 收起' : '▸ 详情'}</span>
+                        </div>
+                        <div class="plan-step-card-details${isFirst ? ' expanded' : ''}">
+                            ${step.tool?.purpose ? `<div class="plan-step-detail-row"><span class="plan-step-detail-label">Purpose:</span><span class="plan-step-detail-value">${step.tool.purpose}</span></div>` : ''}
+                            ${step.tool?.input_requirements ? `<div class="plan-step-detail-row"><span class="plan-step-detail-label">Inputs:</span><span class="plan-step-detail-value">${step.tool.input_requirements.map(i => '&bull; ' + i).join('<br>')}</span></div>` : ''}
+                        </div>
+                    </div>`;
                 });
-                html += '</ul>';
+
+                // 工具链摘要
+                const toolChain = ep.steps.map(s => s.tool?.name || '?').join(' → ');
+                html += `<div class="plan-tool-chain-summary"><span class="label">工具链:</span>${toolChain}</div>`;
             }
 
-            if (plan.工具链) {
-                html += `<div class="plan-tool-chain"><span class="plan-tool-chain-label">🔗 工具链:</span>${plan.工具链}</div>`;
-            }
-
-            return html || '-';
+            return html || '<span class="placeholder">暂无数据</span>';
         }
 
-        // 切换字幕展开/收起
-        function toggleSubtitle(header) {
-            const section = header.parentElement;
-            const content = section.querySelector('.subtitle-content');
-            const preview = section.querySelector('.subtitle-preview');
-            const toggle = header.querySelector('.subtitle-toggle');
+        function circleNum(n) {
+            const circles = ['⓪','①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩'];
+            return circles[n] || n;
+        }
 
-            if (content.classList.contains('expanded')) {
-                content.classList.remove('expanded');
-                preview.classList.remove('hidden');
-                toggle.textContent = '展开 ▼';
+        function toggleStepDetails(header) {
+            const details = header.nextElementSibling;
+            const toggle = header.querySelector('.plan-step-toggle');
+            if (details.classList.contains('expanded')) {
+                details.classList.remove('expanded');
+                toggle.textContent = '▸ 详情';
             } else {
-                content.classList.add('expanded');
-                preview.classList.add('hidden');
-                toggle.textContent = '收起 ▲';
+                details.classList.add('expanded');
+                toggle.textContent = '▾ 收起';
             }
         }
 
-        // 切换筛选器
+        function switchPlanView(uniqueId, view) {
+            const structured = document.getElementById(`structured-${uniqueId}`);
+            const jsonView = document.getElementById(`json-${uniqueId}`);
+            const container = structured.closest('.plan-column');
+            const btns = container.querySelectorAll('.plan-view-btn');
+
+            if (view === 'json') {
+                structured.classList.add('hidden');
+                jsonView.classList.add('active');
+                btns[0].classList.remove('active');
+                btns[1].classList.add('active');
+                // 延迟初始化：使用通用 JSON 视图工具
+                const viewId = `plan-json-${uniqueId}`;
+                if (!jsonViewRegistry[viewId]) {
+                    const planData = container._planData;
+                    if (planData) {
+                        initJsonView(viewId, jsonView, planData, 2);
+                    }
+                }
+            } else {
+                structured.classList.remove('hidden');
+                jsonView.classList.remove('active');
+                btns[0].classList.add('active');
+                btns[1].classList.remove('active');
+            }
+        }
+
+        // ==================== 筛选 ====================
         function toggleFilter(btn) {
             const ability = btn.dataset.ability;
-
             if (selectedAbilities.has(ability)) {
                 selectedAbilities.delete(ability);
                 btn.classList.remove('active');
@@ -1981,84 +2819,49 @@
                 selectedAbilities.add(ability);
                 btn.classList.add('active');
             }
-
             applyFilters();
         }
 
-        // 通过能力标签筛选
-        function filterByAbility(ability) {
-            // 清除所有筛选
+        function filterByAbility(ability, fromCaseId) {
             selectedAbilities.clear();
-            document.querySelectorAll('.filter-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-
-            // 添加选中的能力
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
             selectedAbilities.add(ability);
             const targetBtn = document.querySelector(`.filter-btn[data-ability="${ability}"]`);
-            if (targetBtn) {
-                targetBtn.classList.add('active');
-            }
-
+            if (targetBtn) targetBtn.classList.add('active');
             applyFilters();
-
-            // 滚动到筛选器
             document.getElementById('ability-filter').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            if (fromCaseId) showReturnButton(fromCaseId);
         }
 
-        // 清除所有筛选
         function clearFilters() {
             selectedAbilities.clear();
-            document.querySelectorAll('.filter-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
             applyFilters();
         }
 
-        // 应用筛选
         function applyFilters() {
-            // 更新筛选状态文本
             const currentText = document.getElementById('filter-current-text');
             if (selectedAbilities.size === 0) {
                 currentText.textContent = '无 (显示全部)';
             } else {
-                const names = [...selectedAbilities].map(a => abilityFullNames[a] || a);
-                currentText.textContent = names.join(' + ');
+                currentText.textContent = [...selectedAbilities].map(a => abilityFullNames[a] || a).join(' + ');
             }
-
-            // 筛选论文
             filterPapers();
-
-            // 筛选 Cases
             filterCases();
-
-            // 更新计数
             updateCounts();
         }
 
-        // 筛选论文
         function filterPapers() {
-            const papers = document.querySelectorAll('.paper-card');
-
-            papers.forEach(paper => {
+            document.querySelectorAll('.paper-card').forEach(paper => {
                 if (selectedAbilities.size === 0) {
                     paper.classList.remove('hidden');
-                    // 移除所有高亮
-                    paper.querySelectorAll('.tool-card, .memory-card').forEach(card => {
-                        card.classList.remove('highlighted');
-                    });
+                    paper.querySelectorAll('.tool-card, .memory-card').forEach(c => c.classList.remove('highlighted'));
                     return;
                 }
-
-                // 检查论文是否有匹配的工具/Memory
                 let hasMatch = false;
-                const toolsGrid = paper.querySelector('.tools-memory-grid');
-                const cards = toolsGrid.querySelectorAll('.tool-card, .memory-card');
-
-                cards.forEach(card => {
+                paper.querySelectorAll('.tool-card, .memory-card').forEach(card => {
                     const cardAbilities = JSON.parse(card.dataset.abilities || '[]');
                     const matches = [...selectedAbilities].every(a => cardAbilities.includes(a));
-
                     if (matches && cardAbilities.length > 0) {
                         card.classList.add('highlighted');
                         hasMatch = true;
@@ -2066,112 +2869,112 @@
                         card.classList.remove('highlighted');
                     }
                 });
-
-                if (hasMatch) {
-                    paper.classList.remove('hidden');
-                } else {
-                    paper.classList.add('hidden');
-                }
+                paper.classList.toggle('hidden', !hasMatch);
             });
         }
 
-        // 筛选 Cases
         function filterCases() {
-            const cases = document.querySelectorAll('.case-card');
-
-            cases.forEach(caseCard => {
+            document.querySelectorAll('.case-card').forEach(caseCard => {
                 if (selectedAbilities.size === 0) {
                     caseCard.classList.remove('hidden');
                     return;
                 }
-
                 const caseAbilities = JSON.parse(caseCard.dataset.abilities || '[]');
                 const matches = [...selectedAbilities].every(a => caseAbilities.includes(a));
-
-                if (matches) {
-                    caseCard.classList.remove('hidden');
-                } else {
-                    caseCard.classList.add('hidden');
-                }
+                caseCard.classList.toggle('hidden', !matches);
             });
         }
 
-        // 更新计数
         function updateCounts() {
-            const visiblePapers = document.querySelectorAll('.paper-card:not(.hidden)').length;
-            const visibleCases = document.querySelectorAll('.case-card:not(.hidden)').length;
-
-            document.getElementById('paper-count').textContent = visiblePapers;
-            document.getElementById('case-count').textContent = visibleCases;
+            document.getElementById('paper-count').textContent = document.querySelectorAll('.paper-card:not(.hidden)').length;
+            document.getElementById('case-count').textContent = document.querySelectorAll('.case-card:not(.hidden)').length;
         }
 
-        // Side Navigation - Scroll Spy
+        // ==================== Side Navigation ====================
         function setupSideNav() {
             const sections = ['ability-overview', 'ability-filter', 'papers-section', 'cases-section'];
             const navItems = document.querySelectorAll('.side-nav-item');
-
-            const observerOptions = {
-                root: null,
-                rootMargin: '-20% 0px -60% 0px',
-                threshold: 0
-            };
-
             const observer = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
                     if (entry.isIntersecting) {
                         const sectionId = entry.target.id;
                         navItems.forEach(item => {
-                            item.classList.remove('active');
-                            if (item.dataset.section === sectionId) {
-                                item.classList.add('active');
-                            }
+                            item.classList.toggle('active', item.dataset.section === sectionId);
                         });
                     }
                 });
-            }, observerOptions);
+            }, { root: null, rootMargin: '-20% 0px -60% 0px', threshold: 0 });
 
             sections.forEach(id => {
                 const section = document.getElementById(id);
-                if (section) {
-                    observer.observe(section);
-                }
+                if (section) observer.observe(section);
             });
 
             navItems.forEach(item => {
                 item.addEventListener('click', (e) => {
                     e.preventDefault();
-                    const targetId = item.dataset.section;
-                    const target = document.getElementById(targetId);
-                    if (target) {
-                        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }
+                    document.getElementById(item.dataset.section)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 });
             });
         }
-
-        // Initialize side nav
         setupSideNav();
 
-        // 图片 Modal 功能
+        // ==================== 图片 Modal ====================
+        // ==================== URL 深度链接 + 复制 ====================
+        function copySectionLink(sectionId, el) {
+            const url = location.origin + location.pathname + '#' + sectionId;
+            navigator.clipboard.writeText(url).then(() => {
+                history.replaceState(null, '', '#' + sectionId);
+                const original = el.textContent;
+                el.textContent = '✓';
+                setTimeout(() => { el.textContent = original; }, 1500);
+            });
+        }
+
+        function copyCaseLink(caseId, el) {
+            const url = location.origin + location.pathname + '#case-' + caseId;
+            navigator.clipboard.writeText(url).then(() => {
+                history.replaceState(null, '', '#case-' + caseId);
+                const original = el.textContent;
+                el.textContent = '✓';
+                setTimeout(() => { el.textContent = original; }, 1500);
+            });
+        }
+
+        function handleUrlHash() {
+            const hash = location.hash;
+            if (!hash) return;
+            if (hash === '#cases') {
+                setTimeout(() => {
+                    document.getElementById('cases-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
+            } else if (hash.startsWith('#case-')) {
+                const el = document.getElementById(hash.substring(1));
+                if (el) {
+                    setTimeout(() => {
+                        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        el.classList.add('hash-highlight');
+                        setTimeout(() => { el.classList.remove('hash-highlight'); }, 2000);
+                    }, 100);
+                }
+            }
+        }
+
+        // ==================== 图片 Modal ====================
         function openImageModal(src) {
             const modal = document.getElementById('imageModal');
-            const modalImage = document.getElementById('modalImage');
-            modalImage.src = src;
+            document.getElementById('modalImage').src = src;
             modal.classList.add('active');
             document.body.style.overflow = 'hidden';
         }
 
         function closeImageModal() {
-            const modal = document.getElementById('imageModal');
-            modal.classList.remove('active');
+            document.getElementById('imageModal').classList.remove('active');
             document.body.style.overflow = '';
         }
 
-        // ESC 键关闭 Modal
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                closeImageModal();
-            }
+            if (e.key === 'Escape') closeImageModal();
         });
     </script>
 </body>

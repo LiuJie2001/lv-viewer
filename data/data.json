@@ -861,6 +861,18 @@
           ]
         },
         {
+          "name": "Video Understanding-main_object_analysis",
+          "implementation": "video_referring_segmentation + InternVL3-38B",
+          "input": "视频 + 对象标签 + 问题",
+          "output": "对象行为描述文本",
+          "purpose": "主要对象分析（Workflow：先分割追踪目标对象，再 VLM 分析描述）",
+          "abilities": [
+            "visual_perception",
+            "spatial_object_dynamics",
+            "high_level_reasoning"
+          ]
+        },
+        {
           "name": "Image Gen-text2image_generate",
           "implementation": "FLUX-Kontext API",
           "input": "文本提示",
