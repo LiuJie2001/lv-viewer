@@ -1189,6 +1189,36 @@
             overflow: hidden;
         }
 
+        /* 分层 21 工具集面板 - 蓝色系 */
+        .experiment-panel[data-experiment-id="exp_001_baseline"] {
+            border-color: #7ba3d4;
+        }
+        .experiment-panel[data-experiment-id="exp_001_baseline"] .experiment-panel-header {
+            background: #4b6cb7;
+            color: #fff;
+        }
+        .experiment-panel[data-experiment-id="exp_001_baseline"] .experiment-panel-header:hover {
+            background: #3b5998;
+        }
+        .experiment-panel[data-experiment-id="exp_001_baseline"] .experiment-panel-toggle {
+            color: rgba(255,255,255,0.7);
+        }
+
+        /* UniVA 面板 - 灰色系 */
+        .experiment-panel[data-experiment-id="univa"] {
+            border-color: #d1d5db;
+        }
+        .experiment-panel[data-experiment-id="univa"] .experiment-panel-header {
+            background: #9ca3af;
+            color: #fff;
+        }
+        .experiment-panel[data-experiment-id="univa"] .experiment-panel-header:hover {
+            background: #8b939e;
+        }
+        .experiment-panel[data-experiment-id="univa"] .experiment-panel-toggle {
+            color: rgba(255,255,255,0.7);
+        }
+
         .experiment-panel-header {
             background: var(--color-bg-alt);
             padding: 0.6rem 1rem;
@@ -1320,6 +1350,15 @@
         .plan-ability-tag[data-ability="audiovisual_joint"] { background: rgba(156, 39, 176, 0.15); color: #6a1b9a; }
 
         /* ========== Plan 对比区 ========== */
+        .plan-comparison-header {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--color-text-secondary);
+            margin: 0.75rem 0 0.5rem;
+            padding-bottom: 0.35rem;
+            border-bottom: 1px solid var(--color-border);
+        }
+
         .case-plan-comparison {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -1332,8 +1371,19 @@
             overflow: hidden;
         }
 
+        /* 分层 21 工具集（主角）外层样式 */
+        .plan-column[data-experiment-id="exp_001_baseline"] {
+            border: 2px solid #7ba3d4;
+            background: #f8faff;
+        }
+
+        /* UniVA（参照）外层样式 */
+        .plan-column[data-experiment-id="univa"] {
+            border: 1px solid #d1d5db;
+            background: #fafafa;
+        }
+
         .plan-column-header {
-            background: var(--color-bg-alt);
             padding: 0.5rem 0.75rem;
             display: flex;
             align-items: center;
@@ -1341,10 +1391,45 @@
             border-bottom: 1px solid var(--color-border);
         }
 
+        /* 分层 21 列头 - 深蓝 */
+        .plan-column[data-experiment-id="exp_001_baseline"] .plan-column-header {
+            background: #4b6cb7;
+            border-bottom-color: #4b6cb7;
+        }
+        .plan-column[data-experiment-id="exp_001_baseline"] .plan-column-title {
+            color: #fff;
+        }
+        .plan-column[data-experiment-id="exp_001_baseline"] .plan-column-model {
+            color: rgba(255,255,255,0.7);
+        }
+
+        /* UniVA 列头 - 中灰 */
+        .plan-column[data-experiment-id="univa"] .plan-column-header {
+            background: #9ca3af;
+            border-bottom-color: #9ca3af;
+        }
+        .plan-column[data-experiment-id="univa"] .plan-column-title {
+            color: #fff;
+        }
+        .plan-column[data-experiment-id="univa"] .plan-column-model {
+            color: rgba(255,255,255,0.7);
+        }
+
+        .plan-column-title-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.1rem;
+        }
+
         .plan-column-title {
-            font-size: 0.8rem;
+            font-size: 0.85rem;
             font-weight: 600;
             color: var(--color-text-secondary);
+        }
+
+        .plan-column-model {
+            font-size: 0.7rem;
+            color: var(--color-text-muted);
         }
 
         .plan-view-toggle {
@@ -1353,6 +1438,10 @@
             border: 1px solid var(--color-border);
             border-radius: 4px;
             overflow: hidden;
+        }
+
+        .plan-column[data-experiment-id] .plan-view-toggle {
+            border-color: rgba(255,255,255,0.4);
         }
 
         .plan-view-btn {
@@ -2107,7 +2196,7 @@
                 <span class="section-number">03</span>
                 <h2 class="section-title">Case 展示</h2>
                 <span class="section-count" id="cases-total-count"></span>
-                <span class="case-copy-link" title="复制 Case 区域链接" onclick="copySectionLink('cases', this)" style="margin-left: 0.5rem;">🔗</span>
+                <span class="case-copy-link" title="复制此区域的分享链接" onclick="copySectionLink('cases', this)" style="margin-left: 0.5rem;">🔗 复制链接</span>
             </div>
             <div id="experiment-panels" class="experiment-panels">
                 <!-- 实验模板面板由 JS 渲染 -->
@@ -2480,11 +2569,13 @@
             // 说明文字
             const desc = document.createElement('p');
             desc.className = 'experiment-panels-desc';
-            desc.innerHTML = '以下为<strong>生成轨迹（仅 Plan 阶段）</strong>所用的 System Prompt，定义了可选的工具集。其中「分层 21 工具集」的工具定义聚合自上方「02 论文方法展示」中各论文提出的工具，每个工具均标注了来源论文与对应能力（仅展示）。';
+            desc.innerHTML = '以下为两组实验<strong>生成 Plan 轨迹</strong>所用的 <strong>System Prompt</strong>，定义了各自可选的工具集。其中「分层 21 工具集」的工具定义聚合自上方「02 论文方法展示」中各论文提出的工具，每个工具均标注了来源论文与对应能力。两组实验的 User Prompt 相同，均为：<code>Analyze the video at ./video.mp4 and answer the question: {question}</code>';
             container.appendChild(desc);
-            experiments.forEach(exp => {
+            const sortedExps = [...experiments].sort((a, b) => a.id === 'exp_001_baseline' ? -1 : b.id === 'exp_001_baseline' ? 1 : 0);
+            sortedExps.forEach(exp => {
                 const panel = document.createElement('div');
                 panel.className = 'experiment-panel';
+                panel.dataset.experimentId = exp.id;
                 const promptText = experimentPrompts[exp.id] || '';
                 panel.innerHTML = `
                     <div class="experiment-panel-header" onclick="toggleExperimentPanel(this)">
@@ -2612,7 +2703,7 @@
                         <span class="case-id">${caseItem.id}</span>
                     </div>
                     <div class="case-header-right">
-                        <span class="case-copy-link" title="复制 Case 链接" onclick="copyCaseLink('${caseItem.id}', this)">🔗</span>
+                        <span class="case-copy-link" title="复制此 Case 的分享链接" onclick="copyCaseLink('${caseItem.id}', this)">🔗 复制链接</span>
                         ${caseItem.youtubeLink ? `<a href="${caseItem.youtubeLink}" target="_blank" class="case-link" title="观看视频">▶️</a>` : ''}
                     </div>
                 </div>
@@ -2667,14 +2758,16 @@
                         </div>
                     </div>
 
+                    <div class="plan-comparison-header">📊 Plan 轨迹对比</div>
                     <div class="case-plan-comparison" id="plan-compare-${caseItem.id}">
                     </div>
                 </div>
             `;
 
-            // 渲染 plan 对比列
+            // 渲染 plan 对比列（exp_001_baseline 排在左边）
             const planContainer = card.querySelector(`#plan-compare-${caseItem.id}`);
-            experiments.forEach(exp => {
+            const sortedExps = [...experiments].sort((a, b) => a.id === 'exp_001_baseline' ? -1 : b.id === 'exp_001_baseline' ? 1 : 0);
+            sortedExps.forEach(exp => {
                 const expData = experimentResults[exp.id];
                 const plan = expData?.results?.get(caseItem.id);
                 const col = createPlanColumn(exp, plan, caseItem.id);
@@ -2688,11 +2781,16 @@
         function createPlanColumn(exp, plan, caseId) {
             const col = document.createElement('div');
             col.className = 'plan-column';
+            col.dataset.experimentId = exp.id;
             const uniqueId = `${exp.id}-${caseId}`;
+            const shortName = exp.name.includes('（') ? exp.name.split('（')[0] : exp.name;
 
             col.innerHTML = `
                 <div class="plan-column-header">
-                    <span class="plan-column-title">${exp.name} (${exp.model})</span>
+                    <div class="plan-column-title-group">
+                        <span class="plan-column-title">${shortName}</span>
+                        <span class="plan-column-model">${exp.model}</span>
+                    </div>
                     <div class="plan-view-toggle">
                         <button class="plan-view-btn active" onclick="switchPlanView('${uniqueId}', 'structured')">结构化</button>
                         <button class="plan-view-btn" onclick="switchPlanView('${uniqueId}', 'json')">JSON</button>
