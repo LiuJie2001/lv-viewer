@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工具提取可视化 — Video Understanding Tools</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --color-text: #1a1a1a;
+            --color-text-secondary: #555;
+            --color-text-muted: #888;
+            --color-bg: #ffffff;
+            --color-bg-alt: #f8f9fa;
+            --color-border: #e5e5e5;
+            --color-accent: #2563eb;
+            --color-accent-light: #dbeafe;
+            --color-correct: #16a34a;
+            --color-correct-bg: #dcfce7;
+            --color-gpt: #10a37f;
+            --color-claude: #c96442;
+            --color-gemini: #4285f4;
+            --font-serif: 'Crimson Pro', 'Noto Sans SC', serif;
+            --font-sans: 'Noto Sans SC', -apple-system, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { font-family: var(--font-sans); font-size: 16px; line-height: 1.6; color: var(--color-text); background: var(--color-bg); }
+
+        .header { background: linear-gradient(135deg, #f8fafc 0%, #fff 100%); border-bottom: 1px solid var(--color-border); padding: 2.5rem 2rem 2rem; text-align: center; }
+        .header-tag { display: inline-block; font-size: 0.75rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.1em; color: var(--color-accent); background: var(--color-accent-light); padding: 0.25rem 0.75rem; border-radius: 2rem; margin-bottom: 1rem; }
+        .header h1 { font-family: var(--font-serif); font-size: clamp(1.5rem, 3.5vw, 2.25rem); font-weight: 700; margin-bottom: 0.5rem; }
+        .header .subtitle { font-size: 0.95rem; color: var(--color-text-secondary); }
+
+        .main { max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+        .section { margin-bottom: 3rem; }
+        .section-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--color-text); }
+        .section-number { font-family: var(--font-serif); font-size: 1.75rem; font-weight: 700; color: var(--color-accent); line-height: 1; }
+        .section-title { font-family: var(--font-serif); font-size: 1.25rem; font-weight: 600; }
+        .section-count { margin-left: auto; font-size: 0.875rem; color: var(--color-text-muted); }
+
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+        .stat-card { background: var(--color-bg-alt); border: 1px solid var(--color-border); border-radius: 8px; padding: 1rem 1.25rem; text-align: center; }
+        .stat-value { font-family: var(--font-serif); font-size: 1.75rem; font-weight: 700; color: var(--color-accent); }
+        .stat-label { font-size: 0.8rem; color: var(--color-text-muted); margin-top: 0.25rem; }
+
+        /* Panel */
+        .panel { border: 1px solid var(--color-border); border-radius: 8px; margin-bottom: 1rem; overflow: hidden; }
+        .panel-header { display: flex; align-items: center; justify-content: space-between; padding: 0.6rem 1rem; background: var(--color-bg-alt); cursor: pointer; font-size: 0.88rem; font-weight: 500; user-select: none; }
+        .panel-header:hover { background: #f0f2f5; }
+        .panel-toggle { font-size: 0.78rem; color: var(--color-text-muted); }
+        .panel-body { display: none; border-top: 1px solid var(--color-border); }
+        .panel-body.expanded { display: block; }
+
+        .prompt-block { padding: 1rem; }
+        .prompt-block + .prompt-block { border-top: 1px solid var(--color-border); }
+        .prompt-label { font-size: 0.78rem; font-weight: 600; color: var(--color-accent); margin-bottom: 0.5rem; }
+        .prompt-code { font-family: var(--font-mono); font-size: 0.73rem; line-height: 1.7; background: #f8f9fb; border: 1px solid var(--color-border); border-radius: 6px; padding: 0.75rem 1rem; overflow-x: auto; white-space: pre-wrap; word-break: break-word; color: var(--color-text-secondary); }
+
+        /* Cross-links */
+        .xlink { color: var(--color-accent); cursor: pointer; text-decoration: none; border-bottom: 1px dashed var(--color-accent); transition: opacity 0.15s; }
+        .xlink:hover { opacity: 0.7; }
+
+        /* Ability grid (referencing ability-analysis.html layout) */
+        .ability-overview-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px; background: var(--color-border); border: 1px solid var(--color-border); border-radius: 8px; overflow: hidden; }
+        @media (max-width: 1000px) { .ability-overview-grid { grid-template-columns: repeat(3, 1fr); } }
+        @media (max-width: 600px) { .ability-overview-grid { grid-template-columns: 1fr 1fr; } }
+        .ability-col { background: var(--color-bg); display: flex; flex-direction: column; }
+        .ability-col-header { padding: 0.7rem 0.6rem; text-align: center; border-bottom: 1px solid var(--color-border); }
+        .ability-col-name { font-weight: 600; font-size: 0.88rem; }
+        .ability-col-sub { font-size: 0.65rem; color: var(--color-text-muted); margin-top: 0.15rem; }
+        .ability-item { border-bottom: 1px solid #f0f0f0; }
+        .ability-item:last-child { border-bottom: none; }
+        .ability-item-header { padding: 0.4rem 0.55rem; cursor: pointer; display: flex; align-items: center; gap: 0.3rem; font-size: 0.8rem; user-select: none; }
+        .ability-item-header:hover { background: var(--color-bg-alt); }
+        .ability-item-id { font-family: var(--font-mono); font-size: 0.62rem; color: var(--color-accent); font-weight: 700; min-width: 1.2rem; text-align: right; flex-shrink: 0; }
+        .ability-item-name { font-size: 0.76rem; font-weight: 500; line-height: 1.3; }
+        .ability-item-count { margin-left: auto; font-size: 0.6rem; color: var(--color-text-muted); flex-shrink: 0; }
+        .ability-item-arrow { font-size: 0.58rem; color: var(--color-text-muted); transition: transform 0.2s; flex-shrink: 0; }
+        .ability-item-header.expanded .ability-item-arrow { transform: rotate(90deg); }
+        .ability-item-body { display: none; border-top: 1px solid #f0f0f0; padding: 0.5rem; background: var(--color-bg-alt); font-size: 0.75rem; }
+        .ability-item-body.expanded { display: block; }
+        .ability-item-desc { color: var(--color-text-secondary); margin-bottom: 0.4rem; line-height: 1.4; font-size: 0.7rem; }
+        .ability-q-list { max-height: 320px; overflow-y: auto; }
+        .ability-q-item { padding: 0.3rem 0; border-bottom: 1px solid #eee; }
+        .ability-q-item:last-child { border-bottom: none; }
+        .ability-q-head { display: flex; align-items: center; gap: 0.3rem; }
+        .ability-q-id { font-family: var(--font-mono); font-size: 0.6rem; color: var(--color-accent); cursor: pointer; flex-shrink: 0; }
+        .ability-q-id:hover { text-decoration: underline; }
+        .ability-q-bm { font-family: var(--font-mono); font-size: 0.56rem; padding: 0.05rem 0.2rem; border-radius: 2px; background: #eee; color: var(--color-text-muted); flex-shrink: 0; }
+        .ability-q-text { font-size: 0.68rem; color: var(--color-text-secondary); margin-top: 0.1rem; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .ability-q-tools { display: flex; flex-wrap: wrap; gap: 0.15rem; margin-top: 0.15rem; }
+        .ability-q-tool-tag { font-family: var(--font-mono); font-size: 0.56rem; padding: 0.05rem 0.22rem; background: #f0fdf4; color: var(--color-correct); border-radius: 2px; cursor: pointer; }
+        .ability-q-tool-tag:hover { opacity: 0.7; }
+
+        /* Tool registry table */
+        .tool-table-wrap { overflow-x: auto; border: 1px solid var(--color-border); border-radius: 8px; }
+        .tool-reg-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
+        .tool-reg-table th { padding: 0.45rem 0.5rem; background: var(--color-bg-alt); font-weight: 600; font-size: 0.68rem; text-align: left; border-bottom: 1px solid var(--color-border); color: var(--color-text-secondary); white-space: nowrap; }
+        .tool-reg-table td { padding: 0.4rem 0.5rem; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+        .tool-row { cursor: pointer; transition: background 0.1s; }
+        .tool-row:hover { background: #fafbfd; }
+        .tool-row.expanded { background: var(--color-accent-light); }
+        .tool-row-rank { font-family: var(--font-mono); font-size: 0.62rem; color: var(--color-text-muted); text-align: center; width: 1.8rem; }
+        .tool-row-name { font-family: var(--font-mono); font-size: 0.74rem; font-weight: 600; color: var(--color-accent); white-space: nowrap; }
+        .tool-row-desc { font-size: 0.72rem; color: var(--color-text-secondary); line-height: 1.45; max-width: 360px; }
+        .tool-row-io { font-size: 0.64rem; color: var(--color-text-secondary); line-height: 1.5; max-width: 220px; }
+        .tool-row-io .io-param { display: flex; gap: 0.2rem; align-items: baseline; }
+        .tool-row-io .io-key { font-family: var(--font-mono); font-weight: 600; color: var(--color-text); white-space: nowrap; }
+        .tool-row-io .io-type { font-family: var(--font-mono); font-size: 0.58rem; color: var(--color-text-muted); word-break: break-all; }
+        .tool-row-freq { white-space: nowrap; text-align: right; }
+        .tool-row-freq-bar { display: inline-block; width: 48px; height: 5px; background: #eee; border-radius: 3px; overflow: hidden; vertical-align: middle; margin-right: 0.25rem; }
+        .tool-row-freq-fill { display: block; height: 100%; background: var(--color-accent); border-radius: 3px; }
+        .tool-row-freq-num { font-family: var(--font-mono); font-size: 0.65rem; color: var(--color-text-muted); }
+        .tool-row-arrow { font-size: 0.55rem; color: var(--color-text-muted); transition: transform 0.2s; text-align: center; width: 1rem; }
+        .tool-row.expanded .tool-row-arrow { transform: rotate(90deg); }
+        .tool-detail-row { display: none; }
+        .tool-detail-row.expanded { display: table-row; }
+        .tool-detail-cell { padding: 0.6rem 0.75rem; background: var(--color-bg-alt); border-bottom: 1px solid var(--color-border); }
+        .tool-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+        @media (max-width: 700px) { .tool-detail-grid { grid-template-columns: 1fr; } }
+        .tool-detail-label { font-size: 0.66rem; font-weight: 600; color: var(--color-text-muted); margin-bottom: 0.25rem; }
+        .tool-detail-tags { display: flex; flex-wrap: wrap; gap: 0.2rem; align-items: center; }
+        .tool-detail-tag { display: inline-block; padding: 0.1rem 0.35rem; border-radius: 3px; font-size: 0.63rem; font-weight: 500; cursor: pointer; transition: opacity 0.15s; }
+        .tool-detail-tag:hover { opacity: 0.7; }
+        .tool-detail-tag.ability { background: var(--color-correct-bg); color: var(--color-correct); }
+        .tool-detail-q-list { max-height: 260px; overflow-y: auto; margin-top: 0.2rem; }
+        .tool-detail-q-item { padding: 0.25rem 0; border-bottom: 1px solid #eee; font-size: 0.7rem; }
+        .tool-detail-q-item:last-child { border-bottom: none; }
+        .tool-detail-q-head { display: flex; align-items: center; gap: 0.25rem; }
+        .tool-detail-q-id { font-family: var(--font-mono); font-size: 0.58rem; color: var(--color-accent); cursor: pointer; }
+        .tool-detail-q-id:hover { text-decoration: underline; }
+        .tool-detail-q-bm { font-family: var(--font-mono); font-size: 0.54rem; padding: 0.03rem 0.18rem; border-radius: 2px; background: #eee; color: var(--color-text-muted); }
+        .tool-detail-q-text { font-size: 0.66rem; color: var(--color-text-secondary); margin-top: 0.08rem; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+        /* Question cards */
+        .question-card { border: 1px solid var(--color-border); border-radius: 8px; margin-bottom: 1rem; overflow: hidden; }
+        .question-card-header { padding: 0.6rem 0.85rem; background: var(--color-bg-alt); border-bottom: 1px solid var(--color-border); }
+        .question-info { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; }
+        .question-benchmark { font-family: var(--font-mono); font-size: 0.68rem; padding: 0.1rem 0.35rem; border-radius: 3px; background: #e8e8e8; color: var(--color-text-secondary); font-weight: 500; }
+        .question-id { font-family: var(--font-mono); font-size: 0.68rem; color: var(--color-text-muted); }
+        .question-ability-link { font-size: 0.68rem; font-weight: 500; }
+        .question-text { font-size: 0.8rem; color: var(--color-text); margin-top: 0.35rem; line-height: 1.5; }
+        .question-expand-btn { font-size: 0.68rem; color: var(--color-accent); cursor: pointer; margin-top: 0.15rem; display: inline-block; }
+        .resolved-tools-bar { padding: 0.35rem 0.6rem; font-size: 0.7rem; color: var(--color-correct); background: rgba(22,163,106,0.04); border-bottom: 1px solid var(--color-border); display: flex; flex-wrap: wrap; gap: 0.25rem; align-items: center; }
+        .resolved-label { font-weight: 600; margin-right: 0.2rem; }
+        .resolved-tag { font-family: var(--font-mono); font-size: 0.65rem; padding: 0.1rem 0.3rem; background: var(--color-correct-bg); border-radius: 3px; cursor: pointer; }
+        .resolved-tag:hover { opacity: 0.7; }
+
+        /* Three-column */
+        .model-compare { display: grid; grid-template-columns: 1fr 1fr 1fr; min-height: 60px; }
+        @media (max-width: 900px) { .model-compare { display: none; } .model-tabs-wrapper { display: block !important; } }
+        @media (min-width: 901px) { .model-tabs-wrapper { display: none; } }
+        .model-column { border-right: 1px solid var(--color-border); }
+        .model-column:last-child { border-right: none; }
+        .model-col-header { padding: 0.35rem 0.5rem; font-size: 0.72rem; font-weight: 600; border-bottom: 1px solid var(--color-border); display: flex; align-items: center; gap: 0.35rem; }
+        .model-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+        .model-dot.gpt { background: var(--color-gpt); } .model-dot.claude { background: var(--color-claude); } .model-dot.gemini { background: var(--color-gemini); }
+        .model-col-header.gpt { color: var(--color-gpt); background: rgba(16,163,127,0.04); }
+        .model-col-header.claude { color: var(--color-claude); background: rgba(201,100,66,0.04); }
+        .model-col-header.gemini { color: var(--color-gemini); background: rgba(66,133,244,0.04); }
+        .tool-step { padding: 0.3rem 0.5rem; border-bottom: 1px solid #f5f5f5; font-size: 0.72rem; }
+        .tool-step:last-child { border-bottom: none; }
+        .tool-step-header { display: flex; align-items: center; gap: 0.25rem; }
+        .step-num { font-family: var(--font-mono); font-size: 0.58rem; font-weight: 700; color: white; background: var(--color-accent); width: 15px; height: 15px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .step-name { font-family: var(--font-mono); font-size: 0.7rem; font-weight: 600; color: var(--color-text); }
+        .step-purpose { font-size: 0.66rem; color: var(--color-text-muted); margin-top: 0.1rem; margin-left: 1.2rem; line-height: 1.35; }
+        .no-tools { padding: 0.6rem; font-size: 0.75rem; color: var(--color-text-muted); text-align: center; font-style: italic; }
+
+        /* Tabs */
+        .model-tabs-wrapper { display: none; }
+        .model-tabs { display: flex; border-bottom: 1px solid var(--color-border); }
+        .model-tab { flex: 1; padding: 0.35rem; text-align: center; font-size: 0.72rem; font-weight: 500; cursor: pointer; border-bottom: 2px solid transparent; color: var(--color-text-muted); transition: all 0.15s; }
+        .model-tab:hover { background: #fafafa; }
+        .model-tab.active { border-bottom-color: var(--color-accent); color: var(--color-accent); }
+        .model-tab-panel { display: none; }
+        .model-tab-panel.active { display: block; }
+
+        /* Matrix */
+        .matrix-wrapper { overflow-x: auto; }
+        .matrix-table { border-collapse: collapse; font-size: 0.68rem; }
+        .matrix-table th { padding: 0.3rem 0.4rem; background: var(--color-bg-alt); font-weight: 600; border: 1px solid var(--color-border); white-space: nowrap; }
+        .matrix-table th.tool-col { writing-mode: vertical-lr; text-orientation: mixed; font-family: var(--font-mono); font-size: 0.62rem; padding: 0.5rem 0.25rem; max-width: 1.8rem; color: var(--color-text-secondary); cursor: pointer; }
+        .matrix-table th.tool-col:hover { color: var(--color-accent); }
+        .matrix-table td { padding: 0.25rem 0.35rem; border: 1px solid var(--color-border); text-align: center; }
+        .matrix-table td.ability-name { text-align: left; font-weight: 500; white-space: nowrap; cursor: pointer; }
+        .matrix-table td.ability-name:hover { color: var(--color-accent); }
+        .matrix-dot { display: inline-block; width: 12px; height: 12px; border-radius: 3px; background: var(--color-accent); opacity: 0.7; }
+        .matrix-dot.empty { background: transparent; }
+
+        /* Ability group in questions */
+        .ability-group { margin-bottom: 1.5rem; }
+        .ability-group-header { font-family: var(--font-serif); font-size: 1rem; font-weight: 600; padding-bottom: 0.3rem; border-bottom: 1px solid var(--color-border); margin-bottom: 0.6rem; }
+        .ability-group-id { color: var(--color-accent); margin-right: 0.3rem; }
+
+        /* Provenance */
+        .prov-section { margin-top: 0.5rem; }
+        .prov-item { font-size: 0.72rem; padding: 0.25rem 0; color: var(--color-text-secondary); border-bottom: 1px solid #f5f5f5; }
+        .prov-item:last-child { border-bottom: none; }
+        .prov-name { font-family: var(--font-mono); font-weight: 600; color: var(--color-text); }
+        .prov-action { font-size: 0.62rem; padding: 0.05rem 0.3rem; border-radius: 3px; font-weight: 600; margin: 0 0.3rem; }
+        .prov-action.deleted { background: #fee2e2; color: #dc2626; }
+        .prov-action.merged { background: #fef3c7; color: #d97706; }
+
+        /* Copy / Back */
+        .copy-btn { font-size: 0.63rem; padding: 0.12rem 0.35rem; border: 1px solid var(--color-border); border-radius: 3px; background: white; cursor: pointer; color: var(--color-text-muted); font-family: var(--font-mono); }
+        .copy-btn:hover { border-color: var(--color-accent); color: var(--color-accent); }
+        #back-btn { position: fixed; bottom: 2rem; right: 2rem; display: none; align-items: center; gap: 0.3rem; padding: 0.5rem 1rem; background: var(--color-accent); color: white; border: none; border-radius: 2rem; font-family: var(--font-sans); font-size: 0.78rem; font-weight: 500; cursor: pointer; box-shadow: 0 2px 12px rgba(37,99,235,0.3); z-index: 1000; transition: opacity 0.2s, transform 0.2s; }
+        #back-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(37,99,235,0.4); }
+        #back-btn.visible { display: flex; }
+        @keyframes flash-highlight { 0% { box-shadow: 0 0 0 3px rgba(37,99,235,0.4); } 100% { box-shadow: 0 0 0 0 rgba(37,99,235,0); } }
+        .flash-highlight { animation: flash-highlight 1.5s ease-out; }
+    </style>
+</head>
+<body>
+
+<header class="header">
+    <div class="header-tag">Tool Extraction Analysis v5</div>
+    <h1>视频理解工具提取 — 多模型对比分析</h1>
+    <p class="subtitle">GPT-5.4 / Claude Opus 4.6 / Gemini 3.1 Pro &times; 工具归并</p>
+</header>
+
+<main class="main">
+    <section class="section" id="sec-overview">
+        <div class="section-header"><span class="section-number">01</span><span class="section-title">概览</span></div>
+        <div class="stats-grid" id="stats-grid"></div>
+    </section>
+
+    <section class="section" id="sec-abilities">
+        <div class="section-header"><span class="section-number">02</span><span class="section-title">能力框架</span><span class="section-count" id="abilities-count"></span></div>
+        <div id="abilities-container"></div>
+    </section>
+
+    <section class="section" id="sec-prompts">
+        <div class="section-header"><span class="section-number">03</span><span class="section-title">提示词模板</span></div>
+        <div id="prompts-container"></div>
+    </section>
+
+    <section class="section" id="sec-tools">
+        <div class="section-header"><span class="section-number">04</span><span class="section-title">工具注册表</span><span class="section-count" id="tools-count"></span></div>
+        <div id="tools-container"></div>
+    </section>
+
+    <section class="section" id="sec-questions">
+        <div class="section-header"><span class="section-number">05</span><span class="section-title">逐题多模型对比</span><span class="section-count" id="questions-count"></span></div>
+        <div id="questions-container"></div>
+    </section>
+
+    <section class="section" id="sec-matrix">
+        <div class="section-header"><span class="section-number">06</span><span class="section-title">Ability &times; Tool 矩阵</span></div>
+        <div id="matrix-container"></div>
+    </section>
+</main>
+
+<button id="back-btn" onclick="goBack()">&#8592; 返回</button>
+
+<script>
+let DATA = null;
+let abilityMap = {};
+
+// ==================== Navigation ====================
+const navHistory = [];
+function jumpTo(targetId) {
+    navHistory.push(window.scrollY);
+    document.getElementById('back-btn').classList.add('visible');
+    let el = document.getElementById(targetId);
+    // Tool table: tool-xxx → tool-xxx-row
+    if (!el && targetId.startsWith('tool-')) {
+        el = document.getElementById(targetId + '-row');
+        if (el) {
+            const detail = document.getElementById(targetId + '-detail');
+            if (detail && !detail.classList.contains('expanded')) { detail.classList.add('expanded'); el.classList.add('expanded'); }
+        }
+    }
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    el.classList.remove('flash-highlight');
+    void el.offsetWidth;
+    el.classList.add('flash-highlight');
+    // Auto-expand ability items
+    const body = el.querySelector('.ability-item-body');
+    const header = el.querySelector('.ability-item-header');
+    if (body && !body.classList.contains('expanded')) {
+        body.classList.add('expanded');
+        if (header) header.classList.add('expanded');
+    }
+}
+function goBack() {
+    if (!navHistory.length) return;
+    window.scrollTo({ top: navHistory.pop(), behavior: 'smooth' });
+    if (!navHistory.length) document.getElementById('back-btn').classList.remove('visible');
+}
+
+// ==================== Utility ====================
+function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function modelShort(m) { if (m.includes('gemini')) return 'gemini'; if (m.includes('claude')) return 'claude'; if (m.includes('gpt')) return 'gpt'; return m.split('-')[0]; }
+function modelLabel(m) { const s = modelShort(m); return s === 'gpt' ? 'GPT-5.4' : s === 'claude' ? 'Claude Opus 4.6' : s === 'gemini' ? 'Gemini 3.1 Pro' : m; }
+function getAbilityName(aid) { return abilityMap[aid] ? abilityMap[aid].name : `Ability ${aid}`; }
+function qAnchorId(q) { return `q-${q.ability_id}-${q.benchmark}-${q.question_id}`; }
+
+function buildAbilityMap(data) {
+    for (const a of (data.abilities || [])) abilityMap[a.ability_id] = { name: a.ability_name, category: a.ability_category, description: a.ability_description };
+    for (const q of (data.questions || [])) if (!abilityMap[q.ability_id]) abilityMap[q.ability_id] = { name: q.ability_name, category: '', description: '' };
+}
+
+function togglePanel(pid) {
+    const b = document.getElementById(pid + '-body'), t = document.getElementById(pid + '-toggle');
+    const e = b.classList.toggle('expanded');
+    t.textContent = e ? '▾ 收起' : '▸ 展开';
+}
+function toggleExpandable(hid, bid) {
+    const h = document.getElementById(hid), b = document.getElementById(bid);
+    const e = b.classList.toggle('expanded');
+    h.classList.toggle('expanded', e);
+}
+function copyText(text, btn) { navigator.clipboard.writeText(text).then(() => { const o = btn.textContent; btn.textContent = '✓'; setTimeout(() => btn.textContent = o, 1500); }); }
+
+// ==================== 01: Stats ====================
+function renderStats(data) {
+    const m = data.metadata;
+    document.getElementById('stats-grid').innerHTML = `
+        <div class="stat-card"><div class="stat-value">${(data.abilities||[]).length}</div><div class="stat-label">Abilities</div></div>
+        <div class="stat-card"><div class="stat-value">${m.total_questions}</div><div class="stat-label">Questions</div></div>
+        <div class="stat-card"><div class="stat-value">${m.models.length}</div><div class="stat-label">Models</div></div>
+        <div class="stat-card"><div class="stat-value">${m.total_raw_tool_entries}</div><div class="stat-label">Raw Entries</div></div>
+        <div class="stat-card"><div class="stat-value">${m.total_registry_tools}</div><div class="stat-label">Registry Tools</div></div>
+    `;
+}
+
+// ==================== 02: Abilities ====================
+function renderAbilities(data) {
+    const abilities = data.abilities || [], questions = data.questions || [], matrix = data.ability_tool_matrix || {};
+    // Group questions by ability
+    const qByAb = {};
+    for (const q of questions) { if (!qByAb[q.ability_id]) qByAb[q.ability_id] = []; qByAb[q.ability_id].push(q); }
+    // Group abilities by category (preserve insertion order)
+    const byCat = {}, catOrder = [];
+    for (const a of abilities) { if (!byCat[a.ability_category]) { byCat[a.ability_category] = []; catOrder.push(a.ability_category); } byCat[a.ability_category].push(a); }
+    document.getElementById('abilities-count').textContent = `${abilities.length} 项能力 · ${catOrder.length} 大类`;
+
+    let html = '<div class="ability-overview-grid">';
+    for (const cat of catOrder) {
+        const catAbilities = byCat[cat];
+        html += `<div class="ability-col"><div class="ability-col-header"><div class="ability-col-name">${cat}</div><div class="ability-col-sub">${catAbilities.length} 项能力</div></div>`;
+        for (const a of catAbilities) {
+            const aid = a.ability_id, hid = `ab-${aid}-h`, bid = `ab-${aid}-b`;
+            const qs = qByAb[aid] || [];
+            // Build question list
+            let qsHtml = '';
+            for (const q of qs) {
+                const anchor = qAnchorId(q), text = q.question_text || '';
+                const resolved = q.resolved_tools || [];
+                qsHtml += `<div class="ability-q-item">
+                    <div class="ability-q-head"><span class="ability-q-bm">${q.benchmark}</span><span class="ability-q-id" onclick="jumpTo('${anchor}')">Q:${q.question_id}</span></div>
+                    <div class="ability-q-text" title="${escapeHtml(text)}">${escapeHtml(text)}</div>
+                    ${resolved.length ? `<div class="ability-q-tools">${resolved.map(t => `<span class="ability-q-tool-tag" onclick="jumpTo('tool-${t}')">${t}</span>`).join('')}</div>` : ''}
+                </div>`;
+            }
+            html += `<div class="ability-item" id="ability-${aid}">
+                <div class="ability-item-header" id="${hid}" onclick="toggleExpandable('${hid}','${bid}')">
+                    <span class="ability-item-id">${aid}</span><span class="ability-item-name">${a.ability_name}</span>
+                    <span class="ability-item-count">${qs.length}题</span><span class="ability-item-arrow">▸</span>
+                </div>
+                <div class="ability-item-body" id="${bid}">
+                    <div class="ability-item-desc">${escapeHtml(a.ability_description)}</div>
+                    <div class="ability-q-list">${qsHtml}</div>
+                </div>
+            </div>`;
+        }
+        html += `</div>`;
+    }
+    html += '</div>';
+    document.getElementById('abilities-container').innerHTML = html;
+}
+
+// ==================== 03: Prompts ====================
+function renderPrompts(data) {
+    const p = data.prompts;
+    document.getElementById('prompts-container').innerHTML = `
+        <div class="panel" id="extract-prompt-panel">
+            <div class="panel-header" onclick="togglePanel('extract-prompt-panel')">
+                <span>提取阶段 Prompt <span style="font-size:0.66rem;color:var(--color-text-muted);margin-left:0.3rem">System + User Template</span></span>
+                <span class="panel-toggle" id="extract-prompt-panel-toggle">▸ 展开</span>
+            </div>
+            <div class="panel-body" id="extract-prompt-panel-body">
+                <div class="prompt-block">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem"><span class="prompt-label">System Prompt</span><button class="copy-btn" onclick="copyText(DATA.prompts.system, this)">copy</button></div>
+                    <div class="prompt-code">${escapeHtml(p.system)}</div>
+                </div>
+                <div class="prompt-block">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem"><span class="prompt-label">User Prompt Template</span><button class="copy-btn" onclick="copyText(DATA.prompts.user_template, this)">copy</button></div>
+                    <div class="prompt-code">${escapeHtml(p.user_template)}</div>
+                </div>
+            </div>
+        </div>
+        <div class="panel" id="reconcile-prompt-panel">
+            <div class="panel-header" onclick="togglePanel('reconcile-prompt-panel')">
+                <span>工具归并 Prompt</span>
+                <span class="panel-toggle" id="reconcile-prompt-panel-toggle">▸ 展开</span>
+            </div>
+            <div class="panel-body" id="reconcile-prompt-panel-body">
+                <div class="prompt-block">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem"><span class="prompt-label">归并 Prompt Template</span><button class="copy-btn" onclick="copyText(DATA.prompts.reconcile, this)">copy</button></div>
+                    <div class="prompt-code">${escapeHtml(p.reconcile)}</div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// ==================== 04: Tools ====================
+function toggleToolRow(name) {
+    const row = document.getElementById(`tool-${name}-row`);
+    const detail = document.getElementById(`tool-${name}-detail`);
+    if (!row || !detail) return;
+    const e = detail.classList.toggle('expanded');
+    row.classList.toggle('expanded', e);
+}
+function renderTools(data) {
+    const tools = data.tools || [], usage = data.usage || {}, questions = data.questions || [], provenance = data.provenance || {};
+    const sorted = [...tools].sort((a, b) => (usage[b.name]?.frequency || 0) - (usage[a.name]?.frequency || 0));
+    const maxFreq = sorted.length ? (usage[sorted[0].name]?.frequency || 1) : 1;
+    document.getElementById('tools-count').textContent = `共 ${sorted.length} 个工具`;
+
+    // Pre-index questions by tool name
+    const qByTool = {};
+    for (const q of questions) for (const tn of (q.resolved_tools || [])) { if (!qByTool[tn]) qByTool[tn] = []; qByTool[tn].push(q); }
+
+    let rows = '';
+    for (let i = 0; i < sorted.length; i++) {
+        const t = sorted[i];
+        const u = usage[t.name] || { ability_ids: [], frequency: 0 };
+        const barPct = Math.round((u.frequency / maxFreq) * 100);
+        const fmtIO = (obj) => Object.entries(obj || {}).map(([k,v]) => `<div class="io-param"><span class="io-key">${escapeHtml(k)}</span><span class="io-type">${escapeHtml(v)}</span></div>`).join('');
+
+        // Main row
+        rows += `<tr class="tool-row" id="tool-${t.name}-row" onclick="toggleToolRow('${t.name}')">
+            <td class="tool-row-rank">${i+1}</td>
+            <td class="tool-row-name">${t.name}</td>
+            <td class="tool-row-desc">${escapeHtml(t.description)}</td>
+            <td class="tool-row-io">${fmtIO(t.input)}</td>
+            <td class="tool-row-io">${fmtIO(t.output)}</td>
+            <td class="tool-row-freq"><span class="tool-row-freq-bar"><span class="tool-row-freq-fill" style="width:${barPct}%"></span></span><span class="tool-row-freq-num">${u.frequency}</span></td>
+            <td class="tool-row-arrow">▸</td>
+        </tr>`;
+
+        // Detail row — abilities + questions with text
+        const relatedQs = qByTool[t.name] || [];
+        const abilityTags = u.ability_ids.map(aid => `<span class="tool-detail-tag ability" onclick="event.stopPropagation();jumpTo('ability-${aid}')">${aid}. ${getAbilityName(aid)}</span>`).join('');
+        let qListHtml = '';
+        for (const q of relatedQs) {
+            const anchor = qAnchorId(q), text = q.question_text || '';
+            qListHtml += `<div class="tool-detail-q-item">
+                <div class="tool-detail-q-head"><span class="tool-detail-q-bm">${q.benchmark}</span><span class="tool-detail-q-id" onclick="event.stopPropagation();jumpTo('${anchor}')">Q:${q.question_id}</span></div>
+                <div class="tool-detail-q-text" title="${escapeHtml(text)}">${escapeHtml(text)}</div>
+            </div>`;
+        }
+
+        rows += `<tr class="tool-detail-row" id="tool-${t.name}-detail">
+            <td colspan="7" class="tool-detail-cell"><div class="tool-detail-grid">
+                <div><div class="tool-detail-label">关联能力 (${u.ability_ids.length})</div><div class="tool-detail-tags">${abilityTags || '<span style="font-size:0.63rem;color:var(--color-text-muted)">—</span>'}</div></div>
+                <div><div class="tool-detail-label">关联问题 (${relatedQs.length})</div><div class="tool-detail-q-list">${qListHtml || '<span style="font-size:0.63rem;color:var(--color-text-muted)">—</span>'}</div></div>
+            </div></td>
+        </tr>`;
+    }
+
+    let html = `<div class="tool-table-wrap"><table class="tool-reg-table">
+        <thead><tr><th>#</th><th>Name</th><th>Description</th><th>Input</th><th>Output</th><th>Freq</th><th></th></tr></thead>
+        <tbody>${rows}</tbody></table></div>`;
+
+    // Provenance
+    const deleted = provenance.deleted_as_non_atomic || {};
+    const merged = provenance.merged || {};
+    if (Object.keys(deleted).length || Object.keys(merged).length) {
+        html += `<div class="prov-section" style="margin-top:1rem;padding:0.6rem;border:1px solid var(--color-border);border-radius:8px;background:var(--color-bg-alt)">
+            <div style="font-size:0.78rem;font-weight:600;margin-bottom:0.4rem">归并日志 <span style="font-weight:400;color:var(--color-text-muted)">(${data.metadata.consolidation || ''})</span></div>`;
+        for (const [name, info] of Object.entries(deleted)) {
+            html += `<div class="prov-item"><span class="prov-name">${name}</span><span class="prov-action deleted">DELETED</span>${escapeHtml(info.reason)} <span style="color:var(--color-text-muted)">(freq ${info.original_frequency})</span></div>`;
+        }
+        for (const [name, info] of Object.entries(merged)) {
+            html += `<div class="prov-item"><span class="prov-name">${name}</span><span class="prov-action merged">MERGED</span>→ <a class="xlink" onclick="jumpTo('tool-${info.merged_into}')">${info.merged_into}</a> ${escapeHtml(info.reason)} <span style="color:var(--color-text-muted)">(freq ${info.original_frequency})</span></div>`;
+        }
+        html += `</div>`;
+    }
+    document.getElementById('tools-container').innerHTML = html;
+}
+
+// ==================== 05: Questions ====================
+function renderQuestions(data) {
+    const questions = data.questions || [], models = data.metadata.models;
+    document.getElementById('questions-count').textContent = `共 ${questions.length} 题`;
+
+    const byAb = {};
+    for (const q of questions) { if (!byAb[q.ability_id]) byAb[q.ability_id] = { name: q.ability_name, questions: [] }; byAb[q.ability_id].questions.push(q); }
+
+    let html = '';
+    for (const aid of Object.keys(byAb).sort((a,b) => +a - +b)) {
+        const g = byAb[aid];
+        html += `<div class="ability-group"><div class="ability-group-header"><span class="ability-group-id"><a class="xlink" onclick="jumpTo('ability-${aid}')">${aid}.</a></span>${g.name}</div>`;
+
+        for (const q of g.questions) {
+            const qText = q.question_text || '', needTrunc = qText.length > 200, anchor = qAnchorId(q);
+
+            function stepsHtml(model) {
+                const tools = (q.tools_by_model||{})[model]||[];
+                if (!tools.length) return '<div class="no-tools">--</div>';
+                return tools.map(t => `<div class="tool-step"><div class="tool-step-header"><span class="step-num">${t.step}</span><span class="step-name">${t.name}</span></div>${t.purpose_in_question ? `<div class="step-purpose">${escapeHtml(t.purpose_in_question)}</div>` : ''}</div>`).join('');
+            }
+
+            const cols = models.map(m => { const ms = modelShort(m), ts = (q.tools_by_model||{})[m]||[]; return `<div class="model-column"><div class="model-col-header ${ms}"><span class="model-dot ${ms}"></span>${modelLabel(m)}<span style="margin-left:auto;font-size:0.62rem;font-weight:400;color:var(--color-text-muted)">${ts.length}</span></div>${stepsHtml(m)}</div>`; }).join('');
+            const tabs = models.map((m,i) => `<div class="model-tab${i===0?' active':''}" data-qc="${anchor}" data-tab="${i}" onclick="switchTab('${anchor}',${i})">${modelLabel(m)}</div>`).join('');
+            const panels = models.map((m,i) => `<div class="model-tab-panel${i===0?' active':''}" data-qc="${anchor}" data-panel="${i}">${stepsHtml(m)}</div>`).join('');
+
+            // Resolved tools bar
+            const resolved = q.resolved_tools || [];
+            const resolvedBar = resolved.length ? `<div class="resolved-tools-bar"><span class="resolved-label">归并结果:</span>${resolved.map(t => `<span class="resolved-tag" onclick="jumpTo('tool-${t}')">${t}</span>`).join('')}</div>` : '';
+
+            html += `<div class="question-card" id="${anchor}">
+                <div class="question-card-header">
+                    <div class="question-info">
+                        <span class="question-benchmark">${q.benchmark}</span><span class="question-id">Q:${q.question_id}</span>
+                        <span class="question-ability-link"><a class="xlink" onclick="jumpTo('ability-${q.ability_id}')">${q.ability_id}. ${getAbilityName(q.ability_id)}</a></span>
+                    </div>
+                    <div class="question-text" id="${anchor}-text"${needTrunc?' style="max-height:3em;overflow:hidden;cursor:pointer" onclick="toggleQText(\''+anchor+'\')"':''}>${escapeHtml(qText)}</div>
+                    ${needTrunc?`<span class="question-expand-btn" id="${anchor}-expand" onclick="toggleQText('${anchor}')">展开</span>`:''}
+                </div>
+                ${resolvedBar}
+                <div class="model-compare">${cols}</div>
+                <div class="model-tabs-wrapper"><div class="model-tabs">${tabs}</div>${panels}</div>
+            </div>`;
+        }
+        html += `</div>`;
+    }
+    document.getElementById('questions-container').innerHTML = html;
+}
+
+function switchTab(qc, idx) {
+    document.querySelectorAll(`.model-tab[data-qc="${qc}"]`).forEach((e,i) => e.classList.toggle('active', i===idx));
+    document.querySelectorAll(`.model-tab-panel[data-qc="${qc}"]`).forEach((e,i) => e.classList.toggle('active', i===idx));
+}
+function toggleQText(id) {
+    const t = document.getElementById(id+'-text'), e = document.getElementById(id+'-expand');
+    if (!t) return;
+    if (t.style.maxHeight) { t.style.maxHeight = ''; t.style.overflow = ''; if(e) e.textContent='收起'; }
+    else { t.style.maxHeight = '3em'; t.style.overflow = 'hidden'; if(e) e.textContent='展开'; }
+}
+
+// ==================== 06: Matrix ====================
+function renderMatrix(data) {
+    const matrix = data.ability_tool_matrix || {}, tools = data.tools || [], usage = data.usage || {};
+    const sorted = [...tools].sort((a,b) => (usage[b.name]?.frequency||0) - (usage[a.name]?.frequency||0));
+    const topTools = sorted.slice(0, 20);
+    const abilityIds = Object.keys(matrix).sort((a,b) => +a - +b);
+
+    let html = '<div class="matrix-wrapper"><table class="matrix-table"><thead><tr><th>Ability</th>';
+    for (const t of topTools) html += `<th class="tool-col" title="${escapeHtml(t.description)}" onclick="jumpTo('tool-${t.name}')">${t.name}</th>`;
+    html += '</tr></thead><tbody>';
+    for (const aid of abilityIds) {
+        const s = new Set(matrix[aid]||[]);
+        html += `<tr><td class="ability-name" onclick="jumpTo('ability-${aid}')"><span style="font-family:var(--font-mono);font-size:0.6rem;margin-right:0.2rem;color:var(--color-accent)">${aid}</span>${getAbilityName(+aid)}</td>`;
+        for (const t of topTools) html += `<td><span class="matrix-dot${s.has(t.name)?'':' empty'}"></span></td>`;
+        html += '</tr>';
+    }
+    html += '</tbody></table></div>';
+    document.getElementById('matrix-container').innerHTML = html;
+}
+
+// ==================== Init ====================
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        const r = await fetch('data/tool-extraction-v1.json?v=' + Date.now());
+        DATA = await r.json();
+        buildAbilityMap(DATA);
+        renderStats(DATA);
+        renderAbilities(DATA);
+        renderPrompts(DATA);
+        renderTools(DATA);
+        renderQuestions(DATA);
+        renderMatrix(DATA);
+    } catch (e) {
+        console.error('Failed to load data:', e);
+        document.querySelector('.main').innerHTML = `<p style="color:red">加载数据失败: ${e.message}</p>`;
+    }
+});
+</script>
+</body>
+</html>
