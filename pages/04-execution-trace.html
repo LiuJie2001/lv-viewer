@@ -1658,7 +1658,7 @@ function renderTOC(data) {
 // ==================== Init ====================
 document.addEventListener('DOMContentLoaded', async () => {
     try {
-        const resp = await fetch('data/execution-trace-v1.json');
+        const resp = await fetch('../data/execution-trace.json');
         DATA = await resp.json();
         renderStats(DATA);
         renderClaudeMd(DATA);

@@ -2421,9 +2421,9 @@
         document.addEventListener('DOMContentLoaded', async () => {
             try {
                 const [dataResp, toolsResp, expIndexResp] = await Promise.all([
-                    fetch('data/data.json'),
-                    fetch('data/long_video_understanding_tools.json'),
-                    fetch('data/experiment_index.json')
+                    fetch('../data/abilities-papers-cases.json'),
+                    fetch('../data/tool-taxonomy.json'),
+                    fetch('../data/experiment-index.json')
                 ]);
                 data = await dataResp.json();
                 toolsData = await toolsResp.json();
@@ -2432,12 +2432,12 @@
 
                 // 加载各实验的结果和提示词
                 const loadPromises = experiments.flatMap(exp => [
-                    fetch(`data/${exp.data_file}`).then(r => r.json()).then(d => {
+                    fetch(`../data/${exp.data_file}`).then(r => r.json()).then(d => {
                         const resultsMap = new Map();
                         (d.results || []).forEach(r => resultsMap.set(r.case_id, r.plan));
                         experimentResults[exp.id] = { meta: d.meta, results: resultsMap };
                     }),
-                    fetch(`data/${exp.prompts.system}`).then(r => r.text()).then(t => {
+                    fetch(`../data/${exp.prompts.system}`).then(r => r.text()).then(t => {
                         experimentPrompts[exp.id] = t;
                     }).catch(() => { experimentPrompts[exp.id] = ''; })
                 ]);
@@ -2509,7 +2509,7 @@
                         <div class="paper-info-label">方法图</div>
                         <div class="paper-info-value">
                             ${paper.overviewImage
-                                ? `<img class="paper-thumbnail" src="images/overview/${paper.overviewImage.split('/').pop()}" alt="${paper.name} 方法图" onclick="openImageModal(this.src)">`
+                                ? `<img class="paper-thumbnail" src="../images/overview/${paper.overviewImage.split('/').pop()}" alt="${paper.name} 方法图" onclick="openImageModal(this.src)">`
                                 : '<span class="no-image">暂无图片</span>'}
                         </div>
                     </div>

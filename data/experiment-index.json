@@ -6,18 +6,18 @@
       "model": "gpt-5.2",
       "data_file": "results/univa.json",
       "prompts": {
-        "system": "templates/univa/system_prompt.txt",
-        "user": "templates/univa/user_prompt.txt"
+        "system": "templates/univa/system-prompt.txt",
+        "user": "templates/univa/user-prompt.txt"
       }
     },
     {
-      "id": "exp_001_baseline",
+      "id": "exp-001-baseline",
       "name": "分层 21 工具集（来自 02 论文方法展示中的工具）",
       "model": "claude-opus-4-6",
-      "data_file": "results/exp_001_baseline.json",
+      "data_file": "results/exp-001-baseline.json",
       "prompts": {
-        "system": "templates/exp_001_baseline/system_prompt.txt",
-        "user": "templates/exp_001_baseline/user_prompt.txt"
+        "system": "templates/exp-001-baseline/system-prompt.txt",
+        "user": "templates/exp-001-baseline/user-prompt.txt"
       }
     }
   ]

@@ -570,7 +570,7 @@ function renderMatrix(data) {
 // ==================== Init ====================
 document.addEventListener('DOMContentLoaded', async () => {
     try {
-        const r = await fetch('data/tool-extraction-v1.json?v=' + Date.now());
+        const r = await fetch('../data/tool-extraction.json?v=' + Date.now());
         DATA = await r.json();
         buildAbilityMap(DATA);
         renderStats(DATA);
