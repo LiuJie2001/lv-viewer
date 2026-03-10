@@ -12,6 +12,7 @@
 | 03 | `pages/03-case-showcase.html` | Claude 模型 Case 展示 |
 | 04 | `pages/04-execution-trace.html` | 执行追踪可视化，逐步展示模型推理过程 |
 | 05 | `pages/05-tool-extraction.html` | 工具提取分析，多模型对比 × 22 能力维度 ★ 主模板 |
+| 06 | `pages/06-tool-pool.html` | 工具池 v7 + 轨迹概览（自包含，可离线查看） |
 
 ## 五大能力维度
 
@@ -32,6 +33,7 @@ lv-viewer/
 │   ├── 03-case-showcase.html
 │   ├── 04-execution-trace.html
 │   └── 05-tool-extraction.html             ★ 主模板
+│       └── 06-tool-pool.html                   ★ 自包含
 ├── data/                                   # 数据文件（统一 kebab-case）
 │   ├── abilities-papers-cases.json         # 核心：能力/论文/Case
 │   ├── tool-taxonomy.json                  # 21 工具分层体系
