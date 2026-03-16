@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Open Vocabulary 分析 — Video Understanding</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --color-text: #1a1a1a;
+            --color-text-secondary: #555;
+            --color-text-muted: #888;
+            --color-bg: #ffffff;
+            --color-bg-alt: #f8f9fa;
+            --color-border: #e5e5e5;
+            --color-accent: #2563eb;
+            --color-accent-light: #dbeafe;
+            --color-gpt: #10a37f;
+            --color-claude: #c96442;
+            --color-gemini: #4285f4;
+            --font-serif: 'Crimson Pro', 'Noto Sans SC', serif;
+            --font-sans: 'Noto Sans SC', -apple-system, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            --cat-hlr: #F44336; --cat-tr: #2196F3; --cat-sr: #FF9800;
+            --cat-av: #9C27B0; --cat-vp: #4CAF50;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        html { scroll-behavior:smooth; }
+        body { font-family:var(--font-sans); font-size:16px; line-height:1.6; color:var(--color-text); background:var(--color-bg); }
+
+        .header { background:linear-gradient(135deg,#f8fafc 0%,#fff 100%); border-bottom:1px solid var(--color-border); padding:2.5rem 2rem 2rem; text-align:center; }
+        .header-tag { display:inline-block; font-size:0.75rem; font-weight:500; text-transform:uppercase; letter-spacing:0.1em; color:var(--color-accent); background:var(--color-accent-light); padding:0.25rem 0.75rem; border-radius:2rem; margin-bottom:1rem; }
+        .header h1 { font-family:var(--font-serif); font-size:clamp(1.5rem,3.5vw,2.25rem); font-weight:700; margin-bottom:0.5rem; }
+        .header .subtitle { font-size:0.95rem; color:var(--color-text-secondary); }
+
+        .main { max-width:1200px; margin:0 auto; padding:2rem 1.5rem 4rem; }
+        .section { margin-bottom:3rem; }
+        .section-header { display:flex; align-items:center; gap:0.75rem; margin-bottom:1.5rem; padding-bottom:0.5rem; border-bottom:2px solid var(--color-text); }
+        .section-number { font-family:var(--font-serif); font-size:1.75rem; font-weight:700; color:var(--color-accent); line-height:1; }
+        .section-title { font-family:var(--font-serif); font-size:1.25rem; font-weight:600; }
+        .section-count { margin-left:auto; font-size:0.875rem; color:var(--color-text-muted); }
+
+        .stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:1rem; margin-bottom:1.5rem; }
+        .stat-card { background:var(--color-bg-alt); border:1px solid var(--color-border); border-radius:8px; padding:1rem 1.25rem; text-align:center; }
+        .stat-value { font-family:var(--font-serif); font-size:1.75rem; font-weight:700; color:var(--color-accent); }
+        .stat-label { font-size:0.8rem; color:var(--color-text-muted); margin-top:0.25rem; }
+
+        .chart-row { display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; margin-bottom:1.5rem; }
+        @media (max-width:800px) { .chart-row { grid-template-columns:1fr; } }
+        .chart-box { background:var(--color-bg-alt); border:1px solid var(--color-border); border-radius:8px; padding:1.25rem; }
+        .chart-box-title { font-size:0.85rem; font-weight:600; margin-bottom:1rem; color:var(--color-text-secondary); }
+        .chart-canvas-wrap { position:relative; width:100%; }
+        .chart-canvas-wrap canvas { width:100% !important; cursor:pointer; }
+        .chart-box-full { grid-column:1/-1; }
+        .chart-link-hint { font-size:0.62rem; font-weight:400; color:var(--color-text-muted); font-style:italic; }
+        .chart-link-active { font-size:0.68rem; font-weight:500; color:#f59e0b; margin-left:0.3rem; }
+        .chart-link-active:empty { display:none; }
+        .chart-link-active .link-clear { cursor:pointer; margin-left:0.3rem; color:#dc2626; font-size:0.72rem; font-weight:700; }
+
+        /* Chart pagination controls */
+        .chart-pager { display:flex; align-items:center; justify-content:space-between; gap:0.5rem; margin-top:0.75rem; padding:0.5rem 0.25rem; border-top:1px solid var(--color-border); font-size:0.72rem; }
+        .chart-pager-left { display:flex; align-items:center; gap:0.5rem; }
+        .chart-pager-right { display:flex; align-items:center; gap:0.5rem; }
+        .chart-sort-btn { padding:0.2rem 0.55rem; border:1px solid var(--color-border); border-radius:4px; background:white; cursor:pointer; font-size:0.68rem; font-family:var(--font-sans); color:var(--color-text-secondary); transition:all 0.15s; }
+        .chart-sort-btn:hover { border-color:var(--color-accent); color:var(--color-accent); }
+        .chart-sort-btn.active { background:var(--color-accent); color:white; border-color:var(--color-accent); }
+        .chart-page-info { color:var(--color-text-muted); font-family:var(--font-mono); font-size:0.68rem; min-width:5em; text-align:center; }
+        .chart-page-btn { width:26px; height:26px; display:inline-flex; align-items:center; justify-content:center; border:1px solid var(--color-border); border-radius:4px; background:white; cursor:pointer; font-size:0.72rem; color:var(--color-text-secondary); transition:all 0.15s; }
+        .chart-page-btn:hover:not(:disabled) { border-color:var(--color-accent); color:var(--color-accent); }
+        .chart-page-btn:disabled { opacity:0.35; cursor:default; }
+        .chart-pager-size { display:flex; align-items:center; gap:0.3rem; }
+        .chart-pager-size label { color:var(--color-text-muted); font-size:0.68rem; }
+        .chart-pager-size select { padding:0.15rem 0.3rem; border:1px solid var(--color-border); border-radius:4px; font-size:0.68rem; font-family:var(--font-mono); background:white; cursor:pointer; }
+
+        .filter-bar { display:flex; gap:0.5rem; margin-bottom:1.5rem; flex-wrap:wrap; align-items:center; }
+        .filter-label { font-size:0.72rem; color:var(--color-text-muted); margin-right:0.3rem; }
+        .filter-btn { padding:0.3rem 0.7rem; border:1px solid var(--color-border); border-radius:2rem; background:white; cursor:pointer; font-size:0.75rem; font-family:var(--font-sans); color:var(--color-text-secondary); transition:all 0.15s; }
+        .filter-btn:hover { border-color:var(--color-accent); color:var(--color-accent); }
+        .filter-btn.active { background:var(--color-accent); color:white; border-color:var(--color-accent); }
+
+        /* ═══ Case cards: left-right layout ═══ */
+        .case-card { border:1px solid var(--color-border); border-radius:8px; margin-bottom:1rem; overflow:hidden; }
+        .case-card-header { padding:0.8rem 1rem; border-bottom:1px solid var(--color-border); background:var(--color-bg-alt); cursor:pointer; user-select:none; }
+        .case-card-header:hover { background:#f0f2f5; }
+        .case-info { display:flex; align-items:center; gap:0.5rem; margin-bottom:0.4rem; flex-wrap:wrap; }
+        .case-ds-badge { font-size:0.62rem; font-weight:600; padding:0.1rem 0.35rem; border-radius:3px; }
+        .case-ds-badge.videomme { background:#dbeafe; color:#1d4ed8; }
+        .case-ds-badge.lvbench { background:#fef3c7; color:#92400e; }
+        .case-ds-badge.longvideobench_val { background:#d1fae5; color:#065f46; }
+        .case-qid { font-family:var(--font-mono); font-size:0.65rem; color:var(--color-text-muted); }
+        .case-cat { font-size:0.62rem; color:var(--color-text-muted); margin-left:auto; }
+        .case-arrow { font-size:0.6rem; color:var(--color-text-muted); transition:transform 0.2s; margin-left:0.5rem; }
+        .case-card.expanded .case-arrow { transform:rotate(90deg); }
+        .case-text { font-size:0.82rem; line-height:1.5; color:var(--color-text); max-height:3em; overflow:hidden; text-overflow:ellipsis; }
+        .case-card.expanded .case-text { max-height:none; }
+        .case-card-body { display:none; }
+        .case-card.expanded .case-card-body { display:block; }
+
+        /* Two-panel layout */
+        .case-body-panels { display:grid; grid-template-columns:1fr 1fr; border-top:1px solid var(--color-border); }
+        .case-body-panels.no-traj { grid-template-columns:1fr; }
+        @media (max-width:900px) { .case-body-panels { grid-template-columns:1fr !important; } }
+
+        .case-panel-left { padding:1rem; border-right:1px solid var(--color-border); }
+        .case-body-panels.no-traj .case-panel-left { border-right:none; }
+        @media (max-width:900px) { .case-panel-left { border-right:none; border-bottom:1px solid var(--color-border); } }
+        .case-panel-right { padding:0; display:flex; flex-direction:column; }
+        .case-panel-right-header { padding:0.6rem 1rem; font-size:0.72rem; font-weight:600; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:0.04em; border-bottom:1px solid var(--color-border); display:flex; align-items:center; gap:0.4rem; background:var(--color-bg-alt); }
+
+        .entity-section-title { font-size:0.72rem; font-weight:600; color:var(--color-text-muted); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:0.6rem; }
+        .entity-tags { display:flex; flex-wrap:wrap; gap:0.35rem; margin-bottom:1rem; }
+        .entity-tag { display:inline-flex; align-items:center; gap:0.25rem; padding:0.2rem 0.5rem; border-radius:4px; font-size:0.72rem; font-weight:500; border:1px solid; }
+        .entity-type-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+        .entity-attr { font-size:0.58rem; padding:0.05rem 0.25rem; border-radius:2px; background:rgba(0,0,0,0.06); color:var(--color-text-secondary); margin-left:0.15rem; }
+
+        .relation-list { list-style:none; }
+        .relation-item { display:flex; align-items:center; gap:0.4rem; padding:0.3rem 0; font-size:0.75rem; border-bottom:1px solid #f5f5f5; flex-wrap:wrap; }
+        .relation-item:last-child { border-bottom:none; }
+        .rel-subject, .rel-object { font-weight:600; font-size:0.72rem; }
+        .rel-predicate { font-family:var(--font-mono); font-size:0.68rem; color:white; padding:0.1rem 0.35rem; border-radius:3px; white-space:nowrap; }
+        .rel-arrow { color:var(--color-text-muted); font-size:0.7rem; flex-shrink:0; }
+        .rel-type-tag { font-size:0.55rem; padding:0.05rem 0.25rem; border-radius:2px; color:var(--color-text-muted); border:1px solid var(--color-border); margin-left:auto; }
+
+        /* Trajectory: model tabs (always tabs, not 3-col) */
+        .traj-badge { font-size:0.58rem; background:var(--color-accent-light); color:var(--color-accent); padding:0.1rem 0.35rem; border-radius:3px; font-weight:600; }
+        .model-tabs { display:flex; border-bottom:1px solid var(--color-border); }
+        .model-tab { flex:1; padding:0.5rem; text-align:center; font-size:0.72rem; font-weight:600; cursor:pointer; border-bottom:2px solid transparent; color:var(--color-text-muted); transition:all 0.15s; }
+        .model-tab:hover { background:#fafbfd; }
+        .model-tab.active { border-bottom-color:var(--color-accent); }
+        .model-tab.active.gpt { color:var(--color-gpt); border-bottom-color:var(--color-gpt); }
+        .model-tab.active.claude { color:var(--color-claude); border-bottom-color:var(--color-claude); }
+        .model-tab.active.gemini { color:var(--color-gemini); border-bottom-color:var(--color-gemini); }
+        .model-tab-panel { display:none; }
+        .model-tab-panel.active { display:block; }
+
+        .step-list { padding:0.4rem; }
+        .tool-step { padding:0.35rem 0.5rem; margin-bottom:0.3rem; border-radius:4px; background:var(--color-bg-alt); border:1px solid #f0f0f0; }
+        .tool-step:last-child { margin-bottom:0; }
+        .tool-step-header { display:flex; align-items:center; gap:0.35rem; }
+        .step-num { font-family:var(--font-mono); font-size:0.58rem; font-weight:700; color:white; background:var(--color-accent); width:18px; height:18px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; }
+        .step-num.reasoning { background:#9ca3af; }
+        .step-name { font-family:var(--font-mono); font-size:0.7rem; font-weight:600; color:var(--color-accent); }
+        .step-name.reasoning { color:#6b7280; font-style:italic; }
+        .step-deps { font-size:0.55rem; color:var(--color-text-muted); margin-left:auto; flex-shrink:0; }
+        .step-purpose { font-size:0.66rem; color:var(--color-text-secondary); line-height:1.4; margin-top:0.2rem; padding-left:1.6rem; }
+        .no-tools { padding:1rem; text-align:center; font-size:0.75rem; color:var(--color-text-muted); }
+
+        .pagination { display:flex; align-items:center; justify-content:center; gap:0.5rem; margin:1.5rem 0; }
+        .page-btn { padding:0.3rem 0.7rem; border:1px solid var(--color-border); border-radius:4px; background:white; cursor:pointer; font-size:0.78rem; font-family:var(--font-sans); color:var(--color-text-secondary); }
+        .page-btn:hover { border-color:var(--color-accent); color:var(--color-accent); }
+        .page-btn.active { background:var(--color-accent); color:white; border-color:var(--color-accent); }
+        .page-btn:disabled { opacity:0.4; cursor:default; }
+        .page-info { font-size:0.75rem; color:var(--color-text-muted); }
+
+        .loading { text-align:center; padding:3rem; color:var(--color-text-muted); font-size:0.9rem; }
+
+        /* Chart-driven filter banner */
+        .chart-filter-banner { display:none; align-items:center; gap:0.6rem; padding:0.6rem 1rem; margin-bottom:1rem; background:#fffbeb; border:1px solid #fbbf24; border-radius:8px; font-size:0.8rem; }
+        .chart-filter-banner.active { display:flex; }
+        .chart-filter-banner-icon { font-size:1rem; flex-shrink:0; }
+        .chart-filter-banner-text { flex:1; color:var(--color-text-secondary); }
+        .chart-filter-banner-text strong { color:var(--color-text); font-family:var(--font-mono); font-size:0.78rem; }
+        .chart-filter-banner-clear { padding:0.25rem 0.65rem; border:1px solid #f59e0b; border-radius:2rem; background:white; cursor:pointer; font-size:0.72rem; font-family:var(--font-sans); color:#92400e; font-weight:600; transition:all 0.15s; flex-shrink:0; }
+        .chart-filter-banner-clear:hover { background:#fef3c7; }
+
+        #back-top { position:fixed; bottom:2rem; right:2rem; display:none; padding:0.5rem 1rem; background:var(--color-accent); color:white; border:none; border-radius:2rem; font-family:var(--font-sans); font-size:0.78rem; font-weight:500; cursor:pointer; box-shadow:0 2px 12px rgba(37,99,235,0.3); z-index:1000; }
+        #back-top:hover { box-shadow:0 4px 16px rgba(37,99,235,0.4); transform:translateY(-1px); }
+
+        /* ═══ Methodology section ═══ */
+        .method-overview { display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; margin-bottom:1.5rem; }
+        @media (max-width:800px) { .method-overview { grid-template-columns:1fr; } }
+        .method-card { background:var(--color-bg-alt); border:1px solid var(--color-border); border-radius:8px; padding:1.25rem; }
+        .method-card-title { font-size:0.85rem; font-weight:600; margin-bottom:0.75rem; color:var(--color-accent); display:flex; align-items:center; gap:0.5rem; }
+        .method-card-title .icon { font-size:1.1rem; }
+        .method-card p, .method-card li { font-size:0.82rem; line-height:1.7; color:var(--color-text-secondary); }
+        .method-card ul { padding-left:1.2rem; margin:0; }
+        .method-card ul li { margin-bottom:0.2rem; }
+        .method-card code { font-family:var(--font-mono); font-size:0.75rem; background:#f1f5f9; padding:0.1rem 0.35rem; border-radius:3px; color:#334155; }
+        .method-pipeline { display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; margin-bottom:1.5rem; }
+        .method-pipeline-step { background:white; border:1px solid var(--color-border); border-radius:6px; padding:0.5rem 0.9rem; font-size:0.78rem; font-weight:500; color:var(--color-text); }
+        .method-pipeline-step .step-label { font-size:0.6rem; color:var(--color-text-muted); display:block; margin-bottom:0.15rem; text-transform:uppercase; letter-spacing:0.04em; }
+        .method-pipeline-arrow { color:var(--color-text-muted); font-size:0.9rem; }
+        .prompt-block { background:#1e293b; color:#e2e8f0; border-radius:8px; padding:1rem 1.25rem; font-family:var(--font-mono); font-size:0.72rem; line-height:1.65; overflow-x:auto; white-space:pre-wrap; word-break:break-word; max-height:400px; overflow-y:auto; margin-top:0.75rem; }
+        .prompt-block .prompt-comment { color:#64748b; }
+        .prompt-block .prompt-key { color:#7dd3fc; }
+        .prompt-block .prompt-string { color:#86efac; }
+        .prompt-toggle { display:inline-flex; align-items:center; gap:0.3rem; font-size:0.75rem; color:var(--color-accent); cursor:pointer; border:1px solid var(--color-accent); border-radius:2rem; padding:0.25rem 0.75rem; background:white; font-family:var(--font-sans); font-weight:500; margin-top:0.6rem; transition:all 0.15s; }
+        .prompt-toggle:hover { background:var(--color-accent-light); }
+        .prompt-toggle .arrow { transition:transform 0.2s; font-size:0.6rem; }
+        .prompt-toggle.expanded .arrow { transform:rotate(90deg); }
+    </style>
+</head>
+<body>
+
+<header class="header">
+    <span class="header-tag">Open Vocabulary Analysis</span>
+    <h1>Open Vocabulary 实体-关系分析</h1>
+    <p class="subtitle">长视频理解 Benchmark 题目的开放词汇提取结果可视化</p>
+</header>
+
+<main class="main">
+    <!-- Section 00: Methodology -->
+    <section class="section" id="sec-method">
+        <div class="section-header">
+            <span class="section-number">00</span>
+            <span class="section-title">分析方法</span>
+        </div>
+
+        <!-- Pipeline overview -->
+        <div class="method-pipeline">
+            <div class="method-pipeline-step"><span class="step-label">输入</span>Benchmark 问答文本</div>
+            <span class="method-pipeline-arrow">→</span>
+            <div class="method-pipeline-step"><span class="step-label">模型</span>Qwen 3.5 Plus</div>
+            <span class="method-pipeline-arrow">→</span>
+            <div class="method-pipeline-step"><span class="step-label">提取</span>实体 + 属性 + 关系</div>
+            <span class="method-pipeline-arrow">→</span>
+            <div class="method-pipeline-step"><span class="step-label">后处理</span>JSON 解析 & 校验</div>
+            <span class="method-pipeline-arrow">→</span>
+            <div class="method-pipeline-step"><span class="step-label">输出</span>Scene-Graph 表示</div>
+        </div>
+
+        <div class="method-overview">
+            <!-- Card 1: 实体类型体系 -->
+            <div class="method-card">
+                <div class="method-card-title"><span class="icon">🏷️</span>实体类型体系</div>
+                <p>每个实体标注 <code>type</code> 和可选的 <code>attributes</code>：</p>
+                <ul style="margin-top:0.5rem">
+                    <li><strong>实体类型</strong>（7 大类）：<code>person</code> / <code>object</code> / <code>animal</code> / <code>place</code> / <code>event</code> / <code>abstract</code> / <code>other</code></li>
+                    <li><strong>属性类别</strong>（6 大类）：<code>color</code> / <code>appearance</code> / <code>state</code> / <code>material</code> / <code>ordinal</code> / <code>other</code></li>
+                </ul>
+                <p style="margin-top:0.5rem">规则：仅提取文本中明确出现的词汇（不做推断）；合并指代同一实体的重复项；排除代词和功能词。</p>
+            </div>
+
+            <!-- Card 4: 关系类型体系 -->
+            <div class="method-card">
+                <div class="method-card-title"><span class="icon">🔗</span>关系类型体系</div>
+                <p>每条关系为 <code>subject → predicate → object</code> 三元组，按 5 种类型分类：</p>
+                <ul style="margin-top:0.5rem">
+                    <li><strong>geometric</strong>：空间定位（on, in, near, above, behind）</li>
+                    <li><strong>possessive</strong>：归属/部分-整体（has, of, with, wearing）</li>
+                    <li><strong>semantic</strong>：动作/交互（holding, playing, pushing）</li>
+                    <li><strong>temporal</strong>：时间关系（after, before, during, when）</li>
+                    <li><strong>other</strong>：不属于以上类型</li>
+                </ul>
+                <p style="margin-top:0.5rem"><strong>交叉校验</strong>：关系同时通过 <code>idx</code> 和 <code>name</code> 引用实体，后处理检查索引范围和名称匹配，标记 <code>valid</code> 状态。</p>
+            </div>
+        </div>
+
+        <!-- Prompt template -->
+        <div class="method-card" style="margin-bottom:0">
+            <div class="method-card-title"><span class="icon">📝</span>提示词模板</div>
+            <p>System Prompt 指导模型输出结构化 JSON，包含实体列表和关系三元组。User Prompt 仅传入题目全文（问题 + 选项）。</p>
+            <button class="prompt-toggle" onclick="togglePrompt(this)"><span class="arrow">▶</span> 查看完整 System Prompt</button>
+            <div class="prompt-block" id="prompt-block" style="display:none"></div>
+            <button class="prompt-toggle" style="margin-left:0.5rem" onclick="toggleUserPrompt(this)"><span class="arrow">▶</span> 查看 User Prompt 模板</button>
+            <div class="prompt-block" id="user-prompt-block" style="display:none"></div>
+        </div>
+    </section>
+
+    <!-- Section 01: Overview Dashboard -->
+    <section class="section" id="sec-overview">
+        <div class="section-header">
+            <span class="section-number">01</span>
+            <span class="section-title">概览仪表盘</span>
+        </div>
+        <div class="stats-grid" id="stats-grid"></div>
+    </section>
+
+    <!-- Section 02: Entity Analysis -->
+    <section class="section" id="sec-entities">
+        <div class="section-header">
+            <span class="section-number">02</span>
+            <span class="section-title">实体分析</span>
+        </div>
+        <div class="filter-bar" id="entity-filter-bar"></div>
+        <!-- Linked pair: Entity Types ↔ Top Entities -->
+        <div class="chart-row">
+            <div class="chart-box">
+                <div class="chart-box-title">实体类型分布 <span class="chart-link-hint">← 点击柱状图联动筛选 →</span></div>
+                <div class="chart-canvas-wrap" id="wrap-entity-types"><canvas id="chart-entity-types"></canvas></div>
+                <div id="pager-entity-types"></div>
+            </div>
+            <div class="chart-box">
+                <div class="chart-box-title">高频实体 <span class="chart-link-active" id="link-entity-type"></span></div>
+                <div class="chart-canvas-wrap" id="wrap-top-entities"><canvas id="chart-top-entities"></canvas></div>
+                <div id="pager-top-entities"></div>
+            </div>
+        </div>
+        <!-- Linked pair: Attr Categories ↔ Attr Values -->
+        <div class="chart-row">
+            <div class="chart-box">
+                <div class="chart-box-title">属性类别分布 <span class="chart-link-hint">← 点击柱状图联动筛选 →</span></div>
+                <div class="chart-canvas-wrap" id="wrap-attr-categories"><canvas id="chart-attr-categories"></canvas></div>
+                <div id="pager-attr-categories"></div>
+            </div>
+            <div class="chart-box">
+                <div class="chart-box-title">高频属性值 <span class="chart-link-active" id="link-attr-cat"></span></div>
+                <div class="chart-canvas-wrap" id="wrap-attr-values"><canvas id="chart-attr-values"></canvas></div>
+                <div id="pager-attr-values"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 03: Relation Analysis -->
+    <section class="section" id="sec-relations">
+        <div class="section-header">
+            <span class="section-number">03</span>
+            <span class="section-title">关系分析</span>
+        </div>
+        <div class="filter-bar" id="relation-filter-bar"></div>
+        <div class="chart-row">
+            <div class="chart-box">
+                <div class="chart-box-title">关系类型分布 <span class="chart-link-hint">← 点击柱状图联动筛选 →</span></div>
+                <div class="chart-canvas-wrap" id="wrap-relation-types"><canvas id="chart-relation-types"></canvas></div>
+                <div id="pager-relation-types"></div>
+            </div>
+            <div class="chart-box">
+                <div class="chart-box-title">高频谓词 <span class="chart-link-active" id="link-rel-type"></span></div>
+                <div class="chart-canvas-wrap" id="wrap-top-predicates"><canvas id="chart-top-predicates"></canvas></div>
+                <div id="pager-top-predicates"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 04: Case Analysis (combined vocab + trajectory) -->
+    <section class="section" id="sec-cases">
+        <div class="section-header">
+            <span class="section-number">04</span>
+            <span class="section-title">逐 Case 分析</span>
+            <span class="section-count" id="case-count"></span>
+        </div>
+        <div class="chart-filter-banner" id="chart-filter-banner">
+            <span class="chart-filter-banner-icon">🔍</span>
+            <span class="chart-filter-banner-text" id="chart-filter-text"></span>
+            <button class="chart-filter-banner-clear" onclick="clearChartFilter()">取消筛选</button>
+        </div>
+        <div class="filter-bar" id="case-filter-bar"></div>
+        <div id="cases-container"><div class="loading">加载中...</div></div>
+        <div class="pagination" id="pagination"></div>
+    </section>
+</main>
+
+<button id="back-top">Top</button>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   Constants
+   ═══════════════════════════════════════════════════════════ */
+const ENTITY_TYPE_COLORS = {
+    object:'#2196F3', abstract:'#9C27B0', person:'#F44336', place:'#4CAF50',
+    event:'#FF9800', animal:'#795548', time:'#00BCD4', organization:'#3F51B5',
+    body_part:'#E91E63', food:'#8BC34A', vehicle:'#607D8B', number:'#009688',
+    action:'#FF5722', clothing:'#673AB7', instrument:'#CDDC39', other:'#9E9E9E'
+};
+const RELATION_TYPE_COLORS = {
+    semantic:'#2196F3', possessive:'#FF9800', geometric:'#4CAF50',
+    temporal:'#9C27B0', other:'#607D8B', state:'#F44336'
+};
+const DS_COLORS = { videomme:'#3b82f6', lvbench:'#f59e0b', longvideobench_val:'#10b981' };
+const DS_LABELS = { videomme:'Video-MME', lvbench:'LVBench', longvideobench_val:'LongVideoBench' };
+const MODEL_ORDER = [
+    { key:'gpt-5.4', label:'GPT-5.4', css:'gpt' },
+    { key:'claude-opus-4-6', label:'Claude Opus', css:'claude' },
+    { key:'gemini-3.1-pro-preview', label:'Gemini 3.1 Pro', css:'gemini' }
+];
+
+const CASES_PER_PAGE = 30;
+let STATS = null, CASES = null;
+let filteredCases = [];
+let currentPage = 1;
+let currentCaseDsFilter = 'all';
+let currentCaseCatFilter = 'all';
+let currentEntityDsFilter = 'all';
+let currentRelDsFilter = 'all';
+let chartInstances = {};
+
+/* ═══════════════════════════════════════════════════════════
+   Utility
+   ═══════════════════════════════════════════════════════════ */
+function escHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+const ATTR_CAT_COLORS = {
+    color:'#F44336', state:'#2196F3', quantity:'#FF9800', material:'#795548',
+    size:'#4CAF50', shape:'#9C27B0', emotion:'#E91E63', texture:'#8BC34A',
+    appearance:'#00BCD4', age:'#3F51B5', temperature:'#FF5722', weight:'#009688',
+    speed:'#673AB7', sound:'#CDDC39', pattern:'#607D8B', style:'#f59e0b',
+    position:'#0ea5e9', direction:'#6366f1', duration:'#ec4899', other:'#9E9E9E'
+};
+function getEntityColor(t) { return ENTITY_TYPE_COLORS[t] || '#9E9E9E'; }
+function getRelColor(t) { return RELATION_TYPE_COLORS[t] || '#607D8B'; }
+function getAttrCatColor(t) { return ATTR_CAT_COLORS[t] || '#9E9E9E'; }
+
+const ENTITY_NAME_BLACKLIST = new Set(['video']);
+
+/* ═══════════════════════════════════════════════════════════
+   Section 00: Methodology — Prompt display
+   ═══════════════════════════════════════════════════════════ */
+const SYSTEM_PROMPT_TEXT = `You are an open-word entity-attribute-relation analyzer for video understanding questions.
+Given the full text of a question (stem + options), extract a scene-graph-style representation.
+
+Extract:
+1. entities: a numbered list (0-based index), each with idx, name (lowercase English), \
+type (person/object/animal/place/event/abstract/other), \
+attributes (list of {value, category} where category = color/appearance/state/material/ordinal/other)
+2. relations: triplets referencing entities by BOTH index AND name for cross-validation.
+   - subject_idx: index into entities list
+   - subject_name: must match entities[subject_idx].name
+   - object_idx: index into entities list
+   - object_name: must match entities[object_idx].name
+   - predicate: the verb or preposition connecting them
+   - relation_type: geometric/possessive/semantic/temporal/other
+
+relation_type definitions:
+- geometric: spatial positioning (on, in, near, above, behind)
+- possessive: ownership/part-whole/wearing (has, of, with, wearing)
+- semantic: actions/interactions (holding, playing, pushing)
+- temporal: time-based (after, before, during, when)
+- other: doesn't fit above
+
+Rules:
+- Only extract words explicitly in the text, no inference
+- Include entities from scene descriptions
+- Merge duplicates referring to the same entity
+- Exclude pronouns, question words, function words
+- Use "other" for types/categories that don't fit predefined ones
+- CRITICAL: relations must reference entities by BOTH idx AND name. \
+subject_name must equal entities[subject_idx].name, same for object.
+- Do NOT introduce any entity in relations that is not in the entities list.
+
+Output JSON only (no markdown, no explanation):
+{
+  "entities": [
+    {"idx": 0, "name": "tree", "type": "object",
+     "attributes": [{"value": "modern", "category": "appearance"}]},
+    {"idx": 1, "name": "apples", "type": "object", "attributes": []}
+  ],
+  "relations": [
+    {"subject_idx": 0, "subject_name": "tree", "relation_type": "possessive", \
+"predicate": "decorated with", "object_idx": 1, "object_name": "apples"}
+  ]
+}`;
+
+const USER_PROMPT_TEMPLATE = `Text:\n{full_text}`;
+
+function highlightPrompt(text) {
+    return escHtml(text)
+        .replace(/^(#.*)/gm, '<span class="prompt-comment">$1</span>')
+        .replace(/"([^"]+)"/g, '<span class="prompt-string">"$1"</span>')
+        .replace(/\b(entities|relations|idx|name|type|attributes|value|category|subject_idx|subject_name|object_idx|object_name|predicate|relation_type)\b/g, '<span class="prompt-key">$1</span>');
+}
+
+function togglePrompt(btn) {
+    const block = document.getElementById('prompt-block');
+    const shown = block.style.display !== 'none';
+    block.style.display = shown ? 'none' : 'block';
+    btn.classList.toggle('expanded', !shown);
+    btn.querySelector('.arrow').textContent = shown ? '▶' : '▼';
+    if (!shown && !block.dataset.filled) {
+        block.innerHTML = highlightPrompt(SYSTEM_PROMPT_TEXT);
+        block.dataset.filled = '1';
+    }
+}
+
+function toggleUserPrompt(btn) {
+    const block = document.getElementById('user-prompt-block');
+    const shown = block.style.display !== 'none';
+    block.style.display = shown ? 'none' : 'block';
+    btn.classList.toggle('expanded', !shown);
+    btn.querySelector('.arrow').textContent = shown ? '▶' : '▼';
+    if (!shown && !block.dataset.filled) {
+        block.innerHTML = highlightPrompt(USER_PROMPT_TEMPLATE) +
+            '\n\n<span class="prompt-comment">// {full_text} 替换为每道题的「问题文本 + 选项」拼接结果</span>';
+        block.dataset.filled = '1';
+    }
+}
+
+/** Compute entity/relation/attr distributions from a subset of cases.
+ *  Optional filters: entityTypeFilter, attrCatFilter, relTypeFilter for linked charts */
+function computeDistributions(cases, opts = {}) {
+    const entityTypeCounts = {}, entityNameCounts = {}, attrCatCounts = {}, attrValueCounts = {};
+    const relTypeCounts = {}, predCounts = {};
+    // Track dominant parent type for each detail item (for coloring)
+    const entityNameTypes = {}, attrValueCats = {}, predRelTypes = {};
+    for (const c of cases) {
+        for (const e of (c.entities || [])) {
+            entityTypeCounts[e.type] = (entityTypeCounts[e.type] || 0) + 1;
+            // Top entities: filter by entity type if linked
+            if (!opts.entityTypeFilter || e.type === opts.entityTypeFilter) {
+                const n = (e.name || '').toLowerCase();
+                if (!ENTITY_NAME_BLACKLIST.has(n)) {
+                    entityNameCounts[n] = (entityNameCounts[n] || 0) + 1;
+                    if (!entityNameTypes[n]) entityNameTypes[n] = {};
+                    entityNameTypes[n][e.type] = (entityNameTypes[n][e.type] || 0) + 1;
+                }
+            }
+            for (const a of (e.attributes || [])) {
+                const ac = a.category || 'other';
+                attrCatCounts[ac] = (attrCatCounts[ac] || 0) + 1;
+                // Attr values: filter by attr category if linked
+                if (!opts.attrCatFilter || ac === opts.attrCatFilter) {
+                    const av = (a.value || '').toLowerCase();
+                    if (av) {
+                        attrValueCounts[av] = (attrValueCounts[av] || 0) + 1;
+                        if (!attrValueCats[av]) attrValueCats[av] = {};
+                        attrValueCats[av][ac] = (attrValueCats[av][ac] || 0) + 1;
+                    }
+                }
+            }
+        }
+        for (const r of (c.relations || [])) {
+            const rt = r.relation_type || 'other';
+            relTypeCounts[rt] = (relTypeCounts[rt] || 0) + 1;
+            // Predicates: filter by relation type if linked
+            if (!opts.relTypeFilter || rt === opts.relTypeFilter) {
+                const p = (r.predicate || '').toLowerCase();
+                predCounts[p] = (predCounts[p] || 0) + 1;
+                if (!predRelTypes[p]) predRelTypes[p] = {};
+                predRelTypes[p][rt] = (predRelTypes[p][rt] || 0) + 1;
+            }
+        }
+    }
+    const sort = obj => Object.entries(obj).sort((a,b) => b[1] - a[1]);
+    // Helper: get dominant key from a {key: count} map
+    const dominant = m => Object.entries(m).sort((a,b) => b[1] - a[1])[0]?.[0] || 'other';
+    return {
+        entityTypes: sort(entityTypeCounts),
+        topEntities: sort(entityNameCounts),
+        attrCategories: sort(attrCatCounts),
+        attrValues: sort(attrValueCounts),
+        relTypes: sort(relTypeCounts),
+        topPredicates: sort(predCounts),
+        // Dominant type mappings for coloring detail charts
+        entityNameTypes: Object.fromEntries(Object.entries(entityNameTypes).map(([k,v]) => [k, dominant(v)])),
+        attrValueCats: Object.fromEntries(Object.entries(attrValueCats).map(([k,v]) => [k, dominant(v)])),
+        predRelTypes: Object.fromEntries(Object.entries(predRelTypes).map(([k,v]) => [k, dominant(v)])),
+    };
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Data Loading
+   ═══════════════════════════════════════════════════════════ */
+async function loadData() {
+    try {
+        const [statsRes, casesRes] = await Promise.all([
+            fetch('../data/open-vocabulary-stats.json'),
+            fetch('../data/open-vocabulary-cases.json')
+        ]);
+        STATS = await statsRes.json();
+        CASES = await casesRes.json();
+        filteredCases = CASES;
+        init();
+    } catch (e) {
+        document.querySelector('.main').innerHTML = `<div class="loading">数据加载失败: ${escHtml(e.message)}</div>`;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Section 01: Overview
+   ═══════════════════════════════════════════════════════════ */
+function renderOverview() {
+    const o = STATS.overview;
+    const items = [
+        { v: o.total_questions.toLocaleString(), l: '总题目数' },
+        { v: o.total_datasets, l: '数据集' },
+        { v: o.total_categories, l: '分类数' },
+        { v: o.total_entities.toLocaleString(), l: '总实体数' },
+        { v: o.total_relations.toLocaleString(), l: '总关系数' },
+        { v: o.avg_entities_per_question, l: '平均实体/题' },
+        { v: o.avg_relations_per_question, l: '平均关系/题' },
+    ];
+    document.getElementById('stats-grid').innerHTML = items.map(i =>
+        `<div class="stat-card"><div class="stat-value">${i.v}</div><div class="stat-label">${i.l}</div></div>`
+    ).join('');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Filter bar builder (reusable)
+   ═══════════════════════════════════════════════════════════ */
+function buildDsFilterBar(containerId, onClickFn) {
+    const datasets = [...new Set(CASES.map(c => c.dataset))].sort();
+    let html = '<span class="filter-label">数据集:</span>';
+    html += `<button class="filter-btn active" onclick="${onClickFn}('all',this)">全部</button>`;
+    for (const ds of datasets) {
+        html += `<button class="filter-btn" onclick="${onClickFn}('${ds}',this)">${DS_LABELS[ds] || ds}</button>`;
+    }
+    document.getElementById(containerId).innerHTML = html;
+}
+
+function activateFilterBtn(btn) {
+    btn.closest('.filter-bar').querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Section 02: Entity Analysis (filterable)
+   ═══════════════════════════════════════════════════════════ */
+function renderEntityFilterBar() {
+    buildDsFilterBar('entity-filter-bar', 'filterEntityCharts');
+}
+
+function filterEntityCharts(ds, btn) {
+    activateFilterBtn(btn);
+    currentEntityDsFilter = ds;
+    updateEntityCharts();
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Chart Pagination System
+   ═══════════════════════════════════════════════════════════ */
+const chartPagerState = {};  // key → { data, page, pageSize, sortAsc, chartKey, filterType, axis }
+
+function initPagerState(key, fullData, opts) {
+    chartPagerState[key] = {
+        data: fullData,
+        page: 0,
+        pageSize: opts.pageSize || 10,
+        sortAsc: false,  // default: high frequency first
+        chartKey: opts.chartKey,
+        filterType: opts.filterType,
+        axis: opts.axis || 'y',  // 'y' = horizontal bar, 'x' = vertical bar
+        colorFn: opts.colorFn || null,
+        color: opts.color || '#3b82f6',
+        wrapId: opts.wrapId,
+        canvasId: opts.canvasId,
+        pagerId: opts.pagerId,
+        barHeight: opts.barHeight || 32,
+        verticalBarMinHeight: opts.verticalBarMinHeight || 300,
+        linked: opts.linked || false,
+    };
+    renderPagerControls(key);
+    renderPagedChart(key);
+}
+
+function getSortedData(key) {
+    const s = chartPagerState[key];
+    const sorted = [...s.data];
+    if (s.sortAsc) sorted.sort((a, b) => a[1] - b[1]);
+    // else already desc from computeDistributions
+    return sorted;
+}
+
+function getPageSlice(key) {
+    const s = chartPagerState[key];
+    const sorted = getSortedData(key);
+    const start = s.page * s.pageSize;
+    return sorted.slice(start, start + s.pageSize);
+}
+
+function getTotalPages(key) {
+    const s = chartPagerState[key];
+    return Math.max(1, Math.ceil(s.data.length / s.pageSize));
+}
+
+function renderPagerControls(key) {
+    const s = chartPagerState[key];
+    const totalPages = getTotalPages(key);
+    const total = s.data.length;
+    const container = document.getElementById(s.pagerId);
+    container.innerHTML = `<div class="chart-pager">
+        <div class="chart-pager-left">
+            <button class="chart-sort-btn ${!s.sortAsc ? 'active' : ''}" onclick="toggleChartSort('${key}',false)">高频优先</button>
+            <button class="chart-sort-btn ${s.sortAsc ? 'active' : ''}" onclick="toggleChartSort('${key}',true)">低频优先</button>
+            <span style="color:var(--color-text-muted);font-size:0.65rem;margin-left:0.3rem">共 ${total} 项</span>
+        </div>
+        <div class="chart-pager-right">
+            <div class="chart-pager-size">
+                <label>每页</label>
+                <select onchange="changeChartPageSize('${key}',+this.value)">
+                    ${[5,10,15,20,30,50].map(n => `<option value="${n}" ${n===s.pageSize?'selected':''}>${n}</option>`).join('')}
+                </select>
+            </div>
+            <button class="chart-page-btn" onclick="chartPagePrev('${key}')" ${s.page===0?'disabled':''}>&lsaquo;</button>
+            <span class="chart-page-info">${s.page+1} / ${totalPages}</span>
+            <button class="chart-page-btn" onclick="chartPageNext('${key}')" ${s.page>=totalPages-1?'disabled':''}>&rsaquo;</button>
+        </div>
+    </div>`;
+}
+
+function renderPagedChart(key) {
+    const s = chartPagerState[key];
+    const slice = getPageSlice(key);
+    const wrap = document.getElementById(s.wrapId);
+
+    // Dynamic height based on items
+    if (s.axis === 'y') {
+        wrap.style.height = Math.max(120, slice.length * s.barHeight + 40) + 'px';
+    } else {
+        wrap.style.height = s.verticalBarMinHeight + 'px';
+    }
+
+    // Destroy old chart
+    if (chartInstances[s.chartKey]) chartInstances[s.chartKey].destroy();
+
+    const labels = slice.map(d => d[0]);
+    const data = slice.map(d => d[1]);
+    const bgColors = s.colorFn ? slice.map(d => s.colorFn(d[0])) : s.color;
+
+    const isHorizontal = s.axis === 'y';
+    const tooltipCb = isHorizontal
+        ? { label: ctx => ctx.parsed.x.toLocaleString() }
+        : { label: ctx => ctx.parsed.y.toLocaleString() };
+    const scalesConf = isHorizontal
+        ? { x: { grid: { display: false }, ticks: { font: { size: 11 } } }, y: { grid: { display: false }, ticks: { font: { family: "'JetBrains Mono'", size: 11 } } } }
+        : { x: { grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 60, minRotation: 30 } }, y: { grid: { color: '#f0f0f0' }, ticks: { font: { size: 11 } } } };
+
+    chartInstances[s.chartKey] = new Chart(document.getElementById(s.canvasId), {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{ data, backgroundColor: bgColors, borderRadius: 4, barPercentage: 0.7 }]
+        },
+        options: {
+            indexAxis: isHorizontal ? 'y' : 'x',
+            responsive: true,
+            maintainAspectRatio: false,
+            onClick: (evt) => {
+                const chart = chartInstances[s.chartKey];
+                const points = chart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, false);
+                if (points.length === 0) return;
+                const idx = points[0].index;
+                const lbl = chart.data.labels[idx];
+                if (s.linked) {
+                    // Linked chart: update linked filter + refresh paired chart + filter cases
+                    applyLinkedFilter(s.filterType, lbl);
+                } else {
+                    // Detail chart: filter cases only
+                    const val = s.filterType === 'entity_name' || s.filterType === 'predicate' || s.filterType === 'attr_value' ? lbl.toLowerCase() : lbl;
+                    applyChartFilter(s.filterType, val, lbl);
+                }
+            },
+            plugins: { legend: { display: false }, tooltip: { callbacks: tooltipCb } },
+            scales: scalesConf
+        }
+    });
+}
+
+function toggleChartSort(key, asc) {
+    chartPagerState[key].sortAsc = asc;
+    chartPagerState[key].page = 0;
+    renderPagerControls(key);
+    renderPagedChart(key);
+}
+
+function changeChartPageSize(key, size) {
+    chartPagerState[key].pageSize = size;
+    chartPagerState[key].page = 0;
+    renderPagerControls(key);
+    renderPagedChart(key);
+}
+
+function chartPagePrev(key) {
+    if (chartPagerState[key].page > 0) {
+        chartPagerState[key].page--;
+        renderPagerControls(key);
+        renderPagedChart(key);
+    }
+}
+
+function chartPageNext(key) {
+    if (chartPagerState[key].page < getTotalPages(key) - 1) {
+        chartPagerState[key].page++;
+        renderPagerControls(key);
+        renderPagedChart(key);
+    }
+}
+
+/* Chart click handler helper (for doughnut chart) */
+function makeChartClickHandler(chart, filterType) {
+    return (evt) => {
+        const points = chart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, false);
+        if (points.length === 0) return;
+        const idx = points[0].index;
+        const label = chart.data.labels[idx];
+        applyChartFilter(filterType, filterType === 'entity_name' || filterType === 'predicate' ? label.toLowerCase() : label, label);
+    };
+}
+
+/* Linked filter state */
+let linkedEntityType = null;   // selected entity type → filters top entities + cases
+let linkedAttrCat = null;      // selected attr category → filters attr values + cases
+let linkedRelType = null;      // selected relation type → filters predicates + cases
+
+function updateEntityCharts() {
+    const subset = currentEntityDsFilter === 'all' ? CASES : CASES.filter(c => c.dataset === currentEntityDsFilter);
+    const dist = computeDistributions(subset, { entityTypeFilter: linkedEntityType, attrCatFilter: linkedAttrCat });
+
+    // Destroy old charts
+    if (chartInstances.entityTypes) chartInstances.entityTypes.destroy();
+    if (chartInstances.topEntities) chartInstances.topEntities.destroy();
+    if (chartInstances.attrCats) chartInstances.attrCats.destroy();
+    if (chartInstances.attrValues) chartInstances.attrValues.destroy();
+
+    // Entity types (left chart — click to link)
+    initPagerState('entityTypes', dist.entityTypes, {
+        chartKey: 'entityTypes', filterType: 'entity_type', axis: 'y',
+        colorFn: getEntityColor, linked: true,
+        wrapId: 'wrap-entity-types', canvasId: 'chart-entity-types', pagerId: 'pager-entity-types',
+    });
+
+    // Top entities (right chart — colored by dominant entity type)
+    const entTypeMap = dist.entityNameTypes;
+    initPagerState('topEntities', dist.topEntities, {
+        chartKey: 'topEntities', filterType: 'entity_name', axis: 'y',
+        colorFn: name => getEntityColor(entTypeMap[name] || 'other'),
+        wrapId: 'wrap-top-entities', canvasId: 'chart-top-entities', pagerId: 'pager-top-entities',
+    });
+
+    // Attribute categories (left chart — click to link, colored)
+    initPagerState('attrCats', dist.attrCategories, {
+        chartKey: 'attrCats', filterType: 'attr_category', axis: 'y',
+        colorFn: getAttrCatColor, linked: true,
+        wrapId: 'wrap-attr-categories', canvasId: 'chart-attr-categories', pagerId: 'pager-attr-categories',
+    });
+
+    // Attribute values (right chart — colored by dominant attr category)
+    const avCatMap = dist.attrValueCats;
+    initPagerState('attrValues', dist.attrValues, {
+        chartKey: 'attrValues', filterType: 'attr_value', axis: 'y',
+        colorFn: val => getAttrCatColor(avCatMap[val] || 'other'),
+        wrapId: 'wrap-attr-values', canvasId: 'chart-attr-values', pagerId: 'pager-attr-values',
+    });
+
+    // Update linked labels
+    updateLinkedLabel('link-entity-type', linkedEntityType, 'clearLinkedEntityType');
+    updateLinkedLabel('link-attr-cat', linkedAttrCat, 'clearLinkedAttrCat');
+}
+
+function updateLinkedLabel(elemId, value, clearFn) {
+    const el = document.getElementById(elemId);
+    if (!el) return;
+    if (value) {
+        el.innerHTML = `筛选: ${escHtml(value)} <span class="link-clear" onclick="${clearFn}()" title="取消联动">✕</span>`;
+    } else {
+        el.innerHTML = '';
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Section 03: Relation Analysis (filterable)
+   ═══════════════════════════════════════════════════════════ */
+function renderRelFilterBar() {
+    buildDsFilterBar('relation-filter-bar', 'filterRelCharts');
+}
+
+function filterRelCharts(ds, btn) {
+    activateFilterBtn(btn);
+    currentRelDsFilter = ds;
+    updateRelCharts();
+}
+
+function updateRelCharts() {
+    const subset = currentRelDsFilter === 'all' ? CASES : CASES.filter(c => c.dataset === currentRelDsFilter);
+    const dist = computeDistributions(subset, { relTypeFilter: linkedRelType });
+
+    if (chartInstances.relTypes) chartInstances.relTypes.destroy();
+    if (chartInstances.topPreds) chartInstances.topPreds.destroy();
+
+    // Relation types (left — click to link)
+    initPagerState('relTypes', dist.relTypes, {
+        chartKey: 'relTypes', filterType: 'relation_type', axis: 'y',
+        colorFn: getRelColor, linked: true,
+        wrapId: 'wrap-relation-types', canvasId: 'chart-relation-types', pagerId: 'pager-relation-types',
+    });
+
+    // Top predicates (right — colored by dominant relation type)
+    const predTypeMap = dist.predRelTypes;
+    initPagerState('topPreds', dist.topPredicates, {
+        chartKey: 'topPreds', filterType: 'predicate', axis: 'y',
+        colorFn: p => getRelColor(predTypeMap[p] || 'other'),
+        wrapId: 'wrap-top-predicates', canvasId: 'chart-top-predicates', pagerId: 'pager-top-predicates',
+    });
+
+    updateLinkedLabel('link-rel-type', linkedRelType, 'clearLinkedRelType');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Section 04: Case Browser (vocab + trajectory combined)
+   ═══════════════════════════════════════════════════════════ */
+function renderCaseFilters() {
+    const dsSet = [...new Set(CASES.map(c => c.dataset))].sort();
+    const catSet = [...new Set(CASES.map(c => c.category))].sort();
+    let html = '<span class="filter-label">数据集:</span>';
+    html += `<button class="filter-btn active" data-dim="ds" onclick="filterCases('ds','all',this)">全部</button>`;
+    for (const ds of dsSet) html += `<button class="filter-btn" data-dim="ds" onclick="filterCases('ds','${ds}',this)">${DS_LABELS[ds] || ds}</button>`;
+
+    html += `<span class="filter-label" style="margin-left:1rem">分类:</span>`;
+    html += `<button class="filter-btn active" data-dim="cat" onclick="filterCases('cat','all',this)">全部 (${catSet.length})</button>`;
+    for (const cat of catSet) html += `<button class="filter-btn" data-dim="cat" onclick="filterCases('cat','${escHtml(cat)}',this)">${escHtml(cat)}</button>`;
+
+    html += `<span class="filter-label" style="margin-left:1rem">轨迹:</span>`;
+    html += `<button class="filter-btn active" data-dim="traj" onclick="filterCases('traj','all',this)">全部</button>`;
+    html += `<button class="filter-btn" data-dim="traj" onclick="filterCases('traj','yes',this)">含轨迹</button>`;
+
+    document.getElementById('case-filter-bar').innerHTML = html;
+}
+
+let currentTrajFilter = 'all';
+let chartFilter = null; // {type, value, label}
+
+/* ── Linked chart filtering (left chart → right chart + cases) ── */
+function applyLinkedFilter(filterType, value) {
+    if (filterType === 'entity_type') {
+        linkedEntityType = (linkedEntityType === value) ? null : value;  // toggle
+        updateEntityCharts();
+        // Also set chart filter for cases
+        if (linkedEntityType) {
+            applyChartFilter('entity_type', linkedEntityType, linkedEntityType);
+        } else {
+            clearChartFilter();
+        }
+    } else if (filterType === 'attr_category') {
+        linkedAttrCat = (linkedAttrCat === value) ? null : value;
+        updateEntityCharts();
+        if (linkedAttrCat) {
+            applyChartFilter('attr_category', linkedAttrCat, linkedAttrCat);
+        } else {
+            clearChartFilter();
+        }
+    } else if (filterType === 'relation_type') {
+        linkedRelType = (linkedRelType === value) ? null : value;
+        updateRelCharts();
+        if (linkedRelType) {
+            applyChartFilter('relation_type', linkedRelType, linkedRelType);
+        } else {
+            clearChartFilter();
+        }
+    }
+}
+
+function clearLinkedEntityType() {
+    linkedEntityType = null;
+    updateEntityCharts();
+    clearChartFilter();
+}
+
+function clearLinkedAttrCat() {
+    linkedAttrCat = null;
+    updateEntityCharts();
+    clearChartFilter();
+}
+
+function clearLinkedRelType() {
+    linkedRelType = null;
+    updateRelCharts();
+    clearChartFilter();
+}
+
+/* ── Chart-click → filter cases (from detail charts) ── */
+function applyChartFilter(type, value, label) {
+    chartFilter = { type, value, label };
+    const banner = document.getElementById('chart-filter-banner');
+    const typeLabels = {
+        entity_type: '实体类型', entity_name: '实体名称',
+        attr_category: '属性类别', attr_value: '属性值',
+        relation_type: '关系类型', predicate: '谓词'
+    };
+    document.getElementById('chart-filter-text').innerHTML =
+        `按 ${typeLabels[type] || type} 筛选: <strong>${escHtml(label)}</strong>`;
+    banner.classList.add('active');
+    applyAllCaseFilters();
+}
+
+function clearChartFilter() {
+    chartFilter = null;
+    document.getElementById('chart-filter-banner').classList.remove('active');
+    applyAllCaseFilters();
+}
+
+function applyAllCaseFilters() {
+    filteredCases = CASES.filter(c => {
+        if (currentCaseDsFilter !== 'all' && c.dataset !== currentCaseDsFilter) return false;
+        if (currentCaseCatFilter !== 'all' && c.category !== currentCaseCatFilter) return false;
+        if (currentTrajFilter === 'yes' && !c.trajectories) return false;
+        if (chartFilter) {
+            const cf = chartFilter;
+            if (cf.type === 'entity_type') {
+                if (!c.entities.some(e => e.type === cf.value)) return false;
+            } else if (cf.type === 'entity_name') {
+                if (!c.entities.some(e => (e.name || '').toLowerCase() === cf.value)) return false;
+            } else if (cf.type === 'attr_category') {
+                if (!c.entities.some(e => (e.attributes || []).some(a => a.category === cf.value))) return false;
+            } else if (cf.type === 'attr_value') {
+                if (!c.entities.some(e => (e.attributes || []).some(a => (a.value || '').toLowerCase() === cf.value))) return false;
+            } else if (cf.type === 'relation_type') {
+                if (!c.relations.some(r => r.relation_type === cf.value)) return false;
+            } else if (cf.type === 'predicate') {
+                if (!c.relations.some(r => (r.predicate || '').toLowerCase() === cf.value)) return false;
+            }
+        }
+        return true;
+    });
+    currentPage = 1;
+    renderCasePage();
+}
+
+function filterCases(dimension, value, btn) {
+    // Update filter state
+    if (dimension === 'ds') currentCaseDsFilter = value;
+    else if (dimension === 'cat') currentCaseCatFilter = value;
+    else if (dimension === 'traj') currentTrajFilter = value;
+
+    // Update button state for this dimension only
+    const bar = document.getElementById('case-filter-bar');
+    bar.querySelectorAll(`.filter-btn[data-dim="${dimension}"]`).forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    applyAllCaseFilters();
+}
+
+function renderCasePage() {
+    const total = filteredCases.length;
+    const totalPages = Math.ceil(total / CASES_PER_PAGE);
+    const start = (currentPage - 1) * CASES_PER_PAGE;
+    const pageCases = filteredCases.slice(start, start + CASES_PER_PAGE);
+
+    document.getElementById('case-count').textContent = `${total.toLocaleString()} 题`;
+
+    const container = document.getElementById('cases-container');
+    if (pageCases.length === 0) {
+        container.innerHTML = '<div class="no-tools">无匹配结果</div>';
+        document.getElementById('pagination').innerHTML = '';
+        return;
+    }
+
+    container.innerHTML = pageCases.map(c => renderCaseCard(c)).join('');
+
+    // Pagination
+    let ph = '';
+    ph += `<button class="page-btn" onclick="goPage(${currentPage-1})" ${currentPage<=1?'disabled':''}>上一页</button>`;
+    const maxShow = 7;
+    let ps = Math.max(1, currentPage-3), pe = Math.min(totalPages, ps+maxShow-1);
+    if (pe-ps < maxShow-1) ps = Math.max(1, pe-maxShow+1);
+    if (ps > 1) { ph += `<button class="page-btn" onclick="goPage(1)">1</button>`; if (ps>2) ph += `<span class="page-info">...</span>`; }
+    for (let p = ps; p <= pe; p++) ph += `<button class="page-btn ${p===currentPage?'active':''}" onclick="goPage(${p})">${p}</button>`;
+    if (pe < totalPages) { if (pe<totalPages-1) ph += `<span class="page-info">...</span>`; ph += `<button class="page-btn" onclick="goPage(${totalPages})">${totalPages}</button>`; }
+    ph += `<button class="page-btn" onclick="goPage(${currentPage+1})" ${currentPage>=totalPages?'disabled':''}>下一页</button>`;
+    ph += `<span class="page-info">${start+1}-${Math.min(start+CASES_PER_PAGE,total)} / ${total.toLocaleString()}</span>`;
+    document.getElementById('pagination').innerHTML = ph;
+}
+
+function goPage(p) {
+    const totalPages = Math.ceil(filteredCases.length / CASES_PER_PAGE);
+    if (p < 1 || p > totalPages) return;
+    currentPage = p;
+    renderCasePage();
+    document.getElementById('sec-cases').scrollIntoView({ behavior: 'smooth' });
+}
+
+function renderCaseCard(c) {
+    const hasTraj = !!c.trajectories;
+    const quid = c.question_id.replace(/[^a-zA-Z0-9_-]/g, '_');
+    let html = `<div class="case-card expanded" id="case-${quid}">`;
+
+    // Header
+    html += `<div class="case-card-header" onclick="this.parentElement.classList.toggle('expanded')">`;
+    html += `<div class="case-info">`;
+    html += `<span class="case-ds-badge ${c.dataset}">${DS_LABELS[c.dataset]||c.dataset}</span>`;
+    html += `<span class="case-qid">${escHtml(c.question_id)}</span>`;
+    if (hasTraj) html += `<span class="traj-badge">含轨迹</span>`;
+    html += `<span class="case-cat">${escHtml(c.category)}</span>`;
+    html += `<span class="case-arrow">▶</span>`;
+    html += `</div>`;
+    html += `<div class="case-text">${escHtml(c.full_text)}</div>`;
+    html += `</div>`;
+
+    // Body: two-panel layout
+    html += `<div class="case-card-body">`;
+    html += `<div class="case-body-panels ${hasTraj ? '' : 'no-traj'}">`;
+
+    // ── Left: Entity-Relation Analysis ──
+    html += `<div class="case-panel-left">`;
+    html += `<div class="entity-section-title">Entities (${c.entities.length})</div>`;
+    html += `<div class="entity-tags">`;
+    for (const e of c.entities) {
+        const color = getEntityColor(e.type);
+        html += `<span class="entity-tag" style="border-color:${color}20;background:${color}10">`;
+        html += `<span class="entity-type-dot" style="background:${color}"></span>`;
+        html += `<span>${escHtml(e.name)}</span>`;
+        html += `<span class="entity-attr" style="color:${color}">${e.type}</span>`;
+        for (const a of (e.attributes||[])) html += `<span class="entity-attr" title="${escHtml(a.category||'other')}">${escHtml(a.category||'other')}:${escHtml(a.value)}</span>`;
+        html += `</span>`;
+    }
+    html += `</div>`;
+
+    html += `<div class="entity-section-title">Relations (${c.relations.length})</div>`;
+    html += `<ul class="relation-list">`;
+    for (const r of c.relations) {
+        const rc = getRelColor(r.relation_type);
+        html += `<li class="relation-item">`;
+        html += `<span class="rel-subject">${escHtml(r.subject_name)}</span>`;
+        html += `<span class="rel-arrow">→</span>`;
+        html += `<span class="rel-predicate" style="background:${rc}">${escHtml(r.predicate)}</span>`;
+        html += `<span class="rel-arrow">→</span>`;
+        html += `<span class="rel-object">${escHtml(r.object_name)}</span>`;
+        html += `<span class="rel-type-tag">${r.relation_type}</span>`;
+        html += `</li>`;
+    }
+    html += `</ul></div>`;
+
+    // ── Right: Trajectory (model tabs) ──
+    if (hasTraj) {
+        html += `<div class="case-panel-right">`;
+        html += `<div class="case-panel-right-header">Plan 轨迹`;
+        if (c.ability) html += ` <span class="traj-badge">${escHtml(c.ability.ability_name||'')}</span>`;
+        html += `</div>`;
+
+        // Tabs
+        html += `<div class="model-tabs">`;
+        MODEL_ORDER.forEach((m, i) => {
+            html += `<div class="model-tab ${m.css} ${i===0?'active':''}" data-qid="${quid}" data-idx="${i}" onclick="switchTab(this)">${m.label}</div>`;
+        });
+        html += `</div>`;
+
+        // Panels
+        MODEL_ORDER.forEach((m, i) => {
+            const t = c.trajectories[m.key];
+            const steps = t ? t.steps || [] : [];
+            html += `<div class="model-tab-panel ${i===0?'active':''}" data-qid="${quid}" data-idx="${i}">`;
+            html += renderSteps(steps);
+            html += `</div>`;
+        });
+
+        html += `</div>`;
+    }
+
+    html += `</div></div></div>`;
+    return html;
+}
+
+function renderSteps(steps) {
+    if (!steps || steps.length === 0) return '<div class="no-tools">No steps</div>';
+    let html = '<div class="step-list">';
+    for (const s of steps) {
+        const isR = !s.tool || s.tool === 'null' || s.tool === 'reasoning';
+        html += `<div class="tool-step"><div class="tool-step-header">`;
+        html += `<span class="step-num ${isR?'reasoning':''}">${s.step}</span>`;
+        html += `<span class="step-name ${isR?'reasoning':''}">${isR ? 'Reasoning / Final Answer' : escHtml(s.tool)}</span>`;
+        if (s.depends_on && s.depends_on.length) html += `<span class="step-deps">← ${s.depends_on.join(',')}</span>`;
+        html += `</div>`;
+        if (s.purpose) html += `<div class="step-purpose">${escHtml(s.purpose)}</div>`;
+        html += `</div>`;
+    }
+    html += '</div>';
+    return html;
+}
+
+function switchTab(tabEl) {
+    const qid = tabEl.dataset.qid, idx = tabEl.dataset.idx;
+    tabEl.parentElement.querySelectorAll('.model-tab').forEach(t => t.classList.remove('active'));
+    tabEl.classList.add('active');
+    const panels = tabEl.closest('.case-panel-right').querySelectorAll('.model-tab-panel');
+    panels.forEach(p => p.classList.toggle('active', p.dataset.qid === qid && p.dataset.idx === idx));
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Back to top
+   ═══════════════════════════════════════════════════════════ */
+function setupBackToTop() {
+    const btn = document.getElementById('back-top');
+    window.addEventListener('scroll', () => { btn.style.display = window.scrollY > 400 ? 'block' : 'none'; });
+    btn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Init
+   ═══════════════════════════════════════════════════════════ */
+function init() {
+    renderOverview();
+    renderEntityFilterBar();
+    updateEntityCharts();
+    renderRelFilterBar();
+    updateRelCharts();
+    renderCaseFilters();
+    renderCasePage();
+    setupBackToTop();
+}
+
+document.addEventListener('DOMContentLoaded', loadData);
+</script>
+</body>
+</html>

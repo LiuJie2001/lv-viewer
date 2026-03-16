@@ -1,0 +1,1165 @@
+{
+  "metadata": {
+    "generated_date": "2026-03-15 21:31",
+    "source": "/root/paddlejob/workspace/env_run/output/bwh/lj/video_cases_tools/data/outputs/s6_open_word_results.jsonl",
+    "total_questions": 10927
+  },
+  "overview": {
+    "total_questions": 10927,
+    "total_datasets": 4,
+    "total_categories": 47,
+    "total_entities": 108893,
+    "total_relations": 81326,
+    "avg_entities_per_question": 10.0,
+    "avg_relations_per_question": 7.4
+  },
+  "entity_type_distribution": [
+    {
+      "type": "object",
+      "count": 63853
+    },
+    {
+      "type": "person",
+      "count": 15711
+    },
+    {
+      "type": "abstract",
+      "count": 11156
+    },
+    {
+      "type": "place",
+      "count": 9360
+    },
+    {
+      "type": "event",
+      "count": 4062
+    },
+    {
+      "type": "other",
+      "count": 2683
+    },
+    {
+      "type": "animal",
+      "count": 1964
+    },
+    {
+      "type": "organization",
+      "count": 50
+    },
+    {
+      "type": "time",
+      "count": 18
+    },
+    {
+      "type": "state",
+      "count": 11
+    },
+    {
+      "type": "group",
+      "count": 6
+    },
+    {
+      "type": "body part",
+      "count": 6
+    },
+    {
+      "type": "text",
+      "count": 6
+    },
+    {
+      "type": "material",
+      "count": 4
+    },
+    {
+      "type": "attribute",
+      "count": 2
+    },
+    {
+      "type": "color",
+      "count": 1
+    }
+  ],
+  "top_entities": [
+    {
+      "name": "man",
+      "count": 3697
+    },
+    {
+      "name": "woman",
+      "count": 2438
+    },
+    {
+      "name": "screen",
+      "count": 1873
+    },
+    {
+      "name": "shirt",
+      "count": 1581
+    },
+    {
+      "name": "subtitle",
+      "count": 1408
+    },
+    {
+      "name": "hair",
+      "count": 1251
+    },
+    {
+      "name": "hand",
+      "count": 1083
+    },
+    {
+      "name": "person",
+      "count": 1050
+    },
+    {
+      "name": "background",
+      "count": 944
+    },
+    {
+      "name": "room",
+      "count": 915
+    },
+    {
+      "name": "table",
+      "count": 810
+    },
+    {
+      "name": "people",
+      "count": 757
+    },
+    {
+      "name": "glasses",
+      "count": 742
+    },
+    {
+      "name": "clothes",
+      "count": 706
+    },
+    {
+      "name": "hands",
+      "count": 671
+    },
+    {
+      "name": "wall",
+      "count": 641
+    },
+    {
+      "name": "hat",
+      "count": 640
+    },
+    {
+      "name": "coat",
+      "count": 619
+    },
+    {
+      "name": "top",
+      "count": 552
+    },
+    {
+      "name": "suit",
+      "count": 505
+    },
+    {
+      "name": "subtitles",
+      "count": 496
+    },
+    {
+      "name": "text",
+      "count": 482
+    },
+    {
+      "name": "camera",
+      "count": 467
+    },
+    {
+      "name": "car",
+      "count": 452
+    },
+    {
+      "name": "scene",
+      "count": 412
+    },
+    {
+      "name": "water",
+      "count": 402
+    },
+    {
+      "name": "ground",
+      "count": 388
+    },
+    {
+      "name": "sky",
+      "count": 361
+    },
+    {
+      "name": "pants",
+      "count": 335
+    },
+    {
+      "name": "head",
+      "count": 327
+    },
+    {
+      "name": "jacket",
+      "count": 314
+    },
+    {
+      "name": "girl",
+      "count": 312
+    },
+    {
+      "name": "dress",
+      "count": 309
+    },
+    {
+      "name": "corner",
+      "count": 288
+    },
+    {
+      "name": "bowl",
+      "count": 287
+    },
+    {
+      "name": "object",
+      "count": 276
+    },
+    {
+      "name": "trees",
+      "count": 269
+    },
+    {
+      "name": "food",
+      "count": 268
+    },
+    {
+      "name": "men",
+      "count": 266
+    },
+    {
+      "name": "mirror",
+      "count": 265
+    },
+    {
+      "name": "pot",
+      "count": 244
+    },
+    {
+      "name": "building",
+      "count": 242
+    },
+    {
+      "name": "window",
+      "count": 234
+    },
+    {
+      "name": "door",
+      "count": 222
+    },
+    {
+      "name": "t-shirt",
+      "count": 222
+    },
+    {
+      "name": "cup",
+      "count": 221
+    },
+    {
+      "name": "chair",
+      "count": 217
+    },
+    {
+      "name": "picture",
+      "count": 210
+    },
+    {
+      "name": "house",
+      "count": 209
+    },
+    {
+      "name": "book",
+      "count": 209
+    }
+  ],
+  "attribute_category_distribution": [
+    {
+      "category": "color",
+      "count": 22641
+    },
+    {
+      "category": "appearance",
+      "count": 13152
+    },
+    {
+      "category": "other",
+      "count": 6307
+    },
+    {
+      "category": "state",
+      "count": 5613
+    },
+    {
+      "category": "ordinal",
+      "count": 5569
+    },
+    {
+      "category": "material",
+      "count": 2311
+    },
+    {
+      "category": "temporal",
+      "count": 104
+    },
+    {
+      "category": "type",
+      "count": 53
+    },
+    {
+      "category": "position",
+      "count": 35
+    },
+    {
+      "category": "geometric",
+      "count": 19
+    },
+    {
+      "category": "category",
+      "count": 13
+    },
+    {
+      "category": "content",
+      "count": 11
+    },
+    {
+      "category": "possessive",
+      "count": 7
+    },
+    {
+      "category": "location",
+      "count": 6
+    },
+    {
+      "category": "color/material",
+      "count": 6
+    },
+    {
+      "category": "time",
+      "count": 4
+    },
+    {
+      "category": "size",
+      "count": 4
+    },
+    {
+      "category": "age",
+      "count": 2
+    },
+    {
+      "category": "origin",
+      "count": 2
+    },
+    {
+      "category": "shape",
+      "count": 2
+    },
+    {
+      "category": "color/appearance",
+      "count": 2
+    },
+    {
+      "category": "length",
+      "count": 1
+    },
+    {
+      "category": "quantity",
+      "count": 1
+    },
+    {
+      "category": "value",
+      "count": 1
+    },
+    {
+      "category": "style",
+      "count": 1
+    }
+  ],
+  "relation_type_distribution": [
+    {
+      "type": "semantic",
+      "count": 27275
+    },
+    {
+      "type": "geometric",
+      "count": 25229
+    },
+    {
+      "type": "possessive",
+      "count": 23586
+    },
+    {
+      "type": "temporal",
+      "count": 3119
+    },
+    {
+      "type": "other",
+      "count": 2115
+    },
+    {
+      "type": "state",
+      "count": 2
+    }
+  ],
+  "top_predicates": [
+    {
+      "predicate": "in",
+      "count": 7734
+    },
+    {
+      "predicate": "wearing",
+      "count": 7705
+    },
+    {
+      "predicate": "with",
+      "count": 6265
+    },
+    {
+      "predicate": "on",
+      "count": 5631
+    },
+    {
+      "predicate": "of",
+      "count": 5278
+    },
+    {
+      "predicate": "has",
+      "count": 1921
+    },
+    {
+      "predicate": "holding",
+      "count": 1815
+    },
+    {
+      "predicate": "in front of",
+      "count": 1331
+    },
+    {
+      "predicate": "is",
+      "count": 1075
+    },
+    {
+      "predicate": "behind",
+      "count": 1001
+    },
+    {
+      "predicate": "at",
+      "count": 624
+    },
+    {
+      "predicate": "next to",
+      "count": 556
+    },
+    {
+      "predicate": "from",
+      "count": 508
+    },
+    {
+      "predicate": "mentions",
+      "count": 473
+    },
+    {
+      "predicate": "inside",
+      "count": 465
+    },
+    {
+      "predicate": "to",
+      "count": 434
+    },
+    {
+      "predicate": "for",
+      "count": 390
+    },
+    {
+      "predicate": "shows",
+      "count": 389
+    },
+    {
+      "predicate": "sitting on",
+      "count": 371
+    },
+    {
+      "predicate": "dressed in",
+      "count": 367
+    },
+    {
+      "predicate": "after",
+      "count": 354
+    },
+    {
+      "predicate": "into",
+      "count": 351
+    },
+    {
+      "predicate": "changes to",
+      "count": 351
+    },
+    {
+      "predicate": "below",
+      "count": 342
+    },
+    {
+      "predicate": "under",
+      "count": 317
+    },
+    {
+      "predicate": "filled with",
+      "count": 315
+    },
+    {
+      "predicate": "appears on",
+      "count": 314
+    },
+    {
+      "predicate": "beside",
+      "count": 300
+    },
+    {
+      "predicate": "and",
+      "count": 255
+    },
+    {
+      "predicate": "appears in",
+      "count": 247
+    }
+  ],
+  "dataset_comparison": {
+    "longvideobench_test": {
+      "total_questions": 5341,
+      "total_entities": 62412,
+      "total_relations": 48661,
+      "avg_entities": 11.7,
+      "avg_relations": 9.1,
+      "entity_types": {
+        "object": 43046,
+        "person": 8228,
+        "place": 5582,
+        "abstract": 2986,
+        "other": 912,
+        "animal": 890,
+        "event": 747,
+        "organization": 7,
+        "text": 6,
+        "material": 3,
+        "time": 3,
+        "group": 1,
+        "color": 1
+      },
+      "relation_types": {
+        "geometric": 17484,
+        "possessive": 15575,
+        "semantic": 13612,
+        "temporal": 1277,
+        "other": 713
+      }
+    },
+    "longvideobench_val": {
+      "total_questions": 1337,
+      "total_entities": 15713,
+      "total_relations": 12379,
+      "avg_entities": 11.8,
+      "avg_relations": 9.3,
+      "entity_types": {
+        "object": 10789,
+        "person": 2184,
+        "place": 1520,
+        "abstract": 695,
+        "other": 183,
+        "event": 171,
+        "animal": 164,
+        "body part": 6,
+        "group": 1
+      },
+      "relation_types": {
+        "geometric": 4451,
+        "possessive": 3964,
+        "semantic": 3497,
+        "temporal": 300,
+        "other": 165,
+        "state": 2
+      }
+    },
+    "lvbench": {
+      "total_questions": 1549,
+      "total_entities": 9631,
+      "total_relations": 6238,
+      "avg_entities": 6.2,
+      "avg_relations": 4.0,
+      "entity_types": {
+        "object": 2974,
+        "person": 2347,
+        "abstract": 1745,
+        "place": 859,
+        "event": 740,
+        "other": 541,
+        "animal": 417,
+        "organization": 5,
+        "group": 2,
+        "state": 1
+      },
+      "relation_types": {
+        "semantic": 3164,
+        "possessive": 1113,
+        "geometric": 1031,
+        "temporal": 660,
+        "other": 270
+      }
+    },
+    "videomme": {
+      "total_questions": 2700,
+      "total_entities": 21137,
+      "total_relations": 14048,
+      "avg_entities": 7.8,
+      "avg_relations": 5.2,
+      "entity_types": {
+        "object": 7044,
+        "abstract": 5730,
+        "person": 2952,
+        "event": 2404,
+        "place": 1399,
+        "other": 1047,
+        "animal": 493,
+        "organization": 38,
+        "time": 15,
+        "state": 10,
+        "group": 2,
+        "attribute": 2,
+        "material": 1
+      },
+      "relation_types": {
+        "semantic": 7002,
+        "possessive": 2934,
+        "geometric": 2263,
+        "other": 967,
+        "temporal": 882
+      }
+    }
+  },
+  "category_summary": [
+    {
+      "category": "LC-Lifestyle-Cooking-Recipes",
+      "dataset": "longvideobench_val",
+      "total_questions": 840,
+      "total_entities": 8787,
+      "total_relations": 7047,
+      "avg_entities": 10.5,
+      "avg_relations": 8.4,
+      "top_entity_type": "object",
+      "top_relation_type": "geometric"
+    },
+    {
+      "category": "LT-Lifestyle-Travel-Guides",
+      "dataset": "longvideobench_val",
+      "total_questions": 816,
+      "total_entities": 9870,
+      "total_relations": 7431,
+      "avg_entities": 12.1,
+      "avg_relations": 9.1,
+      "top_entity_type": "object",
+      "top_relation_type": "geometric"
+    },
+    {
+      "category": "LV-Lifestyle-Life-Vlogs",
+      "dataset": "longvideobench_val",
+      "total_questions": 813,
+      "total_entities": 9337,
+      "total_relations": 7349,
+      "avg_entities": 11.5,
+      "avg_relations": 9.0,
+      "top_entity_type": "object",
+      "top_relation_type": "geometric"
+    },
+    {
+      "category": "Recreational: MR-Movie-Recaps",
+      "dataset": "longvideobench_val",
+      "total_questions": 810,
+      "total_entities": 9692,
+      "total_relations": 7353,
+      "avg_entities": 12.0,
+      "avg_relations": 9.1,
+      "top_entity_type": "object",
+      "top_relation_type": "geometric"
+    },
+    {
+      "category": "KH-Knowledge-History",
+      "dataset": "longvideobench_val",
+      "total_questions": 633,
+      "total_entities": 7359,
+      "total_relations": 5803,
+      "avg_entities": 11.6,
+      "avg_relations": 9.2,
+      "top_entity_type": "object",
+      "top_relation_type": "geometric"
+    },
+    {
+      "category": "KG-Knowledge-Geography",
+      "dataset": "longvideobench_val",
+      "total_questions": 630,
+      "total_entities": 7179,
+      "total_relations": 5445,
+      "avg_entities": 11.4,
+      "avg_relations": 8.6,
+      "top_entity_type": "object",
+      "top_relation_type": "geometric"
+    },
+    {
+      "category": "KA-Knowledge-Art",
+      "dataset": "longvideobench_val",
+      "total_questions": 615,
+      "total_entities": 7289,
+      "total_relations": 5885,
+      "avg_entities": 11.9,
+      "avg_relations": 9.6,
+      "top_entity_type": "object",
+      "top_relation_type": "geometric"
+    },
+    {
+      "category": "NP-News-Programs",
+      "dataset": "longvideobench_val",
+      "total_questions": 613,
+      "total_entities": 7606,
+      "total_relations": 6033,
+      "avg_entities": 12.4,
+      "avg_relations": 9.8,
+      "top_entity_type": "object",
+      "top_relation_type": "possessive"
+    },
+    {
+      "category": "KS-Knowledge-STEM",
+      "dataset": "longvideobench_val",
+      "total_questions": 497,
+      "total_entities": 6241,
+      "total_relations": 4941,
+      "avg_entities": 12.6,
+      "avg_relations": 9.9,
+      "top_entity_type": "object",
+      "top_relation_type": "geometric"
+    },
+    {
+      "category": "KC-Knowledge-Computer-Science",
+      "dataset": "longvideobench_val",
+      "total_questions": 410,
+      "total_entities": 4753,
+      "total_relations": 3746,
+      "avg_entities": 11.6,
+      "avg_relations": 9.1,
+      "top_entity_type": "object",
+      "top_relation_type": "geometric"
+    },
+    {
+      "category": "selfmedia",
+      "dataset": "lvbench",
+      "total_questions": 317,
+      "total_entities": 1897,
+      "total_relations": 1203,
+      "avg_entities": 6.0,
+      "avg_relations": 3.8,
+      "top_entity_type": "object",
+      "top_relation_type": "semantic"
+    },
+    {
+      "category": "cartoon",
+      "dataset": "lvbench",
+      "total_questions": 283,
+      "total_entities": 1660,
+      "total_relations": 1174,
+      "avg_entities": 5.9,
+      "avg_relations": 4.1,
+      "top_entity_type": "object",
+      "top_relation_type": "semantic"
+    },
+    {
+      "category": "live",
+      "dataset": "lvbench",
+      "total_questions": 262,
+      "total_entities": 1511,
+      "total_relations": 912,
+      "avg_entities": 5.8,
+      "avg_relations": 3.5,
+      "top_entity_type": "object",
+      "top_relation_type": "semantic"
+    },
+    {
+      "category": "tv",
+      "dataset": "lvbench",
+      "total_questions": 250,
+      "total_entities": 1589,
+      "total_relations": 1052,
+      "avg_entities": 6.4,
+      "avg_relations": 4.2,
+      "top_entity_type": "person",
+      "top_relation_type": "semantic"
+    },
+    {
+      "category": "sport",
+      "dataset": "lvbench",
+      "total_questions": 240,
+      "total_entities": 1628,
+      "total_relations": 1014,
+      "avg_entities": 6.8,
+      "avg_relations": 4.2,
+      "top_entity_type": "person",
+      "top_relation_type": "semantic"
+    },
+    {
+      "category": "documentary",
+      "dataset": "lvbench",
+      "total_questions": 197,
+      "total_entities": 1346,
+      "total_relations": 883,
+      "avg_entities": 6.8,
+      "avg_relations": 4.5,
+      "top_entity_type": "object",
+      "top_relation_type": "semantic"
+    },
+    {
+      "category": "Humanity & History",
+      "dataset": "videomme",
+      "total_questions": 90,
+      "total_entities": 776,
+      "total_relations": 514,
+      "avg_entities": 8.6,
+      "avg_relations": 5.7,
+      "top_entity_type": "object",
+      "top_relation_type": "semantic"
+    },
+    {
+      "category": "Geography",
+      "dataset": "videomme",
+      "total_questions": 90,
+      "total_entities": 716,
+      "total_relations": 473,
+      "avg_entities": 8.0,
+      "avg_relations": 5.3,
+      "top_entity_type": "object",
+      "top_relation_type": "semantic"
+    },
+    {
+      "category": "Astronomy",
+      "dataset": "videomme",
+      "total_questions": 90,
+      "total_entities": 800,
+      "total_relations": 537,
+      "avg_entities": 8.9,
+      "avg_relations": 6.0,
+      "top_entity_type": "object",
+      "top_relation_type": "semantic"
+    },
+    {
+      "category": "Animation",
+      "dataset": "videomme",
+      "total_questions": 90,
+      "total_entities": 598,
+      "total_relations": 410,
+      "avg_entities": 6.6,
+      "avg_relations": 4.6,
+      "top_entity_type": "abstract",
+      "top_relation_type": "semantic"
+    },
+    {
+      "category": "Technology",
+      "dataset": "videomme",
+      "total_questions": 90,
+      "total_entities": 672,
+      "total_relations": 375,
+      "avg_entities": 7.5,
+      "avg_relations": 4.2,
+      "top_entity_type": "object",
+      "top_relation_type": "semantic"
+    },
+    {
+      "category": "Finance & Commerce",
+      "dataset": "videomme",
+      "total_questions": 90,
+      "total_entities": 1006,
+      "total_relations": 692,
+      "avg_entities": 11.2,
+      "avg_relations": 7.7,
+      "top_entity_type": "abstract",
+      "top_relation_type": "semantic"
+    },
+    {
+      "category": "Life Tip",
+      "dataset": "videomme",
+      "total_questions": 90,
+      "total_entities": 694,
+      "total_relations": 487,
+      "avg_entities": 7.7,
+      "avg_relations": 5.4,
+      "top_entity_type": "object",
+      "top_relation_type": "semantic"
+    },
+    {
+      "category": "Biology & Medicine",
+      "dataset": "videomme",
+      "total_questions": 90,
+      "total_entities": 837,
+      "total_relations": 551,
+      "avg_entities": 9.3,
+      "avg_relations": 6.1,
+      "top_entity_type": "object",
+      "top_relation_type": "semantic"
+    },
+    {
+      "category": "Law",
+      "dataset": "videomme",
+      "total_questions": 90,
+      "total_entities": 819,
+      "total_relations": 586,
+      "avg_entities": 9.1,
+      "avg_relations": 6.5,
+      "top_entity_type": "abstract",
+      "top_relation_type": "semantic"
+    },
+    {
+      "category": "Literature & Art",
+      "dataset": "videomme",
+      "total_questions": 90,
+      "total_entities": 738,
+      "total_relations": 512,
+      "avg_entities": 8.2,
+      "avg_relations": 5.7,
+      "top_entity_type": "object",
+      "top_relation_type": "semantic"
+    },
+    {
+      "category": "Movie & TV Show",
+      "dataset": "videomme",
+      "total_questions": 90,
+      "total_entities": 617,
+      "total_relations": 478,
+      "avg_entities": 6.9,
+      "avg_relations": 5.3,
+      "top_entity_type": "object",
+      "top_relation_type": "semantic"
+    },
+    {
+      "category": "Esports",
+      "dataset": "videomme",
+      "total_questions": 90,
+      "total_entities": 514,
+      "total_relations": 313,
+      "avg_entities": 5.7,
+      "avg_relations": 3.5,
+      "top_entity_type": "abstract",
+      "top_relation_type": "semantic"
+    },
+    {
+      "category": "Basketball",
+      "dataset": "videomme",
+      "total_questions": 90,
+      "total_entities": 593,
+      "total_relations": 360,
+      "avg_entities": 6.6,
+      "avg_relations": 4.0,
+      "top_entity_type": "abstract",
+      "top_relation_type": "semantic"
+    },
+    {
+      "category": "Documentary",
+      "dataset": "videomme",
+      "total_questions": 90,
+      "total_entities": 721,
+      "total_relations": 499,
+      "avg_entities": 8.0,
+      "avg_relations": 5.5,
+      "top_entity_type": "abstract",
+      "top_relation_type": "semantic"
+    },
+    {
+      "category": "News Report",
+      "dataset": "videomme",
+      "total_questions": 90,
+      "total_entities": 758,
+      "total_relations": 482,
+      "avg_entities": 8.4,
+      "avg_relations": 5.4,
+      "top_entity_type": "abstract",
+      "top_relation_type": "semantic"
+    },
+    {
+      "category": "Football",
+      "dataset": "videomme",
+      "total_questions": 90,
+      "total_entities": 806,
+      "total_relations": 530,
+      "avg_entities": 9.0,
+      "avg_relations": 5.9,
+      "top_entity_type": "abstract",
+      "top_relation_type": "semantic"
+    },
+    {
+      "category": "Athletics",
+      "dataset": "videomme",
+      "total_questions": 90,
+      "total_entities": 665,
+      "total_relations": 419,
+      "avg_entities": 7.4,
+      "avg_relations": 4.7,
+      "top_entity_type": "object",
+      "top_relation_type": "semantic"
+    },
+    {
+      "category": "Other Sports",
+      "dataset": "videomme",
+      "total_questions": 90,
+      "total_entities": 562,
+      "total_relations": 342,
+      "avg_entities": 6.2,
+      "avg_relations": 3.8,
+      "top_entity_type": "object",
+      "top_relation_type": "semantic"
+    },
+    {
+      "category": "Stage Play",
+      "dataset": "videomme",
+      "total_questions": 90,
+      "total_entities": 785,
+      "total_relations": 547,
+      "avg_entities": 8.7,
+      "avg_relations": 6.1,
+      "top_entity_type": "abstract",
+      "top_relation_type": "semantic"
+    },
+    {
+      "category": "Magic Show",
+      "dataset": "videomme",
+      "total_questions": 90,
+      "total_entities": 726,
+      "total_relations": 600,
+      "avg_entities": 8.1,
+      "avg_relations": 6.7,
+      "top_entity_type": "object",
+      "top_relation_type": "semantic"
+    },
+    {
+      "category": "Variety Show",
+      "dataset": "videomme",
+      "total_questions": 90,
+      "total_entities": 636,
+      "total_relations": 417,
+      "avg_entities": 7.1,
+      "avg_relations": 4.6,
+      "top_entity_type": "object",
+      "top_relation_type": "semantic"
+    },
+    {
+      "category": "Acrobatics",
+      "dataset": "videomme",
+      "total_questions": 90,
+      "total_entities": 593,
+      "total_relations": 402,
+      "avg_entities": 6.6,
+      "avg_relations": 4.5,
+      "top_entity_type": "object",
+      "top_relation_type": "semantic"
+    },
+    {
+      "category": "Handicraft",
+      "dataset": "videomme",
+      "total_questions": 90,
+      "total_entities": 637,
+      "total_relations": 422,
+      "avg_entities": 7.1,
+      "avg_relations": 4.7,
+      "top_entity_type": "object",
+      "top_relation_type": "semantic"
+    },
+    {
+      "category": "Food",
+      "dataset": "videomme",
+      "total_questions": 90,
+      "total_entities": 638,
+      "total_relations": 348,
+      "avg_entities": 7.1,
+      "avg_relations": 3.9,
+      "top_entity_type": "object",
+      "top_relation_type": "semantic"
+    },
+    {
+      "category": "Fashion",
+      "dataset": "videomme",
+      "total_questions": 90,
+      "total_entities": 746,
+      "total_relations": 447,
+      "avg_entities": 8.3,
+      "avg_relations": 5.0,
+      "top_entity_type": "object",
+      "top_relation_type": "semantic"
+    },
+    {
+      "category": "Daily Life",
+      "dataset": "videomme",
+      "total_questions": 90,
+      "total_entities": 791,
+      "total_relations": 579,
+      "avg_entities": 8.8,
+      "avg_relations": 6.4,
+      "top_entity_type": "object",
+      "top_relation_type": "semantic"
+    },
+    {
+      "category": "Travel",
+      "dataset": "videomme",
+      "total_questions": 90,
+      "total_entities": 664,
+      "total_relations": 375,
+      "avg_entities": 7.4,
+      "avg_relations": 4.2,
+      "top_entity_type": "object",
+      "top_relation_type": "semantic"
+    },
+    {
+      "category": "Pet & Animal",
+      "dataset": "videomme",
+      "total_questions": 90,
+      "total_entities": 509,
+      "total_relations": 326,
+      "avg_entities": 5.7,
+      "avg_relations": 3.6,
+      "top_entity_type": "animal",
+      "top_relation_type": "semantic"
+    },
+    {
+      "category": "Exercise",
+      "dataset": "videomme",
+      "total_questions": 90,
+      "total_entities": 758,
+      "total_relations": 548,
+      "avg_entities": 8.4,
+      "avg_relations": 6.1,
+      "top_entity_type": "object",
+      "top_relation_type": "semantic"
+    },
+    {
+      "category": "Multilingual",
+      "dataset": "videomme",
+      "total_questions": 90,
+      "total_entities": 762,
+      "total_relations": 477,
+      "avg_entities": 8.5,
+      "avg_relations": 5.3,
+      "top_entity_type": "object",
+      "top_relation_type": "semantic"
+    },
+    {
+      "category": "NPs",
+      "dataset": "longvideobench_test",
+      "total_questions": 1,
+      "total_entities": 12,
+      "total_relations": 7,
+      "avg_entities": 12.0,
+      "avg_relations": 7.0,
+      "top_entity_type": "object",
+      "top_relation_type": "possessive"
+    }
+  ]
+}
