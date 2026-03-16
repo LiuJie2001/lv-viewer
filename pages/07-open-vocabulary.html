@@ -55,10 +55,6 @@
         .chart-canvas-wrap { position:relative; width:100%; }
         .chart-canvas-wrap canvas { width:100% !important; cursor:pointer; }
         .chart-box-full { grid-column:1/-1; }
-        .chart-link-hint { font-size:0.62rem; font-weight:400; color:var(--color-text-muted); font-style:italic; }
-        .chart-link-active { font-size:0.68rem; font-weight:500; color:#f59e0b; margin-left:0.3rem; }
-        .chart-link-active:empty { display:none; }
-        .chart-link-active .link-clear { cursor:pointer; margin-left:0.3rem; color:#dc2626; font-size:0.72rem; font-weight:700; }
 
         /* Chart pagination controls */
         .chart-pager { display:flex; align-items:center; justify-content:space-between; gap:0.5rem; margin-top:0.75rem; padding:0.5rem 0.25rem; border-top:1px solid var(--color-border); font-size:0.72rem; }
@@ -116,13 +112,6 @@
         .entity-type-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
         .entity-attr { font-size:0.58rem; padding:0.05rem 0.25rem; border-radius:2px; background:rgba(0,0,0,0.06); color:var(--color-text-secondary); margin-left:0.15rem; }
 
-        .relation-list { list-style:none; }
-        .relation-item { display:flex; align-items:center; gap:0.4rem; padding:0.3rem 0; font-size:0.75rem; border-bottom:1px solid #f5f5f5; flex-wrap:wrap; }
-        .relation-item:last-child { border-bottom:none; }
-        .rel-subject, .rel-object { font-weight:600; font-size:0.72rem; }
-        .rel-predicate { font-family:var(--font-mono); font-size:0.68rem; color:white; padding:0.1rem 0.35rem; border-radius:3px; white-space:nowrap; }
-        .rel-arrow { color:var(--color-text-muted); font-size:0.7rem; flex-shrink:0; }
-        .rel-type-tag { font-size:0.55rem; padding:0.05rem 0.25rem; border-radius:2px; color:var(--color-text-muted); border:1px solid var(--color-border); margin-left:auto; }
 
         /* Trajectory: model tabs (always tabs, not 3-col) */
         .traj-badge { font-size:0.58rem; background:var(--color-accent-light); color:var(--color-accent); padding:0.1rem 0.35rem; border-radius:3px; font-weight:600; }
@@ -269,77 +258,45 @@
         <div class="stats-grid" id="stats-grid"></div>
     </section>
 
-    <!-- Section 02: Entity Analysis -->
-    <section class="section" id="sec-entities">
+    <!-- Section 02: Object Entity Analysis (object/person/animal) -->
+    <section class="section" id="sec-objects">
         <div class="section-header">
             <span class="section-number">02</span>
-            <span class="section-title">实体分析</span>
+            <span class="section-title">对象分析（object / person / animal）</span>
         </div>
-        <div class="filter-bar" id="entity-filter-bar"></div>
-        <!-- Linked pair: Entity Types ↔ Top Entities -->
-        <div class="chart-row">
-            <div class="chart-box">
-                <div class="chart-box-title">实体类型分布 <span class="chart-link-hint">← 点击柱状图联动筛选 →</span></div>
-                <div class="chart-canvas-wrap" id="wrap-entity-types"><canvas id="chart-entity-types"></canvas></div>
-                <div id="pager-entity-types"></div>
-            </div>
-            <div class="chart-box">
-                <div class="chart-box-title">高频实体 <span class="chart-link-active" id="link-entity-type"></span></div>
-                <div class="chart-canvas-wrap" id="wrap-top-entities"><canvas id="chart-top-entities"></canvas></div>
-                <div id="pager-top-entities"></div>
-            </div>
-        </div>
-        <!-- Linked pair: Attr Categories ↔ Attr Values -->
-        <div class="chart-row">
-            <div class="chart-box">
-                <div class="chart-box-title">属性类别分布 <span class="chart-link-hint">← 点击柱状图联动筛选 →</span></div>
-                <div class="chart-canvas-wrap" id="wrap-attr-categories"><canvas id="chart-attr-categories"></canvas></div>
-                <div id="pager-attr-categories"></div>
-            </div>
-            <div class="chart-box">
-                <div class="chart-box-title">高频属性值 <span class="chart-link-active" id="link-attr-cat"></span></div>
-                <div class="chart-canvas-wrap" id="wrap-attr-values"><canvas id="chart-attr-values"></canvas></div>
-                <div id="pager-attr-values"></div>
-            </div>
-        </div>
-    </section>
+        <div class="filter-bar" id="object-filter-bar"></div>
 
-    <!-- Section 03: Relation Analysis -->
-    <section class="section" id="sec-relations">
-        <div class="section-header">
-            <span class="section-number">03</span>
-            <span class="section-title">关系分析</span>
-        </div>
-        <div class="filter-bar" id="relation-filter-bar"></div>
+        <!-- 有形容词 -->
         <div class="chart-row">
-            <div class="chart-box">
-                <div class="chart-box-title">关系类型分布 <span class="chart-link-hint">← 点击柱状图联动筛选 →</span></div>
-                <div class="chart-canvas-wrap" id="wrap-relation-types"><canvas id="chart-relation-types"></canvas></div>
-                <div id="pager-relation-types"></div>
-            </div>
-            <div class="chart-box">
-                <div class="chart-box-title">高频谓词 <span class="chart-link-active" id="link-rel-type"></span></div>
-                <div class="chart-canvas-wrap" id="wrap-top-predicates"><canvas id="chart-top-predicates"></canvas></div>
-                <div id="pager-top-predicates"></div>
+            <div class="chart-box chart-box-full">
+                <div class="chart-box-title">有形容词的高频对象（Top 100）</div>
+                <div class="chart-canvas-wrap" id="wrap-obj-with-adj"><canvas id="chart-obj-with-adj"></canvas></div>
+                <div id="pager-obj-with-adj"></div>
             </div>
         </div>
-    </section>
-
-    <!-- Section 04: Case Analysis (combined vocab + trajectory) -->
-    <section class="section" id="sec-cases">
-        <div class="section-header">
-            <span class="section-number">04</span>
-            <span class="section-title">逐 Case 分析</span>
-            <span class="section-count" id="case-count"></span>
-        </div>
-        <div class="chart-filter-banner" id="chart-filter-banner">
+        <div class="chart-filter-banner" id="chart-filter-banner-wa">
             <span class="chart-filter-banner-icon">🔍</span>
-            <span class="chart-filter-banner-text" id="chart-filter-text"></span>
-            <button class="chart-filter-banner-clear" onclick="clearChartFilter()">取消筛选</button>
+            <span class="chart-filter-banner-text" id="chart-filter-text-wa"></span>
+            <button class="chart-filter-banner-clear" onclick="clearCaseBrowser('wa')">取消筛选</button>
         </div>
-        <div class="filter-bar" id="case-filter-bar"></div>
-        <div id="cases-container"><div class="loading">加载中...</div></div>
-        <div class="pagination" id="pagination"></div>
+        <div id="cases-container-wa"></div>
+        <div class="pagination" id="pagination-wa"></div>
+
+        <!-- 无形容词 -->
+        <div class="chart-row" style="margin-top:2rem">
+            <div class="chart-box chart-box-full">
+                <div class="chart-box-title">无形容词的高频对象（Top 100）</div>
+                <div class="chart-canvas-wrap" id="wrap-obj-no-adj"><canvas id="chart-obj-no-adj"></canvas></div>
+                <div id="pager-obj-no-adj"></div>
+            </div>
+        </div>
+        <div class="chart-filter-banner" id="chart-filter-banner-na">
+            <span class="chart-filter-banner-icon">🔍</span>
+            <span class="chart-filter-banner-text" id="chart-filter-text-na"></span>
+            <button class="chart-filter-banner-clear" onclick="clearCaseBrowser('na')">取消筛选</button>
+        </div>
+        <div id="cases-container-na"></div>
+        <div class="pagination" id="pagination-na"></div>
     </section>
 </main>
 
@@ -369,12 +326,7 @@ const MODEL_ORDER = [
 
 const CASES_PER_PAGE = 30;
 let STATS = null, CASES = null;
-let filteredCases = [];
-let currentPage = 1;
-let currentCaseDsFilter = 'all';
-let currentCaseCatFilter = 'all';
 let currentEntityDsFilter = 'all';
-let currentRelDsFilter = 'all';
 let chartInstances = {};
 
 /* ═══════════════════════════════════════════════════════════
@@ -476,65 +428,36 @@ function toggleUserPrompt(btn) {
     }
 }
 
-/** Compute entity/relation/attr distributions from a subset of cases.
- *  Optional filters: entityTypeFilter, attrCatFilter, relTypeFilter for linked charts */
-function computeDistributions(cases, opts = {}) {
-    const entityTypeCounts = {}, entityNameCounts = {}, attrCatCounts = {}, attrValueCounts = {};
-    const relTypeCounts = {}, predCounts = {};
-    // Track dominant parent type for each detail item (for coloring)
-    const entityNameTypes = {}, attrValueCats = {}, predRelTypes = {};
+const OBJECT_TYPES = new Set(['object', 'person', 'animal']);
+const TOP_N = 100;
+
+/** Compute object entity distributions split by has-attributes / no-attributes */
+function computeObjectDistributions(cases) {
+    const withAdj = {}, withAdjTypes = {};
+    const noAdj = {}, noAdjTypes = {};
     for (const c of cases) {
         for (const e of (c.entities || [])) {
-            entityTypeCounts[e.type] = (entityTypeCounts[e.type] || 0) + 1;
-            // Top entities: filter by entity type if linked
-            if (!opts.entityTypeFilter || e.type === opts.entityTypeFilter) {
-                const n = (e.name || '').toLowerCase();
-                if (!ENTITY_NAME_BLACKLIST.has(n)) {
-                    entityNameCounts[n] = (entityNameCounts[n] || 0) + 1;
-                    if (!entityNameTypes[n]) entityNameTypes[n] = {};
-                    entityNameTypes[n][e.type] = (entityNameTypes[n][e.type] || 0) + 1;
-                }
-            }
-            for (const a of (e.attributes || [])) {
-                const ac = a.category || 'other';
-                attrCatCounts[ac] = (attrCatCounts[ac] || 0) + 1;
-                // Attr values: filter by attr category if linked
-                if (!opts.attrCatFilter || ac === opts.attrCatFilter) {
-                    const av = (a.value || '').toLowerCase();
-                    if (av) {
-                        attrValueCounts[av] = (attrValueCounts[av] || 0) + 1;
-                        if (!attrValueCats[av]) attrValueCats[av] = {};
-                        attrValueCats[av][ac] = (attrValueCats[av][ac] || 0) + 1;
-                    }
-                }
-            }
-        }
-        for (const r of (c.relations || [])) {
-            const rt = r.relation_type || 'other';
-            relTypeCounts[rt] = (relTypeCounts[rt] || 0) + 1;
-            // Predicates: filter by relation type if linked
-            if (!opts.relTypeFilter || rt === opts.relTypeFilter) {
-                const p = (r.predicate || '').toLowerCase();
-                predCounts[p] = (predCounts[p] || 0) + 1;
-                if (!predRelTypes[p]) predRelTypes[p] = {};
-                predRelTypes[p][rt] = (predRelTypes[p][rt] || 0) + 1;
+            if (!OBJECT_TYPES.has(e.type)) continue;
+            const n = (e.name || '').toLowerCase();
+            if (ENTITY_NAME_BLACKLIST.has(n)) continue;
+            if (e.attributes && e.attributes.length > 0) {
+                withAdj[n] = (withAdj[n] || 0) + 1;
+                if (!withAdjTypes[n]) withAdjTypes[n] = {};
+                withAdjTypes[n][e.type] = (withAdjTypes[n][e.type] || 0) + 1;
+            } else {
+                noAdj[n] = (noAdj[n] || 0) + 1;
+                if (!noAdjTypes[n]) noAdjTypes[n] = {};
+                noAdjTypes[n][e.type] = (noAdjTypes[n][e.type] || 0) + 1;
             }
         }
     }
-    const sort = obj => Object.entries(obj).sort((a,b) => b[1] - a[1]);
-    // Helper: get dominant key from a {key: count} map
+    const sort = obj => Object.entries(obj).sort((a,b) => b[1] - a[1]).slice(0, TOP_N);
     const dominant = m => Object.entries(m).sort((a,b) => b[1] - a[1])[0]?.[0] || 'other';
     return {
-        entityTypes: sort(entityTypeCounts),
-        topEntities: sort(entityNameCounts),
-        attrCategories: sort(attrCatCounts),
-        attrValues: sort(attrValueCounts),
-        relTypes: sort(relTypeCounts),
-        topPredicates: sort(predCounts),
-        // Dominant type mappings for coloring detail charts
-        entityNameTypes: Object.fromEntries(Object.entries(entityNameTypes).map(([k,v]) => [k, dominant(v)])),
-        attrValueCats: Object.fromEntries(Object.entries(attrValueCats).map(([k,v]) => [k, dominant(v)])),
-        predRelTypes: Object.fromEntries(Object.entries(predRelTypes).map(([k,v]) => [k, dominant(v)])),
+        withAdj: sort(withAdj),
+        noAdj: sort(noAdj),
+        withAdjTypes: Object.fromEntries(Object.entries(withAdjTypes).map(([k,v]) => [k, dominant(v)])),
+        noAdjTypes: Object.fromEntries(Object.entries(noAdjTypes).map(([k,v]) => [k, dominant(v)])),
     };
 }
 
@@ -549,7 +472,6 @@ async function loadData() {
         ]);
         STATS = await statsRes.json();
         CASES = await casesRes.json();
-        filteredCases = CASES;
         init();
     } catch (e) {
         document.querySelector('.main').innerHTML = `<div class="loading">数据加载失败: ${escHtml(e.message)}</div>`;
@@ -594,16 +516,16 @@ function activateFilterBtn(btn) {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   Section 02: Entity Analysis (filterable)
+   Section 02: Object Entity Analysis (filterable)
    ═══════════════════════════════════════════════════════════ */
-function renderEntityFilterBar() {
-    buildDsFilterBar('entity-filter-bar', 'filterEntityCharts');
+function renderObjectFilterBar() {
+    buildDsFilterBar('object-filter-bar', 'filterObjectCharts');
 }
 
-function filterEntityCharts(ds, btn) {
+function filterObjectCharts(ds, btn) {
     activateFilterBtn(btn);
     currentEntityDsFilter = ds;
-    updateEntityCharts();
+    updateObjectCharts();
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -627,7 +549,6 @@ function initPagerState(key, fullData, opts) {
         pagerId: opts.pagerId,
         barHeight: opts.barHeight || 32,
         verticalBarMinHeight: opts.verticalBarMinHeight || 300,
-        linked: opts.linked || false,
     };
     renderPagerControls(key);
     renderPagedChart(key);
@@ -721,14 +642,9 @@ function renderPagedChart(key) {
                 if (points.length === 0) return;
                 const idx = points[0].index;
                 const lbl = chart.data.labels[idx];
-                if (s.linked) {
-                    // Linked chart: update linked filter + refresh paired chart + filter cases
-                    applyLinkedFilter(s.filterType, lbl);
-                } else {
-                    // Detail chart: filter cases only
-                    const val = s.filterType === 'entity_name' || s.filterType === 'predicate' || s.filterType === 'attr_value' ? lbl.toLowerCase() : lbl;
-                    applyChartFilter(s.filterType, val, lbl);
-                }
+                const val = s.filterType === 'entity_name' || s.filterType === 'predicate' || s.filterType === 'attr_value' ? lbl.toLowerCase() : lbl;
+                window._lastChartClickKey = s.chartKey;
+                applyChartFilter(s.filterType, val, lbl);
             },
             plugins: { legend: { display: false }, tooltip: { callbacks: tooltipCb } },
             scales: scalesConf
@@ -766,261 +682,88 @@ function chartPageNext(key) {
     }
 }
 
-/* Chart click handler helper (for doughnut chart) */
-function makeChartClickHandler(chart, filterType) {
-    return (evt) => {
-        const points = chart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, false);
-        if (points.length === 0) return;
-        const idx = points[0].index;
-        const label = chart.data.labels[idx];
-        applyChartFilter(filterType, filterType === 'entity_name' || filterType === 'predicate' ? label.toLowerCase() : label, label);
-    };
-}
 
-/* Linked filter state */
-let linkedEntityType = null;   // selected entity type → filters top entities + cases
-let linkedAttrCat = null;      // selected attr category → filters attr values + cases
-let linkedRelType = null;      // selected relation type → filters predicates + cases
-
-function updateEntityCharts() {
+function updateObjectCharts() {
     const subset = currentEntityDsFilter === 'all' ? CASES : CASES.filter(c => c.dataset === currentEntityDsFilter);
-    const dist = computeDistributions(subset, { entityTypeFilter: linkedEntityType, attrCatFilter: linkedAttrCat });
+    const dist = computeObjectDistributions(subset);
 
-    // Destroy old charts
-    if (chartInstances.entityTypes) chartInstances.entityTypes.destroy();
-    if (chartInstances.topEntities) chartInstances.topEntities.destroy();
-    if (chartInstances.attrCats) chartInstances.attrCats.destroy();
-    if (chartInstances.attrValues) chartInstances.attrValues.destroy();
+    if (chartInstances.objWithAdj) chartInstances.objWithAdj.destroy();
+    if (chartInstances.objNoAdj) chartInstances.objNoAdj.destroy();
 
-    // Entity types (left chart — click to link)
-    initPagerState('entityTypes', dist.entityTypes, {
-        chartKey: 'entityTypes', filterType: 'entity_type', axis: 'y',
-        colorFn: getEntityColor, linked: true,
-        wrapId: 'wrap-entity-types', canvasId: 'chart-entity-types', pagerId: 'pager-entity-types',
+    // With adjectives — colored by dominant entity type
+    const waTypes = dist.withAdjTypes;
+    initPagerState('objWithAdj', dist.withAdj, {
+        chartKey: 'objWithAdj', filterType: 'entity_name', axis: 'x',
+        color: '#3b82f6', pageSize: 20,
+        wrapId: 'wrap-obj-with-adj', canvasId: 'chart-obj-with-adj', pagerId: 'pager-obj-with-adj',
+        verticalBarMinHeight: 400,
     });
 
-    // Top entities (right chart — colored by dominant entity type)
-    const entTypeMap = dist.entityNameTypes;
-    initPagerState('topEntities', dist.topEntities, {
-        chartKey: 'topEntities', filterType: 'entity_name', axis: 'y',
-        colorFn: name => getEntityColor(entTypeMap[name] || 'other'),
-        wrapId: 'wrap-top-entities', canvasId: 'chart-top-entities', pagerId: 'pager-top-entities',
+    // Without adjectives
+    initPagerState('objNoAdj', dist.noAdj, {
+        chartKey: 'objNoAdj', filterType: 'entity_name', axis: 'x',
+        color: '#3b82f6', pageSize: 20,
+        wrapId: 'wrap-obj-no-adj', canvasId: 'chart-obj-no-adj', pagerId: 'pager-obj-no-adj',
+        verticalBarMinHeight: 400,
     });
-
-    // Attribute categories (left chart — click to link, colored)
-    initPagerState('attrCats', dist.attrCategories, {
-        chartKey: 'attrCats', filterType: 'attr_category', axis: 'y',
-        colorFn: getAttrCatColor, linked: true,
-        wrapId: 'wrap-attr-categories', canvasId: 'chart-attr-categories', pagerId: 'pager-attr-categories',
-    });
-
-    // Attribute values (right chart — colored by dominant attr category)
-    const avCatMap = dist.attrValueCats;
-    initPagerState('attrValues', dist.attrValues, {
-        chartKey: 'attrValues', filterType: 'attr_value', axis: 'y',
-        colorFn: val => getAttrCatColor(avCatMap[val] || 'other'),
-        wrapId: 'wrap-attr-values', canvasId: 'chart-attr-values', pagerId: 'pager-attr-values',
-    });
-
-    // Update linked labels
-    updateLinkedLabel('link-entity-type', linkedEntityType, 'clearLinkedEntityType');
-    updateLinkedLabel('link-attr-cat', linkedAttrCat, 'clearLinkedAttrCat');
-}
-
-function updateLinkedLabel(elemId, value, clearFn) {
-    const el = document.getElementById(elemId);
-    if (!el) return;
-    if (value) {
-        el.innerHTML = `筛选: ${escHtml(value)} <span class="link-clear" onclick="${clearFn}()" title="取消联动">✕</span>`;
-    } else {
-        el.innerHTML = '';
-    }
 }
 
 /* ═══════════════════════════════════════════════════════════
-   Section 03: Relation Analysis (filterable)
+   Case Browsers (one per chart: 'wa' = with adj, 'na' = no adj)
    ═══════════════════════════════════════════════════════════ */
-function renderRelFilterBar() {
-    buildDsFilterBar('relation-filter-bar', 'filterRelCharts');
-}
+const caseBrowsers = {
+    wa: { filter: null, filtered: [], page: 1 },
+    na: { filter: null, filtered: [], page: 1 },
+};
 
-function filterRelCharts(ds, btn) {
-    activateFilterBtn(btn);
-    currentRelDsFilter = ds;
-    updateRelCharts();
-}
+/** Called from chart onClick — filter cases containing entity name with/without adjectives */
+function applyChartFilter(filterType, value, label) {
+    // Determine which browser: objWithAdj → 'wa', objNoAdj → 'na'
+    const lastClicked = window._lastChartClickKey;
+    const bkey = lastClicked === 'objWithAdj' ? 'wa' : 'na';
+    const b = caseBrowsers[bkey];
+    b.filter = { value, label };
 
-function updateRelCharts() {
-    const subset = currentRelDsFilter === 'all' ? CASES : CASES.filter(c => c.dataset === currentRelDsFilter);
-    const dist = computeDistributions(subset, { relTypeFilter: linkedRelType });
-
-    if (chartInstances.relTypes) chartInstances.relTypes.destroy();
-    if (chartInstances.topPreds) chartInstances.topPreds.destroy();
-
-    // Relation types (left — click to link)
-    initPagerState('relTypes', dist.relTypes, {
-        chartKey: 'relTypes', filterType: 'relation_type', axis: 'y',
-        colorFn: getRelColor, linked: true,
-        wrapId: 'wrap-relation-types', canvasId: 'chart-relation-types', pagerId: 'pager-relation-types',
-    });
-
-    // Top predicates (right — colored by dominant relation type)
-    const predTypeMap = dist.predRelTypes;
-    initPagerState('topPreds', dist.topPredicates, {
-        chartKey: 'topPreds', filterType: 'predicate', axis: 'y',
-        colorFn: p => getRelColor(predTypeMap[p] || 'other'),
-        wrapId: 'wrap-top-predicates', canvasId: 'chart-top-predicates', pagerId: 'pager-top-predicates',
-    });
-
-    updateLinkedLabel('link-rel-type', linkedRelType, 'clearLinkedRelType');
-}
-
-/* ═══════════════════════════════════════════════════════════
-   Section 04: Case Browser (vocab + trajectory combined)
-   ═══════════════════════════════════════════════════════════ */
-function renderCaseFilters() {
-    const dsSet = [...new Set(CASES.map(c => c.dataset))].sort();
-    const catSet = [...new Set(CASES.map(c => c.category))].sort();
-    let html = '<span class="filter-label">数据集:</span>';
-    html += `<button class="filter-btn active" data-dim="ds" onclick="filterCases('ds','all',this)">全部</button>`;
-    for (const ds of dsSet) html += `<button class="filter-btn" data-dim="ds" onclick="filterCases('ds','${ds}',this)">${DS_LABELS[ds] || ds}</button>`;
-
-    html += `<span class="filter-label" style="margin-left:1rem">分类:</span>`;
-    html += `<button class="filter-btn active" data-dim="cat" onclick="filterCases('cat','all',this)">全部 (${catSet.length})</button>`;
-    for (const cat of catSet) html += `<button class="filter-btn" data-dim="cat" onclick="filterCases('cat','${escHtml(cat)}',this)">${escHtml(cat)}</button>`;
-
-    html += `<span class="filter-label" style="margin-left:1rem">轨迹:</span>`;
-    html += `<button class="filter-btn active" data-dim="traj" onclick="filterCases('traj','all',this)">全部</button>`;
-    html += `<button class="filter-btn" data-dim="traj" onclick="filterCases('traj','yes',this)">含轨迹</button>`;
-
-    document.getElementById('case-filter-bar').innerHTML = html;
-}
-
-let currentTrajFilter = 'all';
-let chartFilter = null; // {type, value, label}
-
-/* ── Linked chart filtering (left chart → right chart + cases) ── */
-function applyLinkedFilter(filterType, value) {
-    if (filterType === 'entity_type') {
-        linkedEntityType = (linkedEntityType === value) ? null : value;  // toggle
-        updateEntityCharts();
-        // Also set chart filter for cases
-        if (linkedEntityType) {
-            applyChartFilter('entity_type', linkedEntityType, linkedEntityType);
-        } else {
-            clearChartFilter();
-        }
-    } else if (filterType === 'attr_category') {
-        linkedAttrCat = (linkedAttrCat === value) ? null : value;
-        updateEntityCharts();
-        if (linkedAttrCat) {
-            applyChartFilter('attr_category', linkedAttrCat, linkedAttrCat);
-        } else {
-            clearChartFilter();
-        }
-    } else if (filterType === 'relation_type') {
-        linkedRelType = (linkedRelType === value) ? null : value;
-        updateRelCharts();
-        if (linkedRelType) {
-            applyChartFilter('relation_type', linkedRelType, linkedRelType);
-        } else {
-            clearChartFilter();
-        }
-    }
-}
-
-function clearLinkedEntityType() {
-    linkedEntityType = null;
-    updateEntityCharts();
-    clearChartFilter();
-}
-
-function clearLinkedAttrCat() {
-    linkedAttrCat = null;
-    updateEntityCharts();
-    clearChartFilter();
-}
-
-function clearLinkedRelType() {
-    linkedRelType = null;
-    updateRelCharts();
-    clearChartFilter();
-}
-
-/* ── Chart-click → filter cases (from detail charts) ── */
-function applyChartFilter(type, value, label) {
-    chartFilter = { type, value, label };
-    const banner = document.getElementById('chart-filter-banner');
-    const typeLabels = {
-        entity_type: '实体类型', entity_name: '实体名称',
-        attr_category: '属性类别', attr_value: '属性值',
-        relation_type: '关系类型', predicate: '谓词'
-    };
-    document.getElementById('chart-filter-text').innerHTML =
-        `按 ${typeLabels[type] || type} 筛选: <strong>${escHtml(label)}</strong>`;
+    // Show banner
+    const banner = document.getElementById(`chart-filter-banner-${bkey}`);
+    document.getElementById(`chart-filter-text-${bkey}`).innerHTML =
+        `按实体筛选: <strong>${escHtml(label)}</strong>`;
     banner.classList.add('active');
-    applyAllCaseFilters();
+
+    // Filter cases: object entities matching name, with/without attributes
+    const hasAdj = bkey === 'wa';
+    b.filtered = CASES.filter(c =>
+        c.entities.some(e =>
+            OBJECT_TYPES.has(e.type) &&
+            (e.name || '').toLowerCase() === value &&
+            (hasAdj ? (e.attributes && e.attributes.length > 0) : (!e.attributes || e.attributes.length === 0))
+        )
+    );
+    b.page = 1;
+    renderCaseBrowser(bkey);
 }
 
-function clearChartFilter() {
-    chartFilter = null;
-    document.getElementById('chart-filter-banner').classList.remove('active');
-    applyAllCaseFilters();
+function clearCaseBrowser(bkey) {
+    const b = caseBrowsers[bkey];
+    b.filter = null;
+    b.filtered = [];
+    b.page = 1;
+    document.getElementById(`chart-filter-banner-${bkey}`).classList.remove('active');
+    document.getElementById(`cases-container-${bkey}`).innerHTML = '';
+    document.getElementById(`pagination-${bkey}`).innerHTML = '';
 }
 
-function applyAllCaseFilters() {
-    filteredCases = CASES.filter(c => {
-        if (currentCaseDsFilter !== 'all' && c.dataset !== currentCaseDsFilter) return false;
-        if (currentCaseCatFilter !== 'all' && c.category !== currentCaseCatFilter) return false;
-        if (currentTrajFilter === 'yes' && !c.trajectories) return false;
-        if (chartFilter) {
-            const cf = chartFilter;
-            if (cf.type === 'entity_type') {
-                if (!c.entities.some(e => e.type === cf.value)) return false;
-            } else if (cf.type === 'entity_name') {
-                if (!c.entities.some(e => (e.name || '').toLowerCase() === cf.value)) return false;
-            } else if (cf.type === 'attr_category') {
-                if (!c.entities.some(e => (e.attributes || []).some(a => a.category === cf.value))) return false;
-            } else if (cf.type === 'attr_value') {
-                if (!c.entities.some(e => (e.attributes || []).some(a => (a.value || '').toLowerCase() === cf.value))) return false;
-            } else if (cf.type === 'relation_type') {
-                if (!c.relations.some(r => r.relation_type === cf.value)) return false;
-            } else if (cf.type === 'predicate') {
-                if (!c.relations.some(r => (r.predicate || '').toLowerCase() === cf.value)) return false;
-            }
-        }
-        return true;
-    });
-    currentPage = 1;
-    renderCasePage();
-}
-
-function filterCases(dimension, value, btn) {
-    // Update filter state
-    if (dimension === 'ds') currentCaseDsFilter = value;
-    else if (dimension === 'cat') currentCaseCatFilter = value;
-    else if (dimension === 'traj') currentTrajFilter = value;
-
-    // Update button state for this dimension only
-    const bar = document.getElementById('case-filter-bar');
-    bar.querySelectorAll(`.filter-btn[data-dim="${dimension}"]`).forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-
-    applyAllCaseFilters();
-}
-
-function renderCasePage() {
-    const total = filteredCases.length;
+function renderCaseBrowser(bkey) {
+    const b = caseBrowsers[bkey];
+    const total = b.filtered.length;
     const totalPages = Math.ceil(total / CASES_PER_PAGE);
-    const start = (currentPage - 1) * CASES_PER_PAGE;
-    const pageCases = filteredCases.slice(start, start + CASES_PER_PAGE);
+    const start = (b.page - 1) * CASES_PER_PAGE;
+    const pageCases = b.filtered.slice(start, start + CASES_PER_PAGE);
 
-    document.getElementById('case-count').textContent = `${total.toLocaleString()} 题`;
-
-    const container = document.getElementById('cases-container');
+    const container = document.getElementById(`cases-container-${bkey}`);
     if (pageCases.length === 0) {
         container.innerHTML = '<div class="no-tools">无匹配结果</div>';
-        document.getElementById('pagination').innerHTML = '';
+        document.getElementById(`pagination-${bkey}`).innerHTML = '';
         return;
     }
 
@@ -1028,24 +771,24 @@ function renderCasePage() {
 
     // Pagination
     let ph = '';
-    ph += `<button class="page-btn" onclick="goPage(${currentPage-1})" ${currentPage<=1?'disabled':''}>上一页</button>`;
+    ph += `<button class="page-btn" onclick="goCasePage('${bkey}',${b.page-1})" ${b.page<=1?'disabled':''}>上一页</button>`;
     const maxShow = 7;
-    let ps = Math.max(1, currentPage-3), pe = Math.min(totalPages, ps+maxShow-1);
+    let ps = Math.max(1, b.page-3), pe = Math.min(totalPages, ps+maxShow-1);
     if (pe-ps < maxShow-1) ps = Math.max(1, pe-maxShow+1);
-    if (ps > 1) { ph += `<button class="page-btn" onclick="goPage(1)">1</button>`; if (ps>2) ph += `<span class="page-info">...</span>`; }
-    for (let p = ps; p <= pe; p++) ph += `<button class="page-btn ${p===currentPage?'active':''}" onclick="goPage(${p})">${p}</button>`;
-    if (pe < totalPages) { if (pe<totalPages-1) ph += `<span class="page-info">...</span>`; ph += `<button class="page-btn" onclick="goPage(${totalPages})">${totalPages}</button>`; }
-    ph += `<button class="page-btn" onclick="goPage(${currentPage+1})" ${currentPage>=totalPages?'disabled':''}>下一页</button>`;
+    if (ps > 1) { ph += `<button class="page-btn" onclick="goCasePage('${bkey}',1)">1</button>`; if (ps>2) ph += `<span class="page-info">...</span>`; }
+    for (let p = ps; p <= pe; p++) ph += `<button class="page-btn ${p===b.page?'active':''}" onclick="goCasePage('${bkey}',${p})">${p}</button>`;
+    if (pe < totalPages) { if (pe<totalPages-1) ph += `<span class="page-info">...</span>`; ph += `<button class="page-btn" onclick="goCasePage('${bkey}',${totalPages})">${totalPages}</button>`; }
+    ph += `<button class="page-btn" onclick="goCasePage('${bkey}',${b.page+1})" ${b.page>=totalPages?'disabled':''}>下一页</button>`;
     ph += `<span class="page-info">${start+1}-${Math.min(start+CASES_PER_PAGE,total)} / ${total.toLocaleString()}</span>`;
-    document.getElementById('pagination').innerHTML = ph;
+    document.getElementById(`pagination-${bkey}`).innerHTML = ph;
 }
 
-function goPage(p) {
-    const totalPages = Math.ceil(filteredCases.length / CASES_PER_PAGE);
+function goCasePage(bkey, p) {
+    const b = caseBrowsers[bkey];
+    const totalPages = Math.ceil(b.filtered.length / CASES_PER_PAGE);
     if (p < 1 || p > totalPages) return;
-    currentPage = p;
-    renderCasePage();
-    document.getElementById('sec-cases').scrollIntoView({ behavior: 'smooth' });
+    b.page = p;
+    renderCaseBrowser(bkey);
 }
 
 function renderCaseCard(c) {
@@ -1069,7 +812,7 @@ function renderCaseCard(c) {
     html += `<div class="case-card-body">`;
     html += `<div class="case-body-panels ${hasTraj ? '' : 'no-traj'}">`;
 
-    // ── Left: Entity-Relation Analysis ──
+    // ── Left: Entity Analysis (no relations) ──
     html += `<div class="case-panel-left">`;
     html += `<div class="entity-section-title">Entities (${c.entities.length})</div>`;
     html += `<div class="entity-tags">`;
@@ -1082,22 +825,7 @@ function renderCaseCard(c) {
         for (const a of (e.attributes||[])) html += `<span class="entity-attr" title="${escHtml(a.category||'other')}">${escHtml(a.category||'other')}:${escHtml(a.value)}</span>`;
         html += `</span>`;
     }
-    html += `</div>`;
-
-    html += `<div class="entity-section-title">Relations (${c.relations.length})</div>`;
-    html += `<ul class="relation-list">`;
-    for (const r of c.relations) {
-        const rc = getRelColor(r.relation_type);
-        html += `<li class="relation-item">`;
-        html += `<span class="rel-subject">${escHtml(r.subject_name)}</span>`;
-        html += `<span class="rel-arrow">→</span>`;
-        html += `<span class="rel-predicate" style="background:${rc}">${escHtml(r.predicate)}</span>`;
-        html += `<span class="rel-arrow">→</span>`;
-        html += `<span class="rel-object">${escHtml(r.object_name)}</span>`;
-        html += `<span class="rel-type-tag">${r.relation_type}</span>`;
-        html += `</li>`;
-    }
-    html += `</ul></div>`;
+    html += `</div></div>`;
 
     // ── Right: Trajectory (model tabs) ──
     if (hasTraj) {
@@ -1106,14 +834,12 @@ function renderCaseCard(c) {
         if (c.ability) html += ` <span class="traj-badge">${escHtml(c.ability.ability_name||'')}</span>`;
         html += `</div>`;
 
-        // Tabs
         html += `<div class="model-tabs">`;
         MODEL_ORDER.forEach((m, i) => {
             html += `<div class="model-tab ${m.css} ${i===0?'active':''}" data-qid="${quid}" data-idx="${i}" onclick="switchTab(this)">${m.label}</div>`;
         });
         html += `</div>`;
 
-        // Panels
         MODEL_ORDER.forEach((m, i) => {
             const t = c.trajectories[m.key];
             const steps = t ? t.steps || [] : [];
@@ -1168,12 +894,8 @@ function setupBackToTop() {
    ═══════════════════════════════════════════════════════════ */
 function init() {
     renderOverview();
-    renderEntityFilterBar();
-    updateEntityCharts();
-    renderRelFilterBar();
-    updateRelCharts();
-    renderCaseFilters();
-    renderCasePage();
+    renderObjectFilterBar();
+    updateObjectCharts();
     setupBackToTop();
 }
 

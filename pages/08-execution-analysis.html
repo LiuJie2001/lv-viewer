@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>执行分析 — 准确率对比 &amp; 轨迹对比</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --color-text: #1a1a1a;
+            --color-text-secondary: #555;
+            --color-text-muted: #888;
+            --color-bg: #ffffff;
+            --color-bg-alt: #f8f9fa;
+            --color-border: #e5e5e5;
+            --color-accent: #2563eb;
+            --color-accent-light: #dbeafe;
+            --color-correct: #16a34a;
+            --color-correct-bg: #dcfce7;
+            --color-wrong: #dc2626;
+            --color-wrong-bg: #fef2f2;
+            --color-gpt: #10a37f;
+            --color-claude: #c96442;
+            --color-gemini: #4285f4;
+            --font-serif: 'Crimson Pro', 'Noto Sans SC', serif;
+            --font-sans: 'Noto Sans SC', -apple-system, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            --cat-hlr: #F44336; --cat-tr: #2196F3; --cat-sr: #FF9800;
+            --cat-av: #9C27B0; --cat-vp: #4CAF50;
+            /* accuracy categories */
+            --acc-both-correct: #4CAF50;
+            --acc-both-wrong: #F44336;
+            --acc-direct-only: #FF9800;
+            --acc-tool-only: #2196F3;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        html { scroll-behavior:smooth; }
+        body { font-family:var(--font-sans); font-size:16px; line-height:1.6; color:var(--color-text); background:var(--color-bg); }
+
+        .header { background:linear-gradient(135deg,#f8fafc 0%,#fff 100%); border-bottom:1px solid var(--color-border); padding:2.5rem 2rem 2rem; text-align:center; }
+        .header-tag { display:inline-block; font-size:0.75rem; font-weight:500; text-transform:uppercase; letter-spacing:0.1em; color:var(--color-accent); background:var(--color-accent-light); padding:0.25rem 0.75rem; border-radius:2rem; margin-bottom:1rem; }
+        .header h1 { font-family:var(--font-serif); font-size:clamp(1.5rem,3.5vw,2.25rem); font-weight:700; margin-bottom:0.5rem; }
+        .header .subtitle { font-size:0.95rem; color:var(--color-text-secondary); }
+
+        .main { max-width:1200px; margin:0 auto; padding:2rem 1.5rem 4rem; }
+        .section { margin-bottom:3rem; }
+        .section-header { display:flex; align-items:center; gap:0.75rem; margin-bottom:1.5rem; padding-bottom:0.5rem; border-bottom:2px solid var(--color-text); }
+        .section-number { font-family:var(--font-serif); font-size:1.75rem; font-weight:700; color:var(--color-accent); line-height:1; }
+        .section-title { font-family:var(--font-serif); font-size:1.25rem; font-weight:600; }
+        .section-count { margin-left:auto; font-size:0.875rem; color:var(--color-text-muted); }
+
+        .stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:1rem; margin-bottom:1.5rem; }
+        .stat-card { background:var(--color-bg-alt); border:1px solid var(--color-border); border-radius:8px; padding:1rem 1.25rem; text-align:center; }
+        .stat-value { font-family:var(--font-serif); font-size:1.75rem; font-weight:700; color:var(--color-accent); }
+        .stat-label { font-size:0.8rem; color:var(--color-text-muted); margin-top:0.25rem; }
+
+        /* Filter bar */
+        .filter-bar { display:flex; gap:0.5rem; margin-bottom:1.5rem; flex-wrap:wrap; align-items:center; }
+        .filter-label { font-size:0.72rem; color:var(--color-text-muted); margin-right:0.3rem; }
+        .filter-btn { padding:0.3rem 0.7rem; border:1px solid var(--color-border); border-radius:2rem; background:white; cursor:pointer; font-size:0.75rem; font-family:var(--font-sans); color:var(--color-text-secondary); transition:all 0.15s; }
+        .filter-btn:hover { border-color:var(--color-accent); color:var(--color-accent); }
+        .filter-btn.active { background:var(--color-accent); color:white; border-color:var(--color-accent); }
+        .filter-sep { width:1px; height:1.2rem; background:var(--color-border); margin:0 0.3rem; }
+
+        /* Tool cards (from page 06) */
+        .tool-card { border:1px solid var(--color-border); border-radius:8px; margin-bottom:0.75rem; overflow:hidden; transition:box-shadow 0.15s; }
+        .tool-card:hover { box-shadow:0 2px 8px rgba(0,0,0,0.06); }
+        .tool-card-header { display:flex; align-items:center; gap:0.6rem; padding:0.65rem 1rem; cursor:pointer; user-select:none; }
+        .tool-card-header:hover { background:#fafbfd; }
+        .tool-card-name { font-family:var(--font-mono); font-size:0.82rem; font-weight:600; color:var(--color-accent); }
+        .type-badge { font-size:0.6rem; font-weight:600; padding:0.12rem 0.4rem; border-radius:3px; white-space:nowrap; }
+        .type-badge.single_model { background:#dbeafe; color:#1d4ed8; }
+        .type-badge.pipeline { background:#fef3c7; color:#92400e; }
+        .type-badge.script { background:#d1fae5; color:#065f46; }
+        .level-badge { font-size:0.58rem; font-weight:600; padding:0.1rem 0.35rem; border-radius:3px; white-space:nowrap; text-transform:uppercase; letter-spacing:0.03em; }
+        .level-badge.image { background:#fce7f3; color:#9d174d; }
+        .level-badge.frame { background:#e0e7ff; color:#3730a3; }
+        .level-badge.audio { background:#fef9c3; color:#854d0e; }
+        .backend-badge { font-size:0.58rem; font-weight:600; padding:0.1rem 0.35rem; border-radius:3px; white-space:nowrap; }
+        .backend-badge.vlm { background:#ede9fe; color:#5b21b6; }
+        .backend-badge.audio { background:#fef9c3; color:#854d0e; }
+        .backend-badge.script { background:#d1fae5; color:#065f46; }
+        .tool-card-desc { flex:1; font-size:0.72rem; color:var(--color-text-secondary); line-height:1.4; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:500px; }
+        .tool-card-arrow { font-size:0.6rem; color:var(--color-text-muted); transition:transform 0.2s; margin-left:auto; }
+        .tool-card.expanded .tool-card-arrow { transform:rotate(90deg); }
+        .tool-card-body { display:none; border-top:1px solid var(--color-border); }
+        .tool-card.expanded .tool-card-body { display:block; }
+        .tool-detail { padding:1rem; }
+        .tool-detail-row { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem; }
+        @media (max-width:700px) { .tool-detail-row { grid-template-columns:1fr; } }
+        .detail-label { font-size:0.68rem; font-weight:600; color:var(--color-text-muted); margin-bottom:0.35rem; text-transform:uppercase; letter-spacing:0.04em; }
+        .detail-content { font-size:0.75rem; color:var(--color-text-secondary); line-height:1.6; }
+        .io-table { width:100%; border-collapse:collapse; font-size:0.72rem; }
+        .io-table th { text-align:left; font-size:0.65rem; font-weight:600; color:var(--color-text-muted); padding:0.2rem 0.4rem; border-bottom:1px solid var(--color-border); }
+        .io-table td { padding:0.25rem 0.4rem; border-bottom:1px solid #f0f0f0; vertical-align:top; }
+        .io-key { font-family:var(--font-mono); font-weight:600; font-size:0.7rem; white-space:nowrap; }
+        .io-type { font-family:var(--font-mono); font-size:0.62rem; color:var(--color-text-muted); word-break:break-all; }
+        .impl-notes { font-size:0.72rem; color:var(--color-text-secondary); line-height:1.6; margin-top:0.5rem; padding:0.6rem 0.8rem; background:#f8f9fb; border-radius:6px; border:1px solid var(--color-border); }
+
+        /* Collapsible section */
+        .collapsible-header { cursor:pointer; user-select:none; }
+        .collapsible-header .toggle-icon { transition:transform 0.2s; display:inline-block; margin-left:0.5rem; font-size:0.75rem; color:var(--color-text-muted); }
+        .collapsible-header.collapsed .toggle-icon { transform:rotate(-90deg); }
+        .collapsible-body.collapsed { display:none; }
+
+        /* Accuracy category badges */
+        .acc-badge { display:inline-block; font-size:0.62rem; font-weight:600; padding:0.15rem 0.45rem; border-radius:3px; }
+        .acc-badge.both_correct { background:#dcfce7; color:#166534; }
+        .acc-badge.both_wrong { background:#fef2f2; color:#991b1b; }
+        .acc-badge.direct_only { background:#fff7ed; color:#9a3412; }
+        .acc-badge.tool_only { background:#dbeafe; color:#1e40af; }
+        .acc-badge.tool_failed_direct_correct { background:#fef3c7; color:#92400e; }
+        .acc-badge.tool_failed_direct_wrong { background:#f3f4f6; color:#6b7280; }
+        .acc-badge.tool_failed { background:#fef2f2; color:#991b1b; }
+        .acc-badge.tool_succeeded { background:#dcfce7; color:#166534; }
+
+        /* Dataset badges */
+        .ds-badge { font-size:0.62rem; font-weight:600; padding:0.1rem 0.35rem; border-radius:3px; }
+        .ds-badge.lvbench { background:#fef3c7; color:#92400e; }
+        .ds-badge.videomme { background:#dbeafe; color:#1e40af; }
+        .ds-badge.longvideobench { background:#d1fae5; color:#065f46; }
+
+        /* Ability category badge */
+        .cat-badge { font-size:0.62rem; font-weight:600; padding:0.1rem 0.4rem; border-radius:3px; color:white; }
+
+        /* Correct/wrong indicator */
+        .answer-indicator { font-size:0.8rem; font-weight:700; }
+        .answer-indicator.correct { color:var(--color-correct); }
+        .answer-indicator.wrong { color:var(--color-wrong); }
+
+        /* Question card */
+        .question-card { border:1px solid var(--color-border); border-radius:8px; margin-bottom:1rem; overflow:hidden; }
+        .question-card-header { padding:0.75rem 1rem; border-bottom:1px solid var(--color-border); background:var(--color-bg-alt); cursor:pointer; user-select:none; }
+        .question-card-header:hover { background:#f0f4f8; }
+        .question-meta { display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; }
+        .question-id { font-family:var(--font-mono); font-size:0.7rem; color:var(--color-text-muted); }
+        .question-text { font-size:0.82rem; line-height:1.5; color:var(--color-text); margin-top:0.4rem; max-height:4.5em; overflow-y:auto; }
+        .question-card-body { display:none; }
+        .question-card.expanded .question-card-body { display:block; }
+
+        /* Video button */
+        .video-btn { display:inline-flex; align-items:center; gap:0.3rem; padding:0.2rem 0.5rem; border:1px solid var(--color-border); border-radius:4px; background:white; cursor:pointer; font-size:0.7rem; font-family:var(--font-sans); color:var(--color-text-secondary); }
+        .video-btn:hover { border-color:var(--color-accent); color:var(--color-accent); }
+
+        /* Accuracy comparison layout (Section 1) */
+        .acc-compare { display:grid; grid-template-columns:1fr 1fr; gap:0; border-top:1px solid var(--color-border); }
+        .acc-col { padding:0.8rem 1rem; }
+        .acc-col:first-child { border-right:1px solid var(--color-border); }
+        .acc-col-header { font-size:0.75rem; font-weight:600; margin-bottom:0.5rem; display:flex; align-items:center; gap:0.4rem; }
+        .acc-answer { font-family:var(--font-mono); font-size:0.85rem; font-weight:700; }
+        .acc-response { font-size:0.72rem; color:var(--color-text-secondary); line-height:1.5; margin-top:0.4rem; max-height:6em; overflow-y:auto; }
+        .tools-used-list { display:flex; flex-wrap:wrap; gap:0.2rem; margin-top:0.3rem; }
+        .tool-used-tag { font-family:var(--font-mono); font-size:0.6rem; padding:0.1rem 0.3rem; border-radius:3px; background:var(--color-accent-light); color:var(--color-accent); }
+
+        /* Trajectory comparison layout (Section 2) */
+        .traj-compare { display:grid; grid-template-columns:1fr 1fr; gap:0; border-top:1px solid var(--color-border); }
+        .traj-col { min-height:60px; }
+        .traj-col:first-child { border-right:1px solid var(--color-border); }
+        .traj-col-header { padding:0.5rem 0.8rem; font-size:0.75rem; font-weight:600; border-bottom:1px solid var(--color-border); display:flex; align-items:center; gap:0.4rem; }
+        .traj-col-header.plan { background:#f0fdf4; color:#166534; border-top:2px solid #4CAF50; }
+        .traj-col-header.exec { background:#eff6ff; color:#1e40af; border-top:2px solid #2563eb; }
+        .traj-col-header .step-count { margin-left:auto; font-size:0.62rem; font-weight:400; color:var(--color-text-muted); }
+
+        .step-list { padding:0.4rem; }
+        .tool-step { padding:0.35rem 0.5rem; margin-bottom:0.3rem; border-radius:4px; background:var(--color-bg-alt); border:1px solid #f0f0f0; }
+        .tool-step:last-child { margin-bottom:0; }
+        .tool-step-header { display:flex; align-items:center; gap:0.35rem; }
+        .step-num { font-family:var(--font-mono); font-size:0.58rem; font-weight:700; color:white; background:var(--color-accent); width:18px; height:18px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; }
+        .step-num.reasoning { background:#9ca3af; }
+        .step-tool-name { font-family:var(--font-mono); font-size:0.7rem; font-weight:600; color:var(--color-accent); }
+        .step-tool-name.reasoning { color:#6b7280; font-style:italic; }
+        .step-deps { font-size:0.55rem; color:var(--color-text-muted); margin-left:auto; flex-shrink:0; }
+        .step-purpose { font-size:0.66rem; color:var(--color-text-secondary); line-height:1.4; margin-top:0.2rem; padding-left:1.6rem; }
+        .step-io { font-family:var(--font-mono); font-size:0.62rem; color:var(--color-text-muted); line-height:1.4; margin-top:0.15rem; padding-left:1.6rem; word-break:break-all; }
+        .step-io .io-label { color:var(--color-text-secondary); font-weight:600; }
+        .exec-result { padding:0.5rem 0.8rem; border-top:1px solid var(--color-border); background:#fafbfd; }
+        .exec-result .answer-line { font-size:0.8rem; font-weight:600; }
+
+        /* Plan model tabs */
+        .plan-model-tabs { display:flex; gap:0; border-bottom:1px solid var(--color-border); }
+        .plan-model-tab { flex:1; padding:0.4rem; text-align:center; font-size:0.7rem; font-weight:600; cursor:pointer; border-bottom:2px solid transparent; color:var(--color-text-muted); background:white; border-top:none; border-left:none; border-right:none; font-family:var(--font-sans); }
+        .plan-model-tab:hover { color:var(--color-accent); }
+        .plan-model-tab.active { color:var(--color-accent); border-bottom-color:var(--color-accent); }
+        .plan-model-tab.gemini { }
+        .plan-model-tab.claude { }
+        .plan-model-tab.gpt { }
+
+        /* Category tabs for accuracy */
+        .acc-category-tabs { display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap; }
+        .acc-cat-tab { padding:0.35rem 0.8rem; border-radius:2rem; cursor:pointer; font-size:0.75rem; font-weight:600; border:2px solid transparent; background:var(--color-bg-alt); color:var(--color-text-secondary); transition:all 0.15s; display:flex; align-items:center; gap:0.3rem; }
+        .acc-cat-tab:hover { opacity:0.85; }
+        .acc-cat-tab.active { color:white; }
+        .acc-cat-tab .tab-count { font-family:var(--font-mono); font-size:0.65rem; }
+        .acc-cat-tab.both_correct.active { background:var(--acc-both-correct); border-color:var(--acc-both-correct); }
+        .acc-cat-tab.both_wrong.active { background:var(--acc-both-wrong); border-color:var(--acc-both-wrong); }
+        .acc-cat-tab.direct_only.active { background:var(--acc-direct-only); border-color:var(--acc-direct-only); }
+        .acc-cat-tab.tool_only.active { background:var(--acc-tool-only); border-color:var(--acc-tool-only); }
+        .acc-cat-tab.all.active { background:var(--color-accent); border-color:var(--color-accent); }
+        .acc-cat-tab.tool_failed_direct_correct.active { background:#d97706; border-color:#d97706; }
+        .acc-cat-tab.tool_failed_direct_wrong.active { background:#6b7280; border-color:#6b7280; }
+
+        /* Options list */
+        .question-options { display:flex; flex-wrap:wrap; gap:0.25rem 0.75rem; margin-top:0.3rem; font-size:0.72rem; color:var(--color-text-secondary); }
+        .question-options .opt { line-height:1.5; }
+        .question-options .opt.correct-opt { font-weight:600; color:var(--color-correct); }
+
+        /* Success/fail stats bar */
+        .stats-bar { display:flex; height:28px; border-radius:6px; overflow:hidden; margin-bottom:1rem; font-size:0.7rem; font-weight:600; }
+        .stats-bar > div { display:flex; align-items:center; justify-content:center; color:white; transition:width 0.3s; }
+        .stats-bar .bar-success { background:#16a34a; }
+        .stats-bar .bar-fail { background:#dc2626; }
+        .stats-bar .bar-correct { background:#16a34a; }
+        .stats-bar .bar-wrong { background:#f97316; }
+
+        /* Two-row stats layout */
+        .stats-section-label { font-size:0.72rem; font-weight:600; color:var(--color-text-muted); margin-bottom:0.4rem; text-transform:uppercase; letter-spacing:0.04em; }
+
+        /* Modal */
+        .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:2000; justify-content:center; align-items:center; }
+        .modal-overlay.active { display:flex; }
+        .modal-content { background:white; border-radius:12px; max-width:900px; width:90%; max-height:90vh; overflow:auto; padding:1.5rem; position:relative; }
+        .modal-close { position:absolute; top:0.75rem; right:1rem; font-size:1.5rem; cursor:pointer; color:var(--color-text-muted); background:none; border:none; font-family:var(--font-sans); }
+        .modal-close:hover { color:var(--color-text); }
+        .modal-video { width:100%; border-radius:8px; margin-top:0.5rem; }
+        .modal-info { font-size:0.8rem; color:var(--color-text-secondary); margin-top:0.5rem; }
+
+        @media (max-width:700px) {
+            .acc-compare, .traj-compare { grid-template-columns:1fr; }
+            .acc-col:first-child, .traj-col:first-child { border-right:none; border-bottom:1px solid var(--color-border); }
+        }
+
+        #back-top { position:fixed; bottom:2rem; right:2rem; display:none; padding:0.5rem 1rem; background:var(--color-accent); color:white; border:none; border-radius:2rem; font-family:var(--font-sans); font-size:0.78rem; font-weight:500; cursor:pointer; box-shadow:0 2px 12px rgba(37,99,235,0.3); z-index:1000; }
+        #back-top:hover { box-shadow:0 4px 16px rgba(37,99,235,0.4); transform:translateY(-1px); }
+
+        .no-data { text-align:center; padding:2rem; color:var(--color-text-muted); font-size:0.85rem; }
+    </style>
+</head>
+<body>
+<header class="header">
+    <div class="header-tag">Execution Analysis</div>
+    <h1>执行分析：准确率对比 &amp; 轨迹对比</h1>
+    <p class="subtitle" id="header-subtitle">加载中...</p>
+</header>
+
+<main class="main">
+    <!-- Section 0: Tool Registry v10 -->
+    <section class="section" id="sec-registry">
+        <div class="section-header collapsible-header" onclick="toggleSection('registry')">
+            <span class="section-number">00</span>
+            <span class="section-title">工具注册表 v10 & 后端配置</span>
+            <span class="section-count" id="registry-count"></span>
+            <span class="toggle-icon">&#9660;</span>
+        </div>
+        <div class="collapsible-body" id="registry-body">
+            <div class="filter-bar" id="registry-filter"></div>
+            <div id="registry-container"></div>
+        </div>
+    </section>
+
+    <!-- Section 1: Accuracy Comparison -->
+    <section class="section" id="sec-accuracy">
+        <div class="section-header">
+            <span class="section-number">01</span>
+            <span class="section-title">准确率对比（Direct vs Tool）</span>
+            <span class="section-count" id="accuracy-count"></span>
+        </div>
+        <div class="stats-grid" id="acc-stats"></div>
+        <div class="acc-category-tabs" id="acc-tabs"></div>
+        <div id="acc-questions"></div>
+    </section>
+
+    <!-- Section 2: Trajectory Comparison -->
+    <section class="section" id="sec-trajectory">
+        <div class="section-header">
+            <span class="section-number">02</span>
+            <span class="section-title">轨迹对比（Plan vs Execution）</span>
+            <span class="section-count" id="traj-count"></span>
+        </div>
+        <div class="stats-grid" id="traj-stats"></div>
+        <div class="filter-bar" id="traj-filter"></div>
+        <div id="traj-questions"></div>
+    </section>
+</main>
+
+<button id="back-top" onclick="scrollTo({top:0,behavior:'smooth'})">&#8593; Top</button>
+
+<!-- Video Modal -->
+<div class="modal-overlay" id="video-modal" onclick="if(event.target===this)closeModal()">
+    <div class="modal-content">
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+        <h3 id="modal-title" style="font-family:var(--font-serif);font-size:1.1rem;margin-bottom:0.5rem;"></h3>
+        <video id="modal-video" class="modal-video" controls></video>
+        <div class="modal-info" id="modal-info"></div>
+    </div>
+</div>
+
+<script>
+let DATA = null;
+const CAT_COLORS = {
+    'High-Level Reasoning': '#F44336',
+    'Temporal Dynamics': '#2196F3',
+    'Spatial Object Dynamics': '#FF9800',
+    'AudioVisual Joint': '#9C27B0',
+    'Visual Perception': '#4CAF50',
+};
+const PLAN_MODEL_LABELS = {
+    'gemini-3.1-pro-preview': 'Gemini',
+    'claude-opus-4-6': 'Claude',
+    'gpt-5.4': 'GPT',
+};
+
+const ACC_CAT_LABELS = {
+    'both_correct': 'Both Correct',
+    'both_wrong': 'Both Wrong',
+    'direct_only': 'Direct Only',
+    'tool_only': 'Tool Only',
+    'tool_failed_direct_correct': 'Tool Failed (Direct ✓)',
+    'tool_failed_direct_wrong': 'Tool Failed (Direct ✗)',
+    'tool_failed': 'Tool Failed',
+    'tool_succeeded': 'Tool Succeeded',
+};
+let currentAccCategory = 'all';
+let currentPlanModel = 'gemini-3.1-pro-preview';
+let currentDatasetFilter = 'all';
+let currentAbilityFilter = 'all';
+
+// ── Data Loading ──────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        const res = await fetch('../data/execution-comparison.json');
+        DATA = await res.json();
+        init();
+    } catch (e) {
+        document.getElementById('header-subtitle').textContent = '数据加载失败: ' + e.message;
+    }
+});
+
+function init() {
+    const meta = DATA.metadata;
+    document.getElementById('header-subtitle').textContent =
+        `${meta.total_questions} Questions · ${meta.execution_models.join(', ')} · ${meta.generated_date}`;
+
+    buildRegistry();
+    buildAccuracySection();
+    buildTrajectorySection();
+
+    // Back to top
+    window.addEventListener('scroll', () => {
+        document.getElementById('back-top').style.display = window.scrollY > 400 ? 'block' : 'none';
+    });
+}
+
+// ── Section 0: Tool Registry ──────────────────
+function buildRegistry() {
+    const tools = DATA.tool_registry;
+    document.getElementById('registry-count').textContent = `${tools.length} Tools`;
+
+    // Filter bar
+    const levels = [...new Set(tools.map(t => t.processing_level))].sort();
+    const backends = [...new Set(tools.map(t => t.backend))].sort();
+    const filterBar = document.getElementById('registry-filter');
+
+    let html = '<span class="filter-label">Level:</span>';
+    html += `<button class="filter-btn active" onclick="filterRegistry('level','all',this)">All</button>`;
+    levels.forEach(l => {
+        html += `<button class="filter-btn" onclick="filterRegistry('level','${l}',this)">${l}</button>`;
+    });
+    html += '<span class="filter-sep"></span><span class="filter-label">Backend:</span>';
+    html += `<button class="filter-btn active" onclick="filterRegistry('backend','all',this)">All</button>`;
+    backends.forEach(b => {
+        html += `<button class="filter-btn" onclick="filterRegistry('backend','${b}',this)">${b}</button>`;
+    });
+    filterBar.innerHTML = html;
+
+    renderRegistryTools(tools);
+}
+
+let regLevelFilter = 'all', regBackendFilter = 'all';
+function filterRegistry(type, val, btn) {
+    if (type === 'level') regLevelFilter = val;
+    else regBackendFilter = val;
+    // Update active buttons
+    const bar = document.getElementById('registry-filter');
+    const sep = bar.querySelector('.filter-sep');
+    const btns = type === 'level'
+        ? [...bar.querySelectorAll('.filter-btn')].filter(b => bar.compareDocumentPosition(b) & 2 || b === bar.firstElementChild.nextElementSibling || (sep && bar.compareDocumentPosition(b) < bar.compareDocumentPosition(sep)))
+        : [...bar.querySelectorAll('.filter-btn')];
+    // Simpler approach: re-render
+    const allBtns = bar.querySelectorAll('.filter-btn');
+    let inBackendSection = false;
+    allBtns.forEach(b => {
+        const bType = inBackendSection ? 'backend' : 'level';
+        if (b.previousElementSibling && b.previousElementSibling.classList.contains('filter-sep')) inBackendSection = true;
+        const bType2 = inBackendSection ? 'backend' : 'level';
+        if (bType2 === type) {
+            b.classList.toggle('active', b.textContent.toLowerCase() === val || (val === 'all' && b.textContent === 'All'));
+        }
+    });
+    const filtered = DATA.tool_registry.filter(t =>
+        (regLevelFilter === 'all' || t.processing_level === regLevelFilter) &&
+        (regBackendFilter === 'all' || t.backend === regBackendFilter)
+    );
+    renderRegistryTools(filtered);
+}
+
+function renderRegistryTools(tools) {
+    const container = document.getElementById('registry-container');
+    container.innerHTML = tools.map((t, i) => `
+        <div class="tool-card" id="tool-${t.name}">
+            <div class="tool-card-header" onclick="this.parentElement.classList.toggle('expanded')">
+                <span class="tool-card-name">${t.name}</span>
+                <span class="level-badge ${t.processing_level}">${t.processing_level}</span>
+                <span class="type-badge ${t.implementation.type}">${t.implementation.type}</span>
+                <span class="backend-badge ${t.backend}">${t.backend}${t.backend_model ? ' · ' + t.backend_model : ''}</span>
+                <span class="tool-card-desc">${t.description.split('.')[0]}</span>
+                <span class="tool-card-arrow">&#9654;</span>
+            </div>
+            <div class="tool-card-body">
+                <div class="tool-detail">
+                    <div class="detail-label">Description</div>
+                    <div class="detail-content">${t.description}</div>
+                    <div class="tool-detail-row" style="margin-top:0.75rem;">
+                        <div>
+                            <div class="detail-label">Input</div>
+                            <table class="io-table">
+                                <tr><th>Param</th><th>Type</th></tr>
+                                ${Object.entries(t.input).map(([k,v]) => `<tr><td class="io-key">${k}</td><td class="io-type">${v}</td></tr>`).join('')}
+                            </table>
+                        </div>
+                        <div>
+                            <div class="detail-label">Output</div>
+                            <table class="io-table">
+                                <tr><th>Field</th><th>Type</th></tr>
+                                ${Object.entries(t.output).map(([k,v]) => `<tr><td class="io-key">${k}</td><td class="io-type">${v}</td></tr>`).join('')}
+                            </table>
+                        </div>
+                    </div>
+                    ${t.implementation.notes ? `<div class="impl-notes">${t.implementation.notes}</div>` : ''}
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// ── Section 1: Accuracy Comparison ────────────
+function buildAccuracySection() {
+    const execModel = DATA.metadata.execution_models[0];
+    const summary = DATA.accuracy_summary[execModel];
+    if (!summary) {
+        document.getElementById('acc-stats').innerHTML = '<div class="no-data">暂无准确率对比数据</div>';
+        return;
+    }
+
+    const tov = summary.tool_overall;
+    const hasDirect = summary.direct.total > 0;
+
+    document.getElementById('accuracy-count').textContent =
+        `${tov.total} Questions`;
+
+    // Stats: first row = tool success/fail, second row = accuracy (if direct available)
+    let statsHtml = '';
+
+    // Row 1: Tool execution success/fail
+    const succPct = (tov.success_rate * 100).toFixed(1);
+    const failPct = ((1 - tov.success_rate) * 100).toFixed(1);
+    const succAccPct = (tov.succeeded_accuracy * 100).toFixed(1);
+    statsHtml += `
+        <div style="margin-bottom:1.5rem;">
+            <div class="stats-section-label">Tool 执行状态</div>
+            <div class="stats-bar">
+                <div class="bar-success" style="width:${succPct}%">${tov.succeeded} 成功 (${succPct}%)</div>
+                <div class="bar-fail" style="width:${failPct}%">${tov.failed} 失败 (${failPct}%)</div>
+            </div>
+            <div class="stats-grid" style="margin-bottom:0;">
+                <div class="stat-card"><div class="stat-value">${tov.total}</div><div class="stat-label">总题数</div></div>
+                <div class="stat-card"><div class="stat-value" style="color:#16a34a">${tov.succeeded}</div><div class="stat-label">执行成功</div></div>
+                <div class="stat-card"><div class="stat-value" style="color:#dc2626">${tov.failed}</div><div class="stat-label">执行失败</div></div>
+                <div class="stat-card"><div class="stat-value">${succAccPct}%</div><div class="stat-label">成功中正确率 (${tov.succeeded_correct}/${tov.succeeded})</div></div>
+            </div>
+        </div>`;
+
+    // Row 2: Direct vs Tool comparison (only if direct data exists)
+    if (hasDirect) {
+        statsHtml += `
+        <div>
+            <div class="stats-section-label">Direct vs Tool 对比（${summary.direct.total} 题有双方数据）</div>
+            <div class="stats-grid">
+                <div class="stat-card"><div class="stat-value">${(summary.direct.accuracy * 100).toFixed(1)}%</div><div class="stat-label">Direct 正确率</div></div>
+                <div class="stat-card"><div class="stat-value">${(summary.tool.accuracy * 100).toFixed(1)}%</div><div class="stat-label">Tool 正确率（含失败）</div></div>
+                <div class="stat-card"><div class="stat-value" style="color:var(--acc-both-correct)">${summary.both_correct}</div><div class="stat-label">Both Correct</div></div>
+                <div class="stat-card"><div class="stat-value" style="color:var(--acc-both-wrong)">${summary.both_wrong}</div><div class="stat-label">Both Wrong</div></div>
+                <div class="stat-card"><div class="stat-value" style="color:var(--acc-direct-only)">${summary.direct_only}</div><div class="stat-label">Direct Only</div></div>
+                <div class="stat-card"><div class="stat-value" style="color:var(--acc-tool-only)">${summary.tool_only}</div><div class="stat-label">Tool Only</div></div>
+                <div class="stat-card"><div class="stat-value" style="color:#d97706">${summary.tool_failed_direct_correct}</div><div class="stat-label">Tool 失败 + Direct ✓</div></div>
+                <div class="stat-card"><div class="stat-value" style="color:#6b7280">${summary.tool_failed_direct_wrong}</div><div class="stat-label">Tool 失败 + Direct ✗</div></div>
+            </div>
+        </div>`;
+    }
+
+    document.getElementById('acc-stats').innerHTML = statsHtml;
+
+    // Category tabs — dynamically build from actual data
+    const execModelName = execModel;
+    const catCounts = {};
+    let totalShown = 0;
+    DATA.questions.forEach(q => {
+        const m = q.models[execModelName];
+        if (!m) return;
+        const cat = m.accuracy_category;
+        if (!cat) return;
+        catCounts[cat] = (catCounts[cat] || 0) + 1;
+        totalShown++;
+    });
+
+    const tabs = document.getElementById('acc-tabs');
+    let tabsHtml = `<button class="acc-cat-tab all active" onclick="setAccCategory('all',this)">All <span class="tab-count">${totalShown}</span></button>`;
+
+    // Order: tool_failed first, then the 4 comparison categories
+    const tabOrder = ['tool_failed_direct_correct', 'tool_failed_direct_wrong', 'direct_only', 'tool_only', 'both_correct', 'both_wrong', 'tool_failed', 'tool_succeeded'];
+    tabOrder.forEach(cat => {
+        if (catCounts[cat]) {
+            tabsHtml += `<button class="acc-cat-tab ${cat}" onclick="setAccCategory('${cat}',this)">${ACC_CAT_LABELS[cat] || cat} <span class="tab-count">${catCounts[cat]}</span></button>`;
+        }
+    });
+    tabs.innerHTML = tabsHtml;
+
+    renderAccQuestions();
+}
+
+function setAccCategory(cat, btn) {
+    currentAccCategory = cat;
+    document.querySelectorAll('.acc-cat-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderAccQuestions();
+}
+
+function renderAccQuestions() {
+    const execModel = DATA.metadata.execution_models[0];
+    let questions = DATA.questions.filter(q => {
+        const m = q.models[execModel];
+        if (!m) return false;
+        if (currentAccCategory !== 'all' && m.accuracy_category !== currentAccCategory) return false;
+        return true;
+    });
+
+    const container = document.getElementById('acc-questions');
+    if (!questions.length) {
+        container.innerHTML = '<div class="no-data">无匹配结果</div>';
+        return;
+    }
+
+    container.innerHTML = questions.map(q => {
+        const m = q.models[execModel];
+        const catColor = CAT_COLORS[q.ability_category] || '#888';
+        const accCat = m.accuracy_category || '';
+        const accLabel = ACC_CAT_LABELS[accCat] || accCat.replace(/_/g,' ');
+
+        // Options rendering with correct option highlighted
+        const optionsHtml = (q.options && q.options.length) ? `
+            <div class="question-options">
+                ${q.options.map(o => {
+                    const optLetter = o.charAt(0);
+                    const isCorrect = q.ground_truth && q.ground_truth.toUpperCase() === optLetter.toUpperCase();
+                    return `<span class="opt ${isCorrect ? 'correct-opt' : ''}">${escHtml(o)}</span>`;
+                }).join('')}
+            </div>` : '';
+
+        // Build body columns
+        const hasDirect = m.direct;
+        const hasTool = m.tool;
+
+        let bodyHtml = '<div class="acc-compare">';
+        if (hasDirect) {
+            bodyHtml += `
+                <div class="acc-col">
+                    <div class="acc-col-header">
+                        <span>Direct</span>
+                        <span class="answer-indicator ${m.direct.correct ? 'correct' : 'wrong'}">${m.direct.correct ? '✓' : '✗'}</span>
+                        <span class="acc-answer">${m.direct.answer || '—'}</span>
+                        <span style="font-size:0.7rem;color:var(--color-text-muted)">GT: ${q.ground_truth}</span>
+                    </div>
+                    <div class="acc-response">${escHtml(m.direct.response_brief || '')}</div>
+                </div>`;
+        }
+        if (hasTool) {
+            const toolFailed = !m.tool.succeeded;
+            bodyHtml += `
+                <div class="acc-col"${!hasDirect ? ' style="border-left:none;"' : ''}>
+                    <div class="acc-col-header">
+                        <span>Tool</span>
+                        ${toolFailed
+                            ? '<span class="answer-indicator wrong" style="font-size:0.7rem;">执行失败</span>'
+                            : `<span class="answer-indicator ${m.tool.correct ? 'correct' : 'wrong'}">${m.tool.correct ? '✓' : '✗'}</span>
+                               <span class="acc-answer">${m.tool.answer || '—'}</span>`}
+                        <span style="font-size:0.7rem;color:var(--color-text-muted)">${m.tool.steps_count} steps · GT: ${q.ground_truth}</span>
+                    </div>
+                    <div class="tools-used-list">
+                        ${(m.tool.tools_used || []).map(t => `<span class="tool-used-tag">${t}</span>`).join('')}
+                    </div>
+                </div>`;
+        }
+        bodyHtml += '</div>';
+
+        return `
+        <div class="question-card" id="acc-${q.question_id}">
+            <div class="question-card-header" onclick="this.parentElement.classList.toggle('expanded')">
+                <div class="question-meta">
+                    <span class="ds-badge ${q.dataset}">${q.dataset}</span>
+                    <span class="cat-badge" style="background:${catColor}">${q.ability_category || ''}</span>
+                    <span class="acc-badge ${accCat}">${accLabel}</span>
+                    <span class="question-id">${q.question_id}</span>
+                    <button class="video-btn" onclick="event.stopPropagation();openVideo('${q.video_path}','${q.question_id}',${q.video_info ? JSON.stringify(JSON.stringify(q.video_info)) : 'null'})">&#9654; 视频</button>
+                </div>
+                <div class="question-text">${escHtml(q.question_text)}</div>
+                ${optionsHtml}
+            </div>
+            <div class="question-card-body">
+                ${bodyHtml}
+            </div>
+        </div>`;
+    }).join('');
+}
+
+// ── Section 2: Trajectory Comparison ──────────
+function buildTrajectorySection() {
+    const execModel = DATA.metadata.execution_models[0];
+    const questions = DATA.questions.filter(q => q.models[execModel] && q.models[execModel].tool);
+
+    // Compute stats
+    let totalPlanSteps = 0, planCount = 0, totalExecSteps = 0;
+    const succeeded = questions.filter(q => q.models[execModel].tool.succeeded);
+    const failed = questions.filter(q => !q.models[execModel].tool.succeeded);
+
+    questions.forEach(q => {
+        const plan = q.planned && q.planned[currentPlanModel];
+        if (plan) { totalPlanSteps += plan.length; planCount++; }
+        totalExecSteps += q.models[execModel].tool.steps_count;
+    });
+
+    const avgPlan = planCount ? (totalPlanSteps / planCount).toFixed(1) : '—';
+    const avgExec = (totalExecSteps / questions.length).toFixed(1);
+    const succCorrect = succeeded.filter(q => q.models[execModel].tool.correct).length;
+
+    document.getElementById('traj-count').textContent = `${questions.length} Questions`;
+    document.getElementById('traj-stats').innerHTML = `
+        <div class="stat-card"><div class="stat-value">${questions.length}</div><div class="stat-label">总题数</div></div>
+        <div class="stat-card"><div class="stat-value" style="color:#16a34a">${succeeded.length}</div><div class="stat-label">执行成功</div></div>
+        <div class="stat-card"><div class="stat-value" style="color:#dc2626">${failed.length}</div><div class="stat-label">执行失败</div></div>
+        <div class="stat-card"><div class="stat-value">${succCorrect}/${succeeded.length}</div><div class="stat-label">成功中正确率</div></div>
+        <div class="stat-card"><div class="stat-value">${avgPlan}</div><div class="stat-label">Plan 平均步数</div></div>
+        <div class="stat-card"><div class="stat-value">${avgExec}</div><div class="stat-label">Exec 平均步数</div></div>
+    `;
+
+    // Filter bar: dataset + ability + plan model
+    const datasets = [...new Set(questions.map(q => q.dataset))].sort();
+    const abilities = [...new Set(questions.map(q => q.ability_category).filter(Boolean))].sort();
+    const planModels = DATA.metadata.plan_models;
+
+    let filterHtml = '<span class="filter-label">Dataset:</span>';
+    filterHtml += `<button class="filter-btn active" onclick="setTrajFilter('dataset','all',this)">All</button>`;
+    datasets.forEach(d => {
+        filterHtml += `<button class="filter-btn" onclick="setTrajFilter('dataset','${d}',this)">${d}</button>`;
+    });
+    filterHtml += '<span class="filter-sep"></span><span class="filter-label">Plan Model:</span>';
+    planModels.forEach((m, i) => {
+        const label = PLAN_MODEL_LABELS[m] || m;
+        filterHtml += `<button class="filter-btn ${i === 0 ? 'active' : ''}" onclick="setTrajFilter('planModel','${m}',this)">${label}</button>`;
+    });
+    document.getElementById('traj-filter').innerHTML = filterHtml;
+
+    renderTrajQuestions();
+}
+
+function setTrajFilter(type, val, btn) {
+    if (type === 'dataset') currentDatasetFilter = val;
+    else if (type === 'planModel') currentPlanModel = val;
+
+    // Update button active states within the same filter group
+    const bar = document.getElementById('traj-filter');
+    const seps = bar.querySelectorAll('.filter-sep');
+    // Find which section the button belongs to
+    let section = 0;
+    let prev = btn.previousElementSibling;
+    while (prev) {
+        if (prev.classList && prev.classList.contains('filter-sep')) section++;
+        prev = prev.previousElementSibling;
+    }
+    let curSection = 0;
+    bar.querySelectorAll('.filter-btn').forEach(b => {
+        let bSec = 0;
+        let p = b.previousElementSibling;
+        while (p) {
+            if (p.classList && p.classList.contains('filter-sep')) bSec++;
+            p = p.previousElementSibling;
+        }
+        if (bSec === section) {
+            b.classList.toggle('active', b === btn);
+        }
+    });
+
+    renderTrajQuestions();
+}
+
+function renderTrajQuestions() {
+    const execModel = DATA.metadata.execution_models[0];
+    let questions = DATA.questions.filter(q => {
+        if (!q.models[execModel] || !q.models[execModel].tool) return false;
+        if (currentDatasetFilter !== 'all' && q.dataset !== currentDatasetFilter) return false;
+        return true;
+    });
+
+    const container = document.getElementById('traj-questions');
+    if (!questions.length) {
+        container.innerHTML = '<div class="no-data">无匹配结果</div>';
+        return;
+    }
+
+    container.innerHTML = questions.map(q => {
+        const m = q.models[execModel];
+        const plan = q.planned && q.planned[currentPlanModel];
+        const planSteps = Array.isArray(plan) ? plan : (plan && plan.steps ? plan.steps : null);
+        const catColor = CAT_COLORS[q.ability_category] || '#888';
+        const planLabel = PLAN_MODEL_LABELS[currentPlanModel] || currentPlanModel;
+        const toolFailed = !m.tool.succeeded;
+
+        // Options
+        const optionsHtml = (q.options && q.options.length) ? `
+            <div class="question-options">
+                ${q.options.map(o => {
+                    const optLetter = o.charAt(0);
+                    const isCorrect = q.ground_truth && q.ground_truth.toUpperCase() === optLetter.toUpperCase();
+                    return `<span class="opt ${isCorrect ? 'correct-opt' : ''}">${escHtml(o)}</span>`;
+                }).join('')}
+            </div>` : '';
+
+        return `
+        <div class="question-card" id="traj-${q.question_id}">
+            <div class="question-card-header" onclick="this.parentElement.classList.toggle('expanded')">
+                <div class="question-meta">
+                    <span class="ds-badge ${q.dataset}">${q.dataset}</span>
+                    <span class="cat-badge" style="background:${catColor}">${q.ability_category || ''}</span>
+                    ${toolFailed
+                        ? '<span class="answer-indicator wrong" style="font-size:0.7rem;">失败</span>'
+                        : `<span class="answer-indicator ${m.tool.correct ? 'correct' : 'wrong'}">${m.tool.correct ? '✓' : '✗'}</span>`}
+                    <span class="question-id">${q.question_id}</span>
+                    <span style="font-size:0.65rem;color:var(--color-text-muted)">Plan: ${planSteps ? planSteps.length : '—'} steps → Exec: ${m.tool.steps_count} steps</span>
+                    <button class="video-btn" onclick="event.stopPropagation();openVideo('${q.video_path}','${q.question_id}',${q.video_info ? JSON.stringify(JSON.stringify(q.video_info)) : 'null'})">&#9654; 视频</button>
+                </div>
+                <div class="question-text">${escHtml(q.question_text)}</div>
+                ${optionsHtml}
+            </div>
+            <div class="question-card-body">
+                <div class="traj-compare">
+                    <div class="traj-col">
+                        <div class="traj-col-header plan">
+                            <span>Plan（${planLabel}，不看视频）</span>
+                            <span class="step-count">${planSteps ? planSteps.length + ' steps' : '—'}</span>
+                        </div>
+                        <div class="step-list">
+                            ${planSteps ? planSteps.map(s => `
+                                <div class="tool-step">
+                                    <div class="tool-step-header">
+                                        <span class="step-num">${s.step}</span>
+                                        <span class="step-tool-name">${s.tool}</span>
+                                        ${s.depends_on && s.depends_on.length ? `<span class="step-deps">dep: ${s.depends_on.join(',')}</span>` : ''}
+                                    </div>
+                                    <div class="step-purpose">${escHtml(s.purpose)}</div>
+                                    ${s.inputs ? `<div class="step-io"><span class="io-label">in: </span>${escHtml(JSON.stringify(s.inputs))}</div>` : ''}
+                                    ${s.expected_output ? `<div class="step-io"><span class="io-label">out: </span>${escHtml(s.expected_output)}</div>` : ''}
+                                </div>
+                            `).join('') : '<div class="no-data">无 Plan 数据</div>'}
+                        </div>
+                    </div>
+                    <div class="traj-col">
+                        <div class="traj-col-header exec">
+                            <span>Execution（实际执行）</span>
+                            <span class="step-count">${m.tool.steps_count} steps${toolFailed ? ' · 失败' : ''}</span>
+                        </div>
+                        <div class="step-list">
+                            ${renderExecSteps(m.tool.trajectory_summary)}
+                        </div>
+                        <div class="exec-result">
+                            <span class="answer-line">
+                                ${toolFailed
+                                    ? '<span class="answer-indicator wrong">✗ 执行失败（无答案）</span>'
+                                    : `<span class="answer-indicator ${m.tool.correct ? 'correct' : 'wrong'}">${m.tool.correct ? '✓' : '✗'}</span>
+                                       Answer: ${m.tool.answer || '—'}`}
+                                <span style="font-size:0.7rem;color:var(--color-text-muted)"> (GT: ${q.ground_truth})</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function renderExecSteps(summary) {
+    if (!summary || !summary.length) return '<div class="no-data">无轨迹数据</div>';
+    let stepNum = 0;
+    return summary.map(s => {
+        if (s.type === 'tool_call') {
+            stepNum++;
+            return `
+                <div class="tool-step">
+                    <div class="tool-step-header">
+                        <span class="step-num">${stepNum}</span>
+                        <span class="step-tool-name">${s.tool}</span>
+                    </div>
+                    ${s.args_brief ? `<div class="step-io"><span class="io-label">in: </span>${escHtml(s.args_brief)}</div>` : ''}
+                    ${s.output_brief ? `<div class="step-io"><span class="io-label">out: </span>${escHtml(s.output_brief)}</div>` : ''}
+                </div>`;
+        } else if (s.type === 'reasoning') {
+            return `
+                <div class="tool-step">
+                    <div class="tool-step-header">
+                        <span class="step-num reasoning">R</span>
+                        <span class="step-tool-name reasoning">reasoning</span>
+                    </div>
+                    <div class="step-purpose">${escHtml(s.content_brief || '')}</div>
+                </div>`;
+        }
+        return '';
+    }).join('');
+}
+
+// ── Utilities ─────────────────────────────────
+function escHtml(s) {
+    if (!s) return '';
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/\n/g,'<br>');
+}
+
+function toggleSection(id) {
+    const header = document.querySelector(`#sec-${id} .collapsible-header`);
+    const body = document.getElementById(`${id}-body`);
+    header.classList.toggle('collapsed');
+    body.classList.toggle('collapsed');
+}
+
+function openVideo(path, qid, infoStr) {
+    const modal = document.getElementById('video-modal');
+    const video = document.getElementById('modal-video');
+    const title = document.getElementById('modal-title');
+    const info = document.getElementById('modal-info');
+
+    title.textContent = qid;
+
+    // Convert absolute path to relative URL for HTTP serving
+    // The video is served from the root of the HTTP server
+    video.src = path;
+    video.load();
+
+    let infoText = path;
+    if (infoStr) {
+        try {
+            const vi = JSON.parse(infoStr);
+            if (vi.duration) infoText += ` · ${(vi.duration / 60).toFixed(1)} min`;
+            if (vi.fps) infoText += ` · ${vi.fps} fps`;
+        } catch(e) {}
+    }
+    info.textContent = infoText;
+    modal.classList.add('active');
+}
+
+function closeModal() {
+    const modal = document.getElementById('video-modal');
+    const video = document.getElementById('modal-video');
+    video.pause();
+    video.src = '';
+    modal.classList.remove('active');
+}
+
+// Close modal on Escape
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeModal();
+});
+</script>
+</body>
+</html>
