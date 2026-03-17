@@ -146,6 +146,47 @@
 
         .loading { text-align:center; padding:3rem; color:var(--color-text-muted); font-size:0.9rem; }
 
+        /* ═══ OVD Coverage Section ═══ */
+        .ovd-top { display:grid; grid-template-columns:1fr auto; gap:1.5rem; margin-bottom:1.5rem; }
+        @media (max-width:800px) { .ovd-top { grid-template-columns:1fr; } }
+        .ovd-stats-col { display:flex; flex-direction:column; gap:1rem; }
+        .ovd-stat-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:1rem; }
+        .ovd-doughnut-wrap { width:220px; height:220px; flex-shrink:0; cursor:pointer; }
+
+        .ovd-stacked-chart { margin-bottom:1.5rem; }
+        .ovd-bar-row { display:flex; align-items:center; gap:0.75rem; margin-bottom:0.5rem; cursor:pointer; }
+        .ovd-bar-row:hover { opacity:0.85; }
+        .ovd-bar-label { width:60px; font-family:var(--font-mono); font-size:0.75rem; font-weight:600; text-align:right; flex-shrink:0; }
+        .ovd-bar-track { flex:1; height:28px; background:#f0f0f0; border-radius:4px; overflow:hidden; display:flex; position:relative; }
+        .ovd-bar-covered { height:100%; background:#22c55e; border-radius:4px 0 0 4px; transition:width 0.3s; display:flex; align-items:center; justify-content:flex-end; padding-right:4px; }
+        .ovd-bar-uncovered { height:100%; background:#ef4444; opacity:0.25; flex:1; }
+        .ovd-bar-pct { font-family:var(--font-mono); font-size:0.68rem; font-weight:600; color:white; text-shadow:0 1px 2px rgba(0,0,0,0.3); }
+        .ovd-bar-count { font-size:0.68rem; color:var(--color-text-muted); width:80px; flex-shrink:0; }
+        .ovd-bar-row.active-covered .ovd-bar-covered { box-shadow:0 0 0 2px #22c55e; }
+        .ovd-bar-row.active-uncovered .ovd-bar-track { box-shadow:0 0 0 2px #ef4444; }
+
+        .ovd-table-wrap { max-height:500px; overflow-y:auto; border:1px solid var(--color-border); border-radius:8px; }
+        .ovd-table { width:100%; border-collapse:collapse; font-size:0.78rem; }
+        .ovd-table th { padding:0.5rem 0.6rem; background:var(--color-bg-alt); font-weight:600; font-size:0.72rem; text-align:left; border-bottom:1px solid var(--color-border); position:sticky; top:0; z-index:1; }
+        .ovd-table td { padding:0.4rem 0.6rem; border-bottom:1px solid #f0f0f0; }
+        .ovd-table tr:hover { background:#fafbfd; }
+        .ovd-table tr.uncovered { background:#fef2f2; }
+        .ovd-table tr.partial-match { background:#fffbeb; }
+        .ovd-badge { font-size:0.6rem; font-weight:600; padding:0.1rem 0.35rem; border-radius:3px; }
+        .ovd-badge.covered { background:#dcfce7; color:#166534; }
+        .ovd-badge.uncovered { background:#fecaca; color:#991b1b; }
+        .ovd-badge.lvis { background:#dbeafe; color:#1d4ed8; }
+        .ovd-badge.coco { background:#fef3c7; color:#92400e; }
+        .ovd-badge.both { background:#d1fae5; color:#065f46; }
+
+        .ovd-filter-row { display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap; align-items:center; }
+        .ovd-search { padding:0.35rem 0.7rem; border:1px solid var(--color-border); border-radius:6px; font-size:0.78rem; font-family:var(--font-sans); width:200px; }
+        .ovd-search:focus { outline:none; border-color:var(--color-accent); }
+
+        .ovd-legend { display:flex; gap:1rem; margin-bottom:0.75rem; font-size:0.72rem; color:var(--color-text-secondary); }
+        .ovd-legend-item { display:flex; align-items:center; gap:0.3rem; cursor:pointer; }
+        .ovd-legend-dot { width:12px; height:12px; border-radius:3px; }
+
         /* Chart-driven filter banner */
         .chart-filter-banner { display:none; align-items:center; gap:0.6rem; padding:0.6rem 1rem; margin-bottom:1rem; background:#fffbeb; border:1px solid #fbbf24; border-radius:8px; font-size:0.8rem; }
         .chart-filter-banner.active { display:flex; }
@@ -258,11 +299,67 @@
         <div class="stats-grid" id="stats-grid"></div>
     </section>
 
-    <!-- Section 02: Object Entity Analysis (object/person/animal) -->
-    <section class="section" id="sec-objects">
+    <!-- Section 02: OVD Coverage Analysis -->
+    <section class="section" id="sec-ovd">
         <div class="section-header">
             <span class="section-number">02</span>
+            <span class="section-title">OVD 覆盖率分析</span>
+        </div>
+
+        <!-- Top: stats cards + doughnut -->
+        <div class="ovd-top">
+            <div class="ovd-stats-col">
+                <div class="ovd-stat-row" id="ovd-stats-row"></div>
+            </div>
+            <div class="ovd-doughnut-wrap"><canvas id="chart-ovd-doughnut"></canvas></div>
+        </div>
+
+        <!-- Stacked bars by entity type -->
+        <div class="chart-box-title">按实体类型覆盖率 <span style="font-weight:400;font-size:0.72rem;color:var(--color-text-muted)">（点击绿色/红色区域联动下方对象分析）</span></div>
+        <div class="ovd-stacked-chart" id="ovd-stacked-bars"></div>
+
+        <!-- Entity detail table -->
+        <div class="chart-box-title">实体详情</div>
+        <div class="ovd-filter-row">
+            <input class="ovd-search" id="ovd-search" placeholder="搜索实体名..." oninput="filterOvdTable()">
+            <span class="filter-label">覆盖:</span>
+            <button class="filter-btn active" data-dim="cov" onclick="setOvdFilter('cov','all',this)">全部</button>
+            <button class="filter-btn" data-dim="cov" onclick="setOvdFilter('cov','covered',this)">已覆盖</button>
+            <button class="filter-btn" data-dim="cov" onclick="setOvdFilter('cov','uncovered',this)">未覆盖</button>
+            <span class="filter-label" style="margin-left:0.5rem">类型:</span>
+            <button class="filter-btn active" data-dim="etype" onclick="setOvdFilter('etype','all',this)">全部</button>
+            <button class="filter-btn" data-dim="etype" onclick="setOvdFilter('etype','object',this)">object</button>
+            <button class="filter-btn" data-dim="etype" onclick="setOvdFilter('etype','person',this)">person</button>
+            <button class="filter-btn" data-dim="etype" onclick="setOvdFilter('etype','animal',this)">animal</button>
+            <button class="filter-btn" data-dim="etype" onclick="setOvdFilter('etype','place',this)">place</button>
+            <span class="filter-label" style="margin-left:0.5rem">匹配:</span>
+            <button class="filter-btn active" data-dim="mlevel" onclick="setOvdFilter('mlevel','all',this)">全部</button>
+            <button class="filter-btn" data-dim="mlevel" onclick="setOvdFilter('mlevel','exact',this)">exact</button>
+            <button class="filter-btn" data-dim="mlevel" onclick="setOvdFilter('mlevel','lemmatized',this)">lemma</button>
+            <button class="filter-btn" data-dim="mlevel" onclick="setOvdFilter('mlevel','partial',this)">partial</button>
+            <button class="filter-btn" data-dim="mlevel" onclick="setOvdFilter('mlevel','fuzzy',this)">fuzzy</button>
+        </div>
+        <div class="ovd-table-wrap">
+            <table class="ovd-table">
+                <thead><tr>
+                    <th>实体名</th><th>频次</th><th>类型</th><th>覆盖状态</th><th>匹配级别</th><th>匹配到</th><th>LVIS 频率</th><th>OVD Split</th>
+                </tr></thead>
+                <tbody id="ovd-table-body"></tbody>
+            </table>
+        </div>
+        <div class="pagination" id="ovd-pagination"></div>
+    </section>
+
+    <!-- Section 03: Object Entity Analysis (object/person/animal) -->
+    <section class="section" id="sec-objects">
+        <div class="section-header">
+            <span class="section-number">03</span>
             <span class="section-title">对象分析（object / person / animal）</span>
+        </div>
+        <div class="chart-filter-banner" id="ovd-link-banner">
+            <span class="chart-filter-banner-icon">🔗</span>
+            <span class="chart-filter-banner-text" id="ovd-link-text"></span>
+            <button class="chart-filter-banner-clear" onclick="clearOvdLink()">取消联动</button>
         </div>
         <div class="filter-bar" id="object-filter-bar"></div>
 
@@ -325,9 +422,11 @@ const MODEL_ORDER = [
 ];
 
 const CASES_PER_PAGE = 30;
-let STATS = null, CASES = null;
+let STATS = null, CASES = null, OVD = null;
 let currentEntityDsFilter = 'all';
 let chartInstances = {};
+let ovdCoverageLink = null;  // null | 'covered' | 'uncovered'
+let ovdCoverageLookup = {};  // entity name → match info or null
 
 /* ═══════════════════════════════════════════════════════════
    Utility
@@ -431,7 +530,13 @@ function toggleUserPrompt(btn) {
 const OBJECT_TYPES = new Set(['object', 'person', 'animal']);
 const TOP_N = 100;
 
-/** Compute object entity distributions split by has-attributes / no-attributes */
+/** Check if entity name is covered by OVD datasets */
+function isEntityCovered(name) {
+    return !!ovdCoverageLookup[name];
+}
+
+/** Compute object entity distributions split by has-attributes / no-attributes.
+ *  Respects ovdCoverageLink filter if set. */
 function computeObjectDistributions(cases) {
     const withAdj = {}, withAdjTypes = {};
     const noAdj = {}, noAdjTypes = {};
@@ -440,6 +545,9 @@ function computeObjectDistributions(cases) {
             if (!OBJECT_TYPES.has(e.type)) continue;
             const n = (e.name || '').toLowerCase();
             if (ENTITY_NAME_BLACKLIST.has(n)) continue;
+            // OVD coverage filter
+            if (ovdCoverageLink === 'covered' && !isEntityCovered(n)) continue;
+            if (ovdCoverageLink === 'uncovered' && isEntityCovered(n)) continue;
             if (e.attributes && e.attributes.length > 0) {
                 withAdj[n] = (withAdj[n] || 0) + 1;
                 if (!withAdjTypes[n]) withAdjTypes[n] = {};
@@ -466,12 +574,15 @@ function computeObjectDistributions(cases) {
    ═══════════════════════════════════════════════════════════ */
 async function loadData() {
     try {
-        const [statsRes, casesRes] = await Promise.all([
+        const [statsRes, casesRes, ovdRes] = await Promise.all([
             fetch('../data/open-vocabulary-stats.json'),
-            fetch('../data/open-vocabulary-cases.json')
+            fetch('../data/open-vocabulary-cases.json'),
+            fetch('../data/ovd-coverage.json')
         ]);
         STATS = await statsRes.json();
         CASES = await casesRes.json();
+        OVD = await ovdRes.json();
+        buildOvdCoverageLookup();
         init();
     } catch (e) {
         document.querySelector('.main').innerHTML = `<div class="loading">数据加载失败: ${escHtml(e.message)}</div>`;
@@ -709,6 +820,247 @@ function updateObjectCharts() {
 }
 
 /* ═══════════════════════════════════════════════════════════
+   Section 02: OVD Coverage Analysis
+   ═══════════════════════════════════════════════════════════ */
+let ovdTableData = [];     // all rows for table
+let ovdFilteredData = [];  // after search+filter
+let ovdTablePage = 1;
+const OVD_PAGE_SIZE = 50;
+let ovdFilters = { cov: 'all', etype: 'all', mlevel: 'all' };
+
+function buildOvdCoverageLookup() {
+    ovdCoverageLookup = {};
+    if (!OVD) return;
+    for (const [name, info] of Object.entries(OVD.detailed_matches)) {
+        ovdCoverageLookup[name.toLowerCase()] = info;
+    }
+}
+
+function buildOvdTableData() {
+    ovdTableData = [];
+    if (!OVD) return;
+    // Covered entities from detailed_matches
+    for (const [name, info] of Object.entries(OVD.detailed_matches)) {
+        ovdTableData.push({
+            name: name.toLowerCase(),
+            count: info.occurrence_count,
+            type: '', // will be enriched
+            covered: true,
+            dataset: info.dataset,
+            match_level: info.match_level,
+            matched_category: info.matched_category,
+            lvis_frequency: info.lvis_frequency || '—',
+            lvis_split: info.lvis_split || '—',
+            coco_split: info.coco_split || '—',
+        });
+    }
+    // Uncovered from top_uncovered_entities
+    for (const e of OVD.top_uncovered_entities) {
+        ovdTableData.push({
+            name: e.name.toLowerCase(),
+            count: e.count,
+            type: e.type || '',
+            covered: false,
+            dataset: 'none',
+            match_level: '—',
+            matched_category: '—',
+            lvis_frequency: '—',
+            lvis_split: '—',
+            coco_split: '—',
+        });
+    }
+    // Enrich types from CASES entity data
+    const typeCounts = {};
+    for (const c of CASES) {
+        for (const e of (c.entities || [])) {
+            const n = (e.name || '').toLowerCase();
+            if (!typeCounts[n]) typeCounts[n] = {};
+            typeCounts[n][e.type] = (typeCounts[n][e.type] || 0) + 1;
+        }
+    }
+    for (const row of ovdTableData) {
+        if (!row.type && typeCounts[row.name]) {
+            const sorted = Object.entries(typeCounts[row.name]).sort((a,b) => b[1] - a[1]);
+            row.type = sorted[0]?.[0] || '';
+        }
+    }
+    // Sort by count desc
+    ovdTableData.sort((a, b) => b.count - a.count);
+}
+
+function renderOvdSection() {
+    if (!OVD) return;
+    const cs = OVD.coverage_summary;
+
+    // Stats cards
+    const statsHtml = [
+        { v: cs.unique_names.total.toLocaleString(), l: '唯一实体名' },
+        { v: cs.weighted_by_occurrence.total.toLocaleString(), l: '总提及次数' },
+        { v: cs.unique_names.lvis_coverage_pct.toFixed(1) + '%', l: 'LVIS 覆盖率 (名)' },
+        { v: cs.weighted_by_occurrence.lvis_coverage_pct.toFixed(1) + '%', l: 'LVIS 覆盖率 (频次)' },
+        { v: cs.unique_names.coco_coverage_pct.toFixed(1) + '%', l: 'COCO 覆盖率 (名)' },
+        { v: cs.weighted_by_occurrence.coco_coverage_pct.toFixed(1) + '%', l: 'COCO 覆盖率 (频次)' },
+    ].map(i => `<div class="stat-card"><div class="stat-value">${i.v}</div><div class="stat-label">${i.l}</div></div>`).join('');
+    document.getElementById('ovd-stats-row').innerHTML = statsHtml;
+
+    // Doughnut chart
+    const un = cs.unique_names;
+    const doughnutData = [un.coco_only, un.lvis_only, un.both, un.neither];
+    const doughnutLabels = ['COCO only', 'LVIS only', 'Both', 'Neither'];
+    const doughnutColors = ['#f59e0b', '#3b82f6', '#22c55e', '#ef4444'];
+    chartInstances.ovdDoughnut = new Chart(document.getElementById('chart-ovd-doughnut'), {
+        type: 'doughnut',
+        data: {
+            labels: doughnutLabels,
+            datasets: [{ data: doughnutData, backgroundColor: doughnutColors, borderWidth: 2, borderColor: '#fff' }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            cutout: '55%',
+            onClick: (evt) => {
+                const chart = chartInstances.ovdDoughnut;
+                const points = chart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, false);
+                if (points.length === 0) return;
+                const idx = points[0].index;
+                // COCO only / LVIS only / Both → covered; Neither → uncovered
+                const status = idx === 3 ? 'uncovered' : 'covered';
+                applyOvdLink(status);
+            },
+            plugins: {
+                legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 10, usePointStyle: true, pointStyle: 'rectRounded' } },
+                tooltip: { callbacks: { label: ctx => `${ctx.label}: ${ctx.parsed.toLocaleString()} (${(ctx.parsed/un.total*100).toFixed(1)}%)` } }
+            }
+        }
+    });
+
+    // Stacked bars by entity type
+    const typeData = OVD.per_entity_type_coverage;
+    const types = ['animal', 'object', 'person', 'place'];
+    let barsHtml = '';
+    for (const t of types) {
+        const d = typeData[t];
+        if (!d) continue;
+        const pct = d.coverage_pct.toFixed(1);
+        const covW = Math.max(2, d.coverage_pct);
+        barsHtml += `<div class="ovd-bar-row" data-type="${t}">`;
+        barsHtml += `<div class="ovd-bar-label" style="color:${getEntityColor(t)}">${t}</div>`;
+        barsHtml += `<div class="ovd-bar-track" onclick="handleOvdBarClick('${t}', event)">`;
+        barsHtml += `<div class="ovd-bar-covered" style="width:${covW}%"><span class="ovd-bar-pct">${pct}%</span></div>`;
+        barsHtml += `<div class="ovd-bar-uncovered"></div>`;
+        barsHtml += `</div>`;
+        barsHtml += `<div class="ovd-bar-count">${d.covered}/${d.unique_names}</div>`;
+        barsHtml += `</div>`;
+    }
+    document.getElementById('ovd-stacked-bars').innerHTML = barsHtml;
+
+    // Build and render table
+    buildOvdTableData();
+    filterOvdTable();
+}
+
+function handleOvdBarClick(type, event) {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const pct = x / rect.width * 100;
+    const typeData = OVD.per_entity_type_coverage[type];
+    const covPct = typeData ? typeData.coverage_pct : 50;
+    const status = pct <= covPct ? 'covered' : 'uncovered';
+    applyOvdLink(status);
+}
+
+function applyOvdLink(status) {
+    if (ovdCoverageLink === status) {
+        clearOvdLink();
+        return;
+    }
+    ovdCoverageLink = status;
+    const banner = document.getElementById('ovd-link-banner');
+    const label = status === 'covered' ? '已覆盖（LVIS/COCO）' : '未覆盖';
+    document.getElementById('ovd-link-text').innerHTML =
+        `OVD 联动筛选: <strong>${label}</strong> — 仅展示${label}的对象实体`;
+    banner.classList.add('active');
+    updateObjectCharts();
+    document.getElementById('sec-objects').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function clearOvdLink() {
+    ovdCoverageLink = null;
+    document.getElementById('ovd-link-banner').classList.remove('active');
+    updateObjectCharts();
+}
+
+/* OVD table filtering */
+function setOvdFilter(dim, value, btn) {
+    ovdFilters[dim] = value;
+    const row = btn.closest('.ovd-filter-row');
+    row.querySelectorAll(`.filter-btn[data-dim="${dim}"]`).forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    ovdTablePage = 1;
+    filterOvdTable();
+}
+
+function filterOvdTable() {
+    const q = (document.getElementById('ovd-search').value || '').toLowerCase().trim();
+    ovdFilteredData = ovdTableData.filter(row => {
+        if (q && !row.name.includes(q)) return false;
+        if (ovdFilters.cov === 'covered' && !row.covered) return false;
+        if (ovdFilters.cov === 'uncovered' && row.covered) return false;
+        if (ovdFilters.etype !== 'all' && row.type !== ovdFilters.etype) return false;
+        if (ovdFilters.mlevel !== 'all' && row.match_level !== ovdFilters.mlevel) return false;
+        return true;
+    });
+    renderOvdTable();
+}
+
+function renderOvdTable() {
+    const total = ovdFilteredData.length;
+    const totalPages = Math.max(1, Math.ceil(total / OVD_PAGE_SIZE));
+    if (ovdTablePage > totalPages) ovdTablePage = totalPages;
+    const start = (ovdTablePage - 1) * OVD_PAGE_SIZE;
+    const pageData = ovdFilteredData.slice(start, start + OVD_PAGE_SIZE);
+
+    const tbody = document.getElementById('ovd-table-body');
+    tbody.innerHTML = pageData.map(row => {
+        const cls = row.covered ? (row.match_level === 'partial' || row.match_level === 'fuzzy' ? 'partial-match' : '') : 'uncovered';
+        const covBadge = row.covered
+            ? `<span class="ovd-badge ${row.dataset === 'both' ? 'both' : row.dataset === 'coco' ? 'coco' : 'lvis'}">${row.dataset === 'both' ? 'Both' : row.dataset === 'coco' ? 'COCO' : 'LVIS'}</span>`
+            : '<span class="ovd-badge uncovered">None</span>';
+        const lvSplit = row.lvis_split !== '—' ? row.lvis_split : '';
+        const coSplit = row.coco_split && row.coco_split !== '—' ? '/' + row.coco_split : '';
+        return `<tr class="${cls}">
+            <td style="font-family:var(--font-mono);font-size:0.72rem">${escHtml(row.name)}</td>
+            <td>${row.count.toLocaleString()}</td>
+            <td><span style="color:${getEntityColor(row.type)};font-weight:600;font-size:0.72rem">${row.type || '—'}</span></td>
+            <td>${covBadge}</td>
+            <td style="font-family:var(--font-mono);font-size:0.7rem">${row.match_level}</td>
+            <td style="font-family:var(--font-mono);font-size:0.7rem;color:var(--color-text-muted)">${row.covered ? escHtml(row.matched_category) : '—'}</td>
+            <td style="font-family:var(--font-mono);font-size:0.7rem">${row.lvis_frequency}</td>
+            <td style="font-family:var(--font-mono);font-size:0.7rem">${lvSplit}${coSplit || ''}</td>
+        </tr>`;
+    }).join('');
+
+    // Pagination
+    let ph = '';
+    ph += `<button class="page-btn" onclick="goOvdPage(${ovdTablePage-1})" ${ovdTablePage<=1?'disabled':''}>上一页</button>`;
+    const maxShow = 7;
+    let ps = Math.max(1, ovdTablePage-3), pe = Math.min(totalPages, ps+maxShow-1);
+    if (pe-ps < maxShow-1) ps = Math.max(1, pe-maxShow+1);
+    if (ps > 1) { ph += `<button class="page-btn" onclick="goOvdPage(1)">1</button>`; if (ps>2) ph += `<span class="page-info">...</span>`; }
+    for (let p = ps; p <= pe; p++) ph += `<button class="page-btn ${p===ovdTablePage?'active':''}" onclick="goOvdPage(${p})">${p}</button>`;
+    if (pe < totalPages) { if (pe<totalPages-1) ph += `<span class="page-info">...</span>`; ph += `<button class="page-btn" onclick="goOvdPage(${totalPages})">${totalPages}</button>`; }
+    ph += `<button class="page-btn" onclick="goOvdPage(${ovdTablePage+1})" ${ovdTablePage>=totalPages?'disabled':''}>下一页</button>`;
+    ph += `<span class="page-info">${total > 0 ? start+1 : 0}-${Math.min(start+OVD_PAGE_SIZE,total)} / ${total.toLocaleString()}</span>`;
+    document.getElementById('ovd-pagination').innerHTML = ph;
+}
+
+function goOvdPage(p) {
+    const totalPages = Math.max(1, Math.ceil(ovdFilteredData.length / OVD_PAGE_SIZE));
+    if (p < 1 || p > totalPages) return;
+    ovdTablePage = p;
+    renderOvdTable();
+}
+
+/* ═══════════════════════════════════════════════════════════
    Case Browsers (one per chart: 'wa' = with adj, 'na' = no adj)
    ═══════════════════════════════════════════════════════════ */
 const caseBrowsers = {
@@ -894,6 +1246,7 @@ function setupBackToTop() {
    ═══════════════════════════════════════════════════════════ */
 function init() {
     renderOverview();
+    renderOvdSection();
     renderObjectFilterBar();
     updateObjectCharts();
     setupBackToTop();
