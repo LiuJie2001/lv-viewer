@@ -16,5 +16,8 @@ __pycache__/
 *.swp
 *.swo
 
+# Data symlinks
+datasets-link
+
 # Claude Code
 CLAUDE.md
