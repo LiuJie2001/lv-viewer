@@ -1,0 +1,124 @@
+{
+  "metadata": {
+    "generated_date": "2026-03-17",
+    "source": "execution-comparison.json",
+    "total_failures": 12,
+    "summary": {
+      "pure_tool_problem": 0,
+      "pure_trajectory_problem": 2,
+      "both": 8,
+      "top_tool_issues": ["OCR API 429 限流 (4次)", "temporal_grounding 幻觉 (4次)", "object_detection 低分辨率失效 (3次)"],
+      "top_trajectory_issues": ["盲目重试不切换策略 (4次)", "长视频搜索范围不足 (3次)", "缺乏结果交叉验证 (2次)"]
+    }
+  },
+  "failures": [
+    {
+      "id": "longvideobench_4QSmRYQBfN4_0",
+      "question": "字幕出现后，右下角显示了什么？",
+      "failed_tools": ["text_recognition"],
+      "failure_description": "text_recognition 连续 HTTP 429 限流，重试 8 次均失败，无法生成答案",
+      "attribution": "both",
+      "tool_problem": "OCR API 无退避机制，限流后完全不可用",
+      "trajectory_problem": "盲目重试相同参数，未切换到 temporal_grounding 定位字幕"
+    },
+    {
+      "id": "longvideobench_5dJUUQufzw4_0",
+      "question": "冒黑烟的飞机之前出现在哪里？（1193s 长视频）",
+      "failed_tools": ["temporal_grounding", "object_detection"],
+      "failure_description": "temporal_grounding 返回幻觉置信度（0-15s / 0.95），object_detection 检测飞机返回空，15 步耗尽",
+      "attribution": "trajectory",
+      "tool_problem": null,
+      "trajectory_problem": "1193s 视频只查了前 18s，缺乏先粗后细的搜索策略"
+    },
+    {
+      "id": "longvideobench_5qMcDQd17Y4_0",
+      "question": "字幕显示 'conference happening about central' 时，男人身后是什么？",
+      "failed_tools": ["text_recognition"],
+      "failure_description": "OCR 成功一次但返回占位符垃圾文本（'The quick brown fox...'），后续全部 429",
+      "attribution": "both",
+      "tool_problem": "OCR 返回占位符文本 + 限流",
+      "trajectory_problem": "应先用 temporal_grounding 定位再用 object_detection"
+    },
+    {
+      "id": "longvideobench_60-ADf8OL9A_0",
+      "question": "穿橄榄色西装的男人提到 'traditional artists' 时身体发生什么变化？",
+      "failed_tools": ["text_recognition", "temporal_grounding", "audio_extraction"],
+      "failure_description": "视频无音轨，OCR 返回垃圾文本，temporal_grounding 对语音查询返回空",
+      "attribution": "trajectory",
+      "tool_problem": null,
+      "trajectory_problem": "未及早识别无音轨，浪费步骤在 OCR 重试上，应切换纯视觉匹配策略"
+    },
+    {
+      "id": "longvideobench_86CxyhFV9MI_0",
+      "question": "特定男人上台时出现了哪些字幕？",
+      "failed_tools": ["text_recognition"],
+      "failure_description": "13 次 OCR 调用 12 次 429 限流，唯一成功的返回韩文而非目标英文字幕",
+      "attribution": "both",
+      "tool_problem": "OCR 限流瘫痪整个流程",
+      "trajectory_problem": "未降低批次大小或尝试 temporal_grounding 定位"
+    },
+    {
+      "id": "longvideobench_Owmy5Vu3BnA_0",
+      "question": "'Lulu Chen BLOOMBERG NEWS' 字幕时谁在说话？",
+      "failed_tools": ["attribute_recognition"],
+      "failure_description": "attribute_recognition 将黑发错判为棕发，选错答案",
+      "attribution": "both",
+      "tool_problem": "属性识别模型准确度不足（黑发→棕发）",
+      "trajectory_problem": "未用 active_speaker_detection，未交叉验证属性"
+    },
+    {
+      "id": "longvideobench_SO3czkzeFjw_1",
+      "question": "三个事件的正确时间顺序？",
+      "failed_tools": ["temporal_grounding"],
+      "failure_description": "temporal_grounding 返回错误时间戳，背包拉链实际在树干之前但被排在之后",
+      "attribution": "both",
+      "tool_problem": "temporal_grounding 幻觉事件位置",
+      "trajectory_problem": "未提取帧视觉验证时间戳正确性"
+    },
+    {
+      "id": "lvbench_41",
+      "question": "主角在 10:33 如何通过通道？",
+      "failed_tools": ["action_recognition", "object_detection"],
+      "failure_description": "action_recognition 仅返回粗粒度动作（walking/running），无法区分选项；object_detection 检测不到长矛",
+      "attribution": "both",
+      "tool_problem": "动作识别粒度不足，低分辨率（640x360）下物体检测失败",
+      "trajectory_problem": "应密集提取关键帧或用 frame_comparison 分析"
+    },
+    {
+      "id": "lvbench_61",
+      "question": "男人威胁厨师后主角做了什么？（3665s）",
+      "failed_tools": ["temporal_grounding", "action_recognition", "object_detection"],
+      "failure_description": "temporal_grounding 将场景定位到 4-6s（61 分钟视频明显不合理），检测工具全部返回空",
+      "attribution": "both",
+      "tool_problem": "检测工具在低分辨率帧上全面失效",
+      "trajectory_problem": "盲目信任不合理的时间定位，未验证时间戳合理性"
+    },
+    {
+      "id": "lvbench_63",
+      "question": "主角往香炉里插了几根香？（3665s）",
+      "failed_tools": ["object_detection"],
+      "failure_description": "object_detection 对所有查询（incense/stick/hand/person）全部返回空，连人都检测不到",
+      "attribution": "both",
+      "tool_problem": "VLM 后端在 640x360 帧上完全失效",
+      "trajectory_problem": "反复失败后未切换到 VLM 视觉问答策略"
+    },
+    {
+      "id": "lvbench_62",
+      "question": "持枪男人不断靠近时主角做了什么？（61分钟视频）",
+      "failed_tools": ["temporal_grounding", "action_recognition"],
+      "failure_description": "temporal_grounding 在 3665s 视频中反复返回前 7s 的幻觉时间戳（置信度 0.95），action_recognition 全部返回空，21 步耗尽未产出答案",
+      "attribution": "both",
+      "tool_problem": "temporal_grounding 对长视频产生严重幻觉（61 分钟视频定位到前 7 秒），action_recognition 在低分辨率帧上完全失效",
+      "trajectory_problem": "盲目信任不合理的时间定位（61 分钟视频中 4-7s 的结果），反复用相同策略重试 temporal_grounding 而不扩大搜索范围"
+    },
+    {
+      "id": "lvbench_65",
+      "question": "排在主角前面的母子为何无法进城？（61分钟视频）",
+      "failed_tools": ["temporal_grounding", "text_recognition", "audio_extraction"],
+      "failure_description": "temporal_grounding 始终定位到 19-20s 区间（61 分钟视频明显不合理），OCR 和音频提取均未获取到有效信息，15 步耗尽",
+      "attribution": "both",
+      "tool_problem": "temporal_grounding 对长视频场景定位严重失准，text_recognition 未能识别相关字幕",
+      "trajectory_problem": "未验证时间戳合理性（19s/3665s），未尝试分段搜索或扩大时间窗口，反复在同一小区间内循环"
+    }
+  ]
+}

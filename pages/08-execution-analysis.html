@@ -54,6 +54,7 @@
         .stat-card { background:var(--color-bg-alt); border:1px solid var(--color-border); border-radius:8px; padding:1rem 1.25rem; text-align:center; }
         .stat-value { font-family:var(--font-serif); font-size:1.75rem; font-weight:700; color:var(--color-accent); }
         .stat-label { font-size:0.8rem; color:var(--color-text-muted); margin-top:0.25rem; }
+        .stat-desc { font-size:0.65rem; color:var(--color-text-muted); margin-top:0.15rem; opacity:0.7; }
 
         /* Filter bar */
         .filter-bar { display:flex; gap:0.5rem; margin-bottom:1.5rem; flex-wrap:wrap; align-items:center; }
@@ -179,6 +180,38 @@
         .baseline-row { border-top:1px solid var(--color-border); border-bottom:1px solid var(--color-border); }
         .baseline-row-header { padding:0.5rem 0.8rem; font-size:0.75rem; font-weight:600; display:flex; align-items:center; gap:0.4rem; background:#fff7ed; color:#9a3412; border-top:2px solid #FF9800; border-bottom:1px solid var(--color-border); }
         .baseline-response { font-size:0.72rem; color:var(--color-text-secondary); line-height:1.5; padding:0.6rem 0.8rem; }
+        .baseline-reasoning { padding:0.6rem 0.8rem; border-bottom:1px solid var(--color-border); }
+        .baseline-answer-section { padding:0.6rem 0.8rem; }
+        .baseline-section-label { font-size:0.62rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--color-text-muted); margin-bottom:0.3rem; }
+        .baseline-md { font-size:0.72rem; line-height:1.6; color:var(--color-text-secondary); }
+        .baseline-md p { margin:0.3rem 0; }
+        .baseline-md strong { color:var(--color-text); }
+        .baseline-md ul, .baseline-md ol { margin:0.3rem 0; padding-left:1.2rem; }
+        .baseline-md li { margin:0.15rem 0; }
+        .baseline-md code { font-family:var(--font-mono); font-size:0.65rem; background:var(--color-bg-alt); padding:0.1rem 0.3rem; border-radius:3px; }
+
+        /* Failure Analysis */
+        .failure-analysis { margin-top:0.5rem; border:1px solid #fecaca; border-radius:6px; background:#fef2f2; padding:0.6rem 0.8rem; }
+        .failure-analysis-header { font-size:0.72rem; font-weight:700; color:#991b1b; margin-bottom:0.4rem; }
+        .failure-desc { font-size:0.72rem; color:#7f1d1d; line-height:1.5; margin-bottom:0.4rem; }
+        .failure-details { display:flex; flex-direction:column; gap:0.3rem; }
+        .failure-item { display:flex; align-items:flex-start; gap:0.4rem; font-size:0.68rem; color:var(--color-text-secondary); line-height:1.5; }
+        .failure-tag { display:inline-block; font-size:0.58rem; font-weight:600; padding:0.1rem 0.35rem; border-radius:3px; white-space:nowrap; flex-shrink:0; }
+        .failure-tag.tool { background:#fee2e2; color:#dc2626; }
+        .failure-tag.traj { background:#fef3c7; color:#92400e; }
+        .failure-tag.attr-both { background:#f3e8ff; color:#7c3aed; }
+        .failure-tag.attr-trajectory { background:#fef3c7; color:#92400e; }
+        .failure-tag.attr-tool { background:#fee2e2; color:#dc2626; }
+        .failure-tools code { font-family:var(--font-mono); font-size:0.62rem; background:#fee2e2; padding:0.05rem 0.25rem; border-radius:2px; color:#dc2626; }
+
+        /* Failure Summary */
+        .failure-summary { background:#fef2f2; border:1px solid #fecaca; border-radius:8px; padding:0.8rem 1rem; margin-bottom:1rem; }
+        .failure-summary-header { font-size:0.82rem; font-weight:700; color:#991b1b; margin-bottom:0.5rem; }
+        .failure-summary-count { font-size:0.68rem; font-weight:400; color:#b91c1c; margin-left:0.4rem; }
+        .failure-summary-body { display:flex; flex-direction:column; gap:0.4rem; }
+        .failure-summary-row { display:flex; gap:0.6rem; font-size:0.72rem; line-height:1.5; }
+        .failure-summary-label { font-weight:600; color:#991b1b; white-space:nowrap; min-width:6rem; flex-shrink:0; }
+        .failure-summary-list { display:flex; flex-direction:column; gap:0.15rem; color:var(--color-text-secondary); }
 
         /* ── Two-column comparison layout (Plan | Tool) ── */
         .two-col-compare { display:grid; grid-template-columns:1fr 1fr; gap:0; }
@@ -216,6 +249,8 @@
         .step-num { font-family:var(--font-mono); font-size:0.58rem; font-weight:700; color:white; background:var(--color-accent); width:18px; height:18px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; }
         .step-num.reasoning { background:#9ca3af; }
         .exec-tool-dot { width:6px; height:6px; border-radius:50%; background:var(--color-accent); flex-shrink:0; }
+        .toggle-all-btn { font-size:0.58rem; padding:0.1rem 0.4rem; border:1px solid var(--color-border); border-radius:3px; background:white; color:var(--color-text-muted); cursor:pointer; margin-left:auto; }
+        .toggle-all-btn:hover { background:var(--color-bg-alt); color:var(--color-text); }
         .step-tool-name { font-family:var(--font-mono); font-size:0.72rem; font-weight:600; color:var(--color-accent); cursor:pointer; }
         .step-tool-name:hover { text-decoration:underline; }
         .step-tool-name.reasoning { color:#6b7280; font-style:italic; cursor:default; }
@@ -339,8 +374,10 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
 let DATA = null;
+let FAILURE_DATA = null;
 const CAT_COLORS = {
     'High-Level Reasoning': '#F44336',
     'Temporal Relation': '#2196F3',
@@ -363,8 +400,12 @@ let currentExecModel = null; // set in init
 // ── Data Loading ──────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
     try {
-        const res = await fetch('../data/execution-comparison.json');
+        const [res, failRes] = await Promise.all([
+            fetch('../data/execution-comparison.json'),
+            fetch('../data/execution-failure-analysis.json').catch(() => null),
+        ]);
         DATA = await res.json();
+        if (failRes && failRes.ok) FAILURE_DATA = await failRes.json();
         init();
     } catch (e) {
         document.getElementById('header-subtitle').textContent = '数据加载失败: ' + e.message;
@@ -555,7 +596,6 @@ function buildAccuracySection() {
 function classifyCase(m) {
     const dOk = m && m.direct && m.direct.succeeded;
     const tOk = m && m.tool && m.tool.succeeded;
-    if (!tOk && !dOk) return 'both_failed';
     if (!tOk) return 'tool_failed';
     if (!dOk) return 'direct_failed';
     const dc = m.direct.correct, tc = m.tool.correct;
@@ -572,7 +612,6 @@ const ALL_CAT_LABELS = {
     'tool_only': 'Tool Only',
     'tool_failed': 'Tool Failed',
     'direct_failed': 'Baseline Failed',
-    'both_failed': 'Both Failed',
 };
 
 function rebuildAccuracyStats() {
@@ -599,23 +638,22 @@ function rebuildAccuracyStats() {
     // Stats bar
     const bs = summary.both_succeeded;
     const tov = summary.tool_overall;
-    if (totalQ > 0) {
+    if (totalQ > 0 && bs.total > 0) {
         const directAcc = (bs.direct_accuracy * 100).toFixed(1);
         const toolAcc = (bs.tool_accuracy * 100).toFixed(1);
         document.getElementById('acc-stats').innerHTML = `
         <div class="stats-grid" style="margin-bottom:1rem;">
-            <div class="stat-card"><div class="stat-value">${tov.succeeded}/${tov.total}</div><div class="stat-label">Tool 成功率 (${(tov.success_rate*100).toFixed(1)}%)</div></div>
-            <div class="stat-card"><div class="stat-value">${(tov.succeeded_accuracy*100).toFixed(1)}%</div><div class="stat-label">Tool 成功正确率 (${tov.succeeded_correct}/${tov.succeeded})</div></div>
-            <div class="stat-card"><div class="stat-value">${directAcc}%</div><div class="stat-label">Baseline 正确率 (${bs.direct_correct}/${bs.total} 双方成功)</div></div>
-            <div class="stat-card"><div class="stat-value">${toolAcc}%</div><div class="stat-label">Tool 正确率 (${bs.tool_correct}/${bs.total} 双方成功)</div></div>
-        </div>`;
+            <div class="stat-card"><div class="stat-value">${directAcc}%</div><div class="stat-label">Baseline 正确率 (${bs.direct_correct}/${bs.total})</div><div class="stat-desc">直接用 Gemini 回答问题</div></div>
+            <div class="stat-card"><div class="stat-value">${toolAcc}%</div><div class="stat-label">Tool 正确率 (${bs.tool_correct}/${bs.total})</div><div class="stat-desc">Gemini 作为主 Agent 调用工具</div></div>
+        </div>
+        <div style="font-size:0.65rem;color:var(--color-text-muted);margin-bottom:0.8rem;">* 仅统计双方均成功产出答案的 ${bs.total} 题</div>`;
     } else {
         document.getElementById('acc-stats').innerHTML = '';
     }
 
     // Category tabs
     const tabs = document.getElementById('acc-tabs');
-    const catOrder = ['both_correct', 'both_wrong', 'direct_only', 'tool_only', 'tool_failed', 'direct_failed', 'both_failed'];
+    const catOrder = ['both_correct', 'both_wrong', 'direct_only', 'tool_only', 'tool_failed', 'direct_failed'];
     let tabsHtml = `<button class="acc-cat-tab all active" onclick="setAccCategory('all',this)">All <span class="tab-count">${totalQ}</span></button>`;
     catOrder.forEach(cat => {
         if (catCounts[cat]) {
@@ -669,7 +707,10 @@ function renderAccQuestions() {
     });
     const sorted = Object.values(abilityGroups).sort((a, b) => Number(a.ability_id || 0) - Number(b.ability_id || 0));
 
-    container.innerHTML = sorted.map(group => {
+    // Show failure summary when filtering tool_failed
+    const summaryHtml = currentAccCategory === 'tool_failed' ? renderFailureSummary() : '';
+
+    container.innerHTML = summaryHtml + sorted.map(group => {
         const color = CAT_COLORS[group.ability_category] || '#888';
 
         const questionsHtml = group.questions.map(q => {
@@ -687,13 +728,27 @@ function renderAccQuestions() {
             // Baseline section
             let baselineHtml = '';
             if (hasDirect && hasDirect.succeeded) {
+                const hasReasoning = hasDirect.reasoning && hasDirect.reasoning.trim();
+                const tokenInfo = hasDirect.token_usage
+                    ? ` · ${hasDirect.token_usage.thoughts_tokens || 0} think tokens`
+                    : '';
+                const durationInfo = hasDirect.duration_seconds
+                    ? ` · ${hasDirect.duration_seconds.toFixed(1)}s`
+                    : '';
+                let bodyHtml = '';
+                if (hasReasoning) {
+                    bodyHtml += `<div class="baseline-reasoning"><div class="baseline-section-label">Reasoning</div><div class="baseline-md">${renderMarkdown(hasDirect.reasoning)}</div></div>`;
+                    bodyHtml += `<div class="baseline-answer-section"><div class="baseline-section-label">Response</div><div class="baseline-md">${renderMarkdown(hasDirect.response || '')}</div></div>`;
+                } else {
+                    bodyHtml += `<div class="baseline-response">${escHtml(hasDirect.response || '')}</div>`;
+                }
                 baselineHtml = `<div class="baseline-row">
                     <div class="baseline-row-header">
                         <span>Baseline</span>
                         <span class="answer-indicator ${hasDirect.correct ? 'correct' : 'wrong'}">${hasDirect.correct ? '✓' : '✗'} ${hasDirect.answer || '—'}</span>
-                        <span style="font-size:0.6rem;color:var(--color-text-muted)">GT: ${q.ground_truth}</span>
+                        <span style="font-size:0.6rem;color:var(--color-text-muted)">GT: ${q.ground_truth}${tokenInfo}${durationInfo}</span>
                     </div>
-                    <div class="baseline-response">${escHtml(hasDirect.response || '')}</div>
+                    ${bodyHtml}
                 </div>`;
             } else {
                 baselineHtml = `<div class="baseline-row">
@@ -713,6 +768,7 @@ function renderAccQuestions() {
                         <span>Tool Execution</span>
                         <span class="answer-indicator ${hasTool.correct ? 'correct' : 'wrong'}">${hasTool.correct ? '✓' : '✗'} ${hasTool.answer || '—'}</span>
                         <span class="step-count">${toolSteps} steps</span>
+                        <button class="toggle-all-btn" onclick="event.stopPropagation();toggleAllDetails(this)">展开全部</button>
                     </div>
                     <div class="step-list">${renderExecSteps(hasTool.trajectory_summary)}</div>
                 </div>`;
@@ -722,6 +778,7 @@ function renderAccQuestions() {
                         <span>Tool Execution</span>
                         <span class="answer-indicator failed">FAILED</span>
                         <span class="step-count">${toolSteps} steps</span>
+                        <button class="toggle-all-btn" onclick="event.stopPropagation();toggleAllDetails(this)">展开全部</button>
                     </div>
                     <div class="step-list">${hasTool.trajectory_summary ? renderExecSteps(hasTool.trajectory_summary) : '<div class="no-data">执行失败</div>'}</div>
                 </div>`;
@@ -733,6 +790,9 @@ function renderAccQuestions() {
             }
 
             const metaSteps = hasTool ? `Plan: ${planSteps ? planSteps.length : '—'} → Exec: ${toolSteps} steps` : `Plan: ${planSteps ? planSteps.length : '—'} steps`;
+
+            // Failure analysis
+            const failureHtml = renderFailureAnalysis(q.question_id);
 
             return `
             <div class="question-card" id="acc-${q.question_id}">
@@ -761,6 +821,7 @@ function renderAccQuestions() {
                         </div>
                         ${toolHtml}
                     </div>
+                    ${failureHtml}
                 </div>
             </div>`;
         }).join('');
@@ -814,32 +875,13 @@ function renderPlanSteps(steps) {
     }).join('');
 }
 
-function renderExecSteps(summary) {
-    if (!summary || !summary.length) return '<div class="no-data">无轨迹数据</div>';
+function renderExecSteps(steps) {
+    if (!steps || !steps.length) return '<div class="no-data">无轨迹数据</div>';
 
-    // Group into steps: each step = optional think + consecutive tool_calls
-    const steps = [];
-    let current = null;
-    summary.forEach(s => {
-        if (s.type === 'reasoning' || (s.type === 'tool_call' && s.reasoning && s.reasoning.trim())) {
-            // Start a new step when we encounter reasoning
-            current = { think: s.type === 'reasoning' ? (s.content_brief || '') : s.reasoning, tools: [] };
-            steps.push(current);
-            if (s.type === 'tool_call') {
-                current.tools.push(s);
-            }
-        } else if (s.type === 'tool_call') {
-            if (!current) {
-                current = { think: '', tools: [] };
-                steps.push(current);
-            }
-            current.tools.push(s);
-        }
-    });
-
+    // Steps are pre-grouped by AI call from build script
     const uid = 'ex' + Math.random().toString(36).slice(2, 8);
     return steps.map((step, si) => {
-        const isReasoningOnly = step.tools.length === 0;
+        const isReasoningOnly = step.type === 'reasoning';
         let html = '<div class="tool-step">';
         html += `<div class="tool-step-header">`;
         if (isReasoningOnly) {
@@ -1035,6 +1077,53 @@ function renderParamsTable(str) {
 }
 
 // ── Utilities ─────────────────────────────────
+function renderFailureAnalysis(qid) {
+    if (!FAILURE_DATA) return '';
+    const f = FAILURE_DATA.failures.find(f => f.id === qid);
+    if (!f) return '';
+    let html = '<div class="failure-analysis">';
+    html += '<div class="failure-analysis-header">失败分析</div>';
+    html += `<div class="failure-desc">${escHtml(f.failure_description)}</div>`;
+    html += '<div class="failure-details">';
+    if (f.tool_problem) {
+        html += `<div class="failure-item tool-issue"><span class="failure-tag tool">工具问题</span><span>${escHtml(f.tool_problem)}</span></div>`;
+    }
+    if (f.trajectory_problem) {
+        html += `<div class="failure-item traj-issue"><span class="failure-tag traj">轨迹问题</span><span>${escHtml(f.trajectory_problem)}</span></div>`;
+    }
+    html += `<div class="failure-item"><span class="failure-tag attr-${f.attribution}">${f.attribution === 'both' ? '工具+轨迹' : f.attribution === 'trajectory' ? '轨迹' : '工具'}</span>`;
+    html += `<span class="failure-tools">涉及工具: ${f.failed_tools.map(t => '<code>' + escHtml(t) + '</code>').join(' ')}</span></div>`;
+    html += '</div></div>';
+    return html;
+}
+
+function renderFailureSummary() {
+    if (!FAILURE_DATA || !FAILURE_DATA.metadata) return '';
+    const s = FAILURE_DATA.metadata.summary;
+    const total = FAILURE_DATA.metadata.total_failures;
+    let html = '<div class="failure-summary">';
+    html += `<div class="failure-summary-header">Tool 失败整体分析 <span class="failure-summary-count">${total} cases</span></div>`;
+    html += '<div class="failure-summary-body">';
+    html += `<div class="failure-summary-row"><span class="failure-summary-label">归因分布</span><span>工具问题: ${s.pure_tool_problem} · 轨迹问题: ${s.pure_trajectory_problem} · 两者兼有: ${s.both}</span></div>`;
+    if (s.top_tool_issues && s.top_tool_issues.length) {
+        html += `<div class="failure-summary-row"><span class="failure-summary-label">Top 工具问题</span><div class="failure-summary-list">${s.top_tool_issues.map(i => '<div>' + escHtml(i) + '</div>').join('')}</div></div>`;
+    }
+    if (s.top_trajectory_issues && s.top_trajectory_issues.length) {
+        html += `<div class="failure-summary-row"><span class="failure-summary-label">Top 轨迹问题</span><div class="failure-summary-list">${s.top_trajectory_issues.map(i => '<div>' + escHtml(i) + '</div>').join('')}</div></div>`;
+    }
+    html += '</div></div>';
+    return html;
+}
+
+function renderMarkdown(s) {
+    if (!s) return '';
+    try {
+        return marked.parse(s);
+    } catch(e) {
+        return escHtml(s);
+    }
+}
+
 function escHtml(s) {
     if (!s) return '';
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/\n/g,'<br>');
@@ -1060,6 +1149,23 @@ function toggleExecDetail(id) {
     }
 }
 
+function toggleAllDetails(btn) {
+    const col = btn.closest('.compare-col');
+    if (!col) return;
+    const details = col.querySelectorAll('.exec-tool-detail');
+    const allExpanded = [...details].every(d => d.classList.contains('expanded'));
+    details.forEach(d => {
+        if (allExpanded) d.classList.remove('expanded');
+        else d.classList.add('expanded');
+        const item = d.previousElementSibling;
+        if (item) {
+            const arrow = item.querySelector('.expand-toggle');
+            if (arrow) arrow.textContent = d.classList.contains('expanded') ? '\u25BC' : '\u25B6';
+        }
+    });
+    btn.textContent = allExpanded ? '展开全部' : '收起全部';
+}
+
 function jumpToTool(name) {
     const el = document.getElementById('tool-' + name);
     if (el) {
@@ -1079,7 +1185,7 @@ function openVideo(path, qid, infoStr) {
     const title = document.getElementById('modal-title');
     const info = document.getElementById('modal-info');
     title.textContent = qid;
-    video.src = path;
+    video.src = '../' + path;
     video.load();
     let infoText = path;
     if (infoStr) {
