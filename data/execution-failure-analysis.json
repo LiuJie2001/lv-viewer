@@ -2,7 +2,7 @@
   "metadata": {
     "generated_date": "2026-03-17",
     "source": "execution-comparison.json",
-    "total_failures": 12,
+    "total_failures": 10,
     "summary": {
       "pure_tool_problem": 0,
       "pure_trajectory_problem": 2,

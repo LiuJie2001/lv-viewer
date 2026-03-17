@@ -175,6 +175,8 @@
         /* Video button */
         .video-btn { display:inline-flex; align-items:center; gap:0.3rem; padding:0.2rem 0.5rem; border:1px solid var(--color-border); border-radius:4px; background:white; cursor:pointer; font-size:0.7rem; font-family:var(--font-sans); color:var(--color-text-secondary); }
         .video-btn:hover { border-color:var(--color-accent); color:var(--color-accent); }
+        a.youtube-btn { text-decoration:none; background:#ff000012; border-color:#cc0000; color:#cc0000; }
+        a.youtube-btn:hover { background:#ff000020; border-color:#ff0000; color:#ff0000; }
 
         /* ── Baseline row (horizontal, on top) ── */
         .baseline-row { border-top:1px solid var(--color-border); border-bottom:1px solid var(--color-border); }
@@ -853,8 +855,14 @@ function renderOptions(q) {
 }
 
 function renderVideoBtn(q) {
-    if (!q.video_path) return '';
-    return `<button class="video-btn" onclick="event.stopPropagation();openVideo('${q.video_path}','${q.question_id}',${q.video_info ? JSON.stringify(JSON.stringify(q.video_info)) : 'null'})">&#9654; 视频</button>`;
+    let btns = '';
+    if (q.video_path) {
+        btns += `<button class="video-btn" onclick="event.stopPropagation();openVideo('${q.video_path}','${q.question_id}',${q.video_info ? JSON.stringify(JSON.stringify(q.video_info)) : 'null'})">&#9654; 本地视频</button>`;
+    }
+    if (q.youtube_url) {
+        btns += `<a class="video-btn youtube-btn" href="${q.youtube_url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">&#9654; YouTube</a>`;
+    }
+    return btns;
 }
 
 function renderPlanSteps(steps) {
