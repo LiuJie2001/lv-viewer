@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>执行分析 v2 — 准确率对比 &amp; 轨迹对比</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --color-text: #1a1a1a;
+            --color-text-secondary: #555;
+            --color-text-muted: #888;
+            --color-bg: #ffffff;
+            --color-bg-alt: #f8f9fa;
+            --color-border: #e5e5e5;
+            --color-accent: #2563eb;
+            --color-accent-light: #dbeafe;
+            --color-correct: #16a34a;
+            --color-correct-bg: #dcfce7;
+            --color-wrong: #dc2626;
+            --color-wrong-bg: #fef2f2;
+            --color-gpt: #10a37f;
+            --color-claude: #c96442;
+            --color-gemini: #4285f4;
+            --font-serif: 'Crimson Pro', 'Noto Sans SC', serif;
+            --font-sans: 'Noto Sans SC', -apple-system, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            --cat-hlr: #F44336; --cat-tr: #2196F3; --cat-sr: #FF9800;
+            --cat-av: #9C27B0; --cat-vp: #4CAF50;
+            --acc-both-correct: #4CAF50;
+            --acc-both-wrong: #F44336;
+            --acc-direct-only: #FF9800;
+            --acc-tool-only: #2196F3;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        html { scroll-behavior:smooth; }
+        body { font-family:var(--font-sans); font-size:16px; line-height:1.6; color:var(--color-text); background:var(--color-bg); }
+
+        .header { background:linear-gradient(135deg,#f8fafc 0%,#fff 100%); border-bottom:1px solid var(--color-border); padding:2.5rem 2rem 2rem; text-align:center; }
+        .header-tag { display:inline-block; font-size:0.75rem; font-weight:500; text-transform:uppercase; letter-spacing:0.1em; color:var(--color-accent); background:var(--color-accent-light); padding:0.25rem 0.75rem; border-radius:2rem; margin-bottom:1rem; }
+        .header h1 { font-family:var(--font-serif); font-size:clamp(1.5rem,3.5vw,2.25rem); font-weight:700; margin-bottom:0.5rem; }
+        .header .subtitle { font-size:0.95rem; color:var(--color-text-secondary); }
+
+        .main { max-width:1200px; margin:0 auto; padding:2rem 1.5rem 4rem; }
+        .section { margin-bottom:3rem; }
+        .section-header { display:flex; align-items:center; gap:0.75rem; margin-bottom:1.5rem; padding-bottom:0.5rem; border-bottom:2px solid var(--color-text); }
+        .section-number { font-family:var(--font-serif); font-size:1.75rem; font-weight:700; color:var(--color-accent); line-height:1; }
+        .section-title { font-family:var(--font-serif); font-size:1.25rem; font-weight:600; }
+        .section-count { margin-left:auto; font-size:0.875rem; color:var(--color-text-muted); }
+
+        .stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:1rem; margin-bottom:1.5rem; }
+        .stat-card { background:var(--color-bg-alt); border:1px solid var(--color-border); border-radius:8px; padding:1rem 1.25rem; text-align:center; }
+        .stat-value { font-family:var(--font-serif); font-size:1.75rem; font-weight:700; color:var(--color-accent); }
+        .stat-label { font-size:0.8rem; color:var(--color-text-muted); margin-top:0.25rem; }
+        .stat-desc { font-size:0.65rem; color:var(--color-text-muted); margin-top:0.15rem; opacity:0.7; }
+
+        /* Filter bar */
+        .filter-bar { display:flex; gap:0.5rem; margin-bottom:1.5rem; flex-wrap:wrap; align-items:center; }
+        .filter-label { font-size:0.72rem; color:var(--color-text-muted); margin-right:0.3rem; }
+        .filter-btn { padding:0.3rem 0.7rem; border:1px solid var(--color-border); border-radius:2rem; background:white; cursor:pointer; font-size:0.75rem; font-family:var(--font-sans); color:var(--color-text-secondary); transition:all 0.15s; }
+        .filter-btn:hover { border-color:var(--color-accent); color:var(--color-accent); }
+        .filter-btn.active { background:var(--color-accent); color:white; border-color:var(--color-accent); }
+        .filter-sep { width:1px; height:1.2rem; background:var(--color-border); margin:0 0.3rem; }
+
+        /* Tool cards (registry) */
+        .tool-card { border:1px solid var(--color-border); border-radius:8px; margin-bottom:0.75rem; overflow:hidden; transition:box-shadow 0.15s; }
+        .tool-card:hover { box-shadow:0 2px 8px rgba(0,0,0,0.06); }
+        .tool-card-header { display:flex; align-items:center; gap:0.6rem; padding:0.65rem 1rem; cursor:pointer; user-select:none; }
+        .tool-card-header:hover { background:#fafbfd; }
+        .tool-card-name { font-family:var(--font-mono); font-size:0.82rem; font-weight:600; color:var(--color-accent); }
+        .type-badge { font-size:0.6rem; font-weight:600; padding:0.12rem 0.4rem; border-radius:3px; white-space:nowrap; }
+        .type-badge.single_model { background:#dbeafe; color:#1d4ed8; }
+        .type-badge.pipeline { background:#fef3c7; color:#92400e; }
+        .type-badge.script { background:#d1fae5; color:#065f46; }
+        .level-badge { font-size:0.58rem; font-weight:600; padding:0.1rem 0.35rem; border-radius:3px; white-space:nowrap; text-transform:uppercase; letter-spacing:0.03em; }
+        .level-badge.image { background:#fce7f3; color:#9d174d; }
+        .level-badge.frame { background:#e0e7ff; color:#3730a3; }
+        .level-badge.audio { background:#fef9c3; color:#854d0e; }
+        .backend-badge { font-size:0.58rem; font-weight:600; padding:0.1rem 0.35rem; border-radius:3px; white-space:nowrap; }
+        .backend-badge.vlm { background:#ede9fe; color:#5b21b6; }
+        .backend-badge.audio { background:#fef9c3; color:#854d0e; }
+        .backend-badge.script { background:#d1fae5; color:#065f46; }
+        .tool-card-desc { flex:1; font-size:0.72rem; color:var(--color-text-secondary); line-height:1.4; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:500px; }
+        .tool-card-arrow { font-size:0.6rem; color:var(--color-text-muted); transition:transform 0.2s; margin-left:auto; }
+        .tool-card:not(.collapsed) .tool-card-arrow { transform:rotate(90deg); }
+        .tool-card-body { border-top:1px solid var(--color-border); }
+        .tool-card.collapsed .tool-card-body { display:none; }
+        .tool-detail { padding:1rem; }
+        .tool-detail-row { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem; }
+        @media (max-width:700px) { .tool-detail-row { grid-template-columns:1fr; } }
+        .detail-label { font-size:0.68rem; font-weight:600; color:var(--color-text-muted); margin-bottom:0.35rem; text-transform:uppercase; letter-spacing:0.04em; }
+        .detail-content { font-size:0.75rem; color:var(--color-text-secondary); line-height:1.6; }
+        .io-table { width:100%; border-collapse:collapse; font-size:0.72rem; }
+        .io-table th { text-align:left; font-size:0.65rem; font-weight:600; color:var(--color-text-muted); padding:0.2rem 0.4rem; border-bottom:1px solid var(--color-border); }
+        .io-table td { padding:0.25rem 0.4rem; border-bottom:1px solid #f0f0f0; vertical-align:top; }
+        .io-key { font-family:var(--font-mono); font-weight:600; font-size:0.7rem; white-space:nowrap; }
+        .io-type { font-family:var(--font-mono); font-size:0.62rem; color:var(--color-text-muted); word-break:break-all; }
+        .impl-notes { font-size:0.72rem; color:var(--color-text-secondary); line-height:1.6; margin-top:0.5rem; padding:0.6rem 0.8rem; background:#f8f9fb; border-radius:6px; border:1px solid var(--color-border); }
+
+        /* Collapsible section */
+        .collapsible-header { cursor:pointer; user-select:none; }
+        .collapsible-header .toggle-icon { transition:transform 0.2s; display:inline-block; margin-left:0.5rem; font-size:0.75rem; color:var(--color-text-muted); }
+        .collapsible-header.collapsed .toggle-icon { transform:rotate(-90deg); }
+        .collapsible-body.collapsed { display:none; }
+
+        /* ── Ability Framework (from page 06) ── */
+        .ability-overview-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:1px; background:var(--color-border); border:1px solid var(--color-border); border-radius:8px; overflow:hidden; }
+        @media (max-width:1000px) { .ability-overview-grid { grid-template-columns:repeat(3,1fr); } }
+        @media (max-width:600px) { .ability-overview-grid { grid-template-columns:1fr 1fr; } }
+        .ability-col { background:var(--color-bg); display:flex; flex-direction:column; }
+        .ability-col-header { padding:0.7rem 0.6rem; text-align:center; border-bottom:1px solid var(--color-border); }
+        .ability-col-name { font-weight:600; font-size:0.85rem; }
+        .ability-col-sub { font-size:0.65rem; color:var(--color-text-muted); margin-top:0.15rem; }
+        .ability-item { border-bottom:1px solid #f0f0f0; }
+        .ability-item:last-child { border-bottom:none; }
+        .ability-item-header { padding:0.4rem 0.55rem; display:flex; align-items:center; gap:0.3rem; font-size:0.8rem; cursor:pointer; }
+        .ability-item-header:hover { background:#fafbfd; }
+        .ability-item-id { font-family:var(--font-mono); font-size:0.62rem; color:var(--color-accent); font-weight:700; min-width:1.2rem; text-align:right; flex-shrink:0; }
+        .ability-item-name { font-size:0.74rem; font-weight:500; line-height:1.3; }
+        .ability-item-count { margin-left:auto; font-size:0.6rem; color:var(--color-text-muted); flex-shrink:0; }
+        .ability-item-stats { font-size:0.55rem; color:var(--color-text-muted); flex-shrink:0; }
+
+        /* ── Ability Group (light background, colored text) ── */
+        .ability-group { margin-bottom:2.5rem; }
+        .ability-group-header { display:flex; align-items:center; gap:0.6rem; padding:0.6rem 0.8rem; border-radius:6px; margin-bottom:1rem; cursor:pointer; user-select:none; background:var(--color-bg-alt); border:1px solid var(--color-border); }
+        .ability-group-header:hover { background:#f0f4f8; }
+        .ability-group-id { font-family:var(--font-mono); font-size:0.75rem; font-weight:700; padding:0.1rem 0.4rem; border-radius:3px; }
+        .ability-group-name { font-weight:600; font-size:0.9rem; }
+        .ability-group-count { margin-left:auto; font-size:0.72rem; color:var(--color-text-muted); }
+        .ability-group-category { font-size:0.65rem; color:var(--color-text-muted); }
+        .ability-group.collapsed .ability-group-questions { display:none; }
+
+        /* ── Accuracy category badges ── */
+        .acc-badge { display:inline-block; font-size:0.62rem; font-weight:600; padding:0.15rem 0.45rem; border-radius:3px; }
+        .acc-badge.both_correct { background:#dcfce7; color:#166534; }
+        .acc-badge.both_wrong { background:#fef2f2; color:#991b1b; }
+        .acc-badge.direct_only { background:#fff7ed; color:#9a3412; }
+        .acc-badge.tool_only { background:#dbeafe; color:#1e40af; }
+        .acc-badge.tool_failed { background:#fef2f2; color:#dc2626; }
+        .acc-badge.direct_failed { background:#fef2f2; color:#dc2626; }
+        .acc-badge.both_failed { background:#fef2f2; color:#7f1d1d; }
+        .answer-indicator.failed { color:#dc2626; font-weight:700; }
+
+        /* Dataset badges */
+        .ds-badge { font-size:0.62rem; font-weight:600; padding:0.1rem 0.35rem; border-radius:3px; }
+        .ds-badge.lvbench { background:#fef3c7; color:#92400e; }
+        .ds-badge.videomme { background:#dbeafe; color:#1e40af; }
+        .ds-badge.longvideobench { background:#d1fae5; color:#065f46; }
+
+        /* Ability category badge */
+        .cat-badge { font-size:0.62rem; font-weight:600; padding:0.1rem 0.4rem; border-radius:3px; color:white; }
+
+        /* Correct/wrong indicator */
+        .answer-indicator { font-size:0.8rem; font-weight:700; }
+        .answer-indicator.correct { color:var(--color-correct); }
+        .answer-indicator.wrong { color:var(--color-wrong); }
+
+        /* Question card */
+        .question-card { border:1px solid var(--color-border); border-radius:8px; margin-bottom:1rem; overflow:hidden; }
+        .question-card-header { padding:0.75rem 1rem; border-bottom:1px solid var(--color-border); background:var(--color-bg-alt); cursor:pointer; user-select:none; }
+        .question-card-header:hover { background:#f0f4f8; }
+        .question-meta { display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; }
+        .question-id { font-family:var(--font-mono); font-size:0.7rem; color:var(--color-text-muted); }
+        .question-text { font-size:0.82rem; line-height:1.5; color:var(--color-text); margin-top:0.4rem; max-height:4.5em; overflow-y:auto; }
+        .question-card-body { display:block; }
+        .question-card.collapsed .question-card-body { display:none; }
+
+        /* Options */
+        .question-options { display:flex; flex-wrap:wrap; gap:0.25rem 0.75rem; margin-top:0.3rem; font-size:0.72rem; color:var(--color-text-secondary); }
+        .question-options .opt { line-height:1.5; }
+        .question-options .opt.correct-opt { font-weight:600; color:var(--color-correct); }
+
+        /* Video button */
+        .video-btn { display:inline-flex; align-items:center; gap:0.3rem; padding:0.2rem 0.5rem; border:1px solid var(--color-border); border-radius:4px; background:white; cursor:pointer; font-size:0.7rem; font-family:var(--font-sans); color:var(--color-text-secondary); }
+        .video-btn:hover { border-color:var(--color-accent); color:var(--color-accent); }
+        a.youtube-btn { text-decoration:none; background:#ff000012; border-color:#cc0000; color:#cc0000; }
+        a.youtube-btn:hover { background:#ff000020; border-color:#ff0000; color:#ff0000; }
+
+        /* ── Baseline row (horizontal, on top) ── */
+        .baseline-row { border-top:1px solid var(--color-border); border-bottom:1px solid var(--color-border); }
+        .baseline-row-header { padding:0.5rem 0.8rem; font-size:0.75rem; font-weight:600; display:flex; align-items:center; gap:0.4rem; background:#fff7ed; color:#9a3412; border-top:2px solid #FF9800; border-bottom:1px solid var(--color-border); }
+        .baseline-response { font-size:0.72rem; color:var(--color-text-secondary); line-height:1.5; padding:0.6rem 0.8rem; }
+        .baseline-reasoning { padding:0.6rem 0.8rem; border-bottom:1px solid var(--color-border); }
+        .baseline-answer-section { padding:0.6rem 0.8rem; }
+        .baseline-section-label { font-size:0.62rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--color-text-muted); margin-bottom:0.3rem; }
+        .baseline-md { font-size:0.72rem; line-height:1.6; color:var(--color-text-secondary); }
+        .baseline-md p { margin:0.3rem 0; }
+        .baseline-md strong { color:var(--color-text); }
+        .baseline-md ul, .baseline-md ol { margin:0.3rem 0; padding-left:1.2rem; }
+        .baseline-md li { margin:0.15rem 0; }
+        .baseline-md code { font-family:var(--font-mono); font-size:0.65rem; background:var(--color-bg-alt); padding:0.1rem 0.3rem; border-radius:3px; }
+
+
+        /* ── Two-column comparison layout (Plan | Tool) ── */
+        .two-col-compare { display:grid; grid-template-columns:1fr 1fr; gap:0; }
+        .compare-col { min-height:60px; }
+        .compare-col + .compare-col { border-left:1px solid var(--color-border); }
+        .compare-col-header { padding:0.5rem 0.8rem; font-size:0.75rem; font-weight:600; border-bottom:1px solid var(--color-border); display:flex; align-items:center; gap:0.4rem; }
+        .compare-col-header.plan { background:#f0fdf4; color:#166534; border-top:2px solid #4CAF50; }
+        .compare-col-header.exec { background:#eff6ff; color:#1e40af; border-top:2px solid #2563eb; }
+        .compare-col-header .step-count { margin-left:auto; font-size:0.62rem; font-weight:400; color:var(--color-text-muted); }
+
+        /* ── Exec step: tool list under think ── */
+        .exec-tool-item { display:flex; align-items:center; gap:0.35rem; padding:0.15rem 0 0.15rem 1.6rem; }
+        .exec-tool-item .step-tool-name { font-family:var(--font-mono); font-size:0.72rem; font-weight:600; color:var(--color-accent); cursor:pointer; }
+        .exec-tool-item .step-tool-name:hover { text-decoration:underline; }
+        .exec-tool-detail { display:none; margin:0.15rem 0 0.3rem 1.6rem; }
+        .exec-tool-detail.expanded { display:block; }
+        .param-table { width:100%; border-collapse:collapse; font-size:0.7rem; }
+        .param-table td { padding:0.2rem 0.4rem; border-bottom:1px solid var(--color-border); vertical-align:top; word-break:break-all; }
+        .param-table th { font-size:0.65rem; padding:0.25rem 0.4rem; border-bottom:2px solid var(--color-border); text-align:left; }
+        .param-table .param-key { font-family:var(--font-mono); font-weight:600; color:var(--color-accent); white-space:nowrap; width:1%; }
+        .param-table .param-val { font-family:var(--font-mono); color:var(--color-text); white-space:pre-wrap; }
+        .param-prefix-hint { font-size:0.65rem; color:var(--color-text-muted); margin-bottom:0.2rem; }
+        .param-prefix-hint code { background:var(--color-bg-alt); padding:0.05rem 0.3rem; border-radius:3px; font-size:0.62rem; }
+        .param-prefix-dim { color:var(--color-text-muted); }
+        .param-val .param-table { margin:0.15rem 0; font-size:0.65rem; background:var(--color-bg-alt); border-radius:4px; }
+        .param-val .param-table td, .param-val .param-table th { padding:0.15rem 0.3rem; }
+
+        /* ── Tool execution steps (improved) ── */
+        .step-list { padding:0.4rem; }
+        .tool-step { padding:0.35rem 0.5rem; margin-bottom:0.5rem; border-radius:6px; background:var(--color-bg-alt); border:1px solid #e8e8e8; }
+        .tool-step:last-child { margin-bottom:0; }
+        .tool-step-header { display:flex; align-items:center; gap:0.35rem; }
+        .step-label { font-family:var(--font-mono); font-size:0.68rem; font-weight:700; color:var(--color-accent); }
+        .step-label.reasoning { color:#9ca3af; }
+        .step-num { font-family:var(--font-mono); font-size:0.58rem; font-weight:700; color:white; background:var(--color-accent); width:18px; height:18px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; }
+        .step-num.reasoning { background:#9ca3af; }
+        .exec-tool-dot { width:6px; height:6px; border-radius:50%; background:var(--color-accent); flex-shrink:0; }
+        .toggle-all-btn { font-size:0.58rem; padding:0.1rem 0.4rem; border:1px solid var(--color-border); border-radius:3px; background:white; color:var(--color-text-muted); cursor:pointer; margin-left:auto; }
+        .toggle-all-btn:hover { background:var(--color-bg-alt); color:var(--color-text); }
+        .step-tool-name { font-family:var(--font-mono); font-size:0.72rem; font-weight:600; color:var(--color-accent); cursor:pointer; }
+        .step-tool-name:hover { text-decoration:underline; }
+        .step-tool-name.reasoning { color:#6b7280; font-style:italic; cursor:default; }
+        .step-tool-name.reasoning:hover { text-decoration:none; }
+        .step-deps { font-size:0.55rem; color:var(--color-text-muted); margin-left:auto; flex-shrink:0; }
+        .step-purpose { font-size:0.66rem; color:var(--color-text-secondary); line-height:1.4; margin-top:0.2rem; padding-left:1.6rem; }
+
+        /* Step detail blocks: Think / Input / Output */
+        .step-block { margin-top:0.3rem; margin-left:1.6rem; border-radius:4px; padding:0.5rem 0.75rem; font-size:0.68rem; line-height:1.6; position:relative; overflow:hidden; }
+        .step-block-content { max-height:24rem; overflow-y:auto; }
+        .step-block-label { display:inline-block; font-size:0.55rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; padding:0.05rem 0.3rem; border-radius:2px; margin-right:0.3rem; vertical-align:middle; }
+        .step-block.think { background:#fffbeb; border:1px solid #fde68a; color:#92400e; }
+        .step-block.think .step-block-label { background:#fde68a; color:#78350f; }
+        .step-block.input { background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; }
+        .step-block.input .step-block-label { background:#bfdbfe; color:#1e3a8a; }
+        .step-block.output { background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; }
+        .step-block.output .step-block-label { background:#bbf7d0; color:#14532d; }
+        .step-block-content { font-family:var(--font-mono); font-size:0.62rem; color:inherit; word-break:break-all; white-space:pre-wrap; max-height:8em; overflow-y:auto; margin-top:0.15rem; }
+        .step-block.collapsed-block .step-block-content { max-height:2.5em; overflow:hidden; }
+        .step-block .expand-toggle { font-size:0.55rem; color:var(--color-accent); cursor:pointer; margin-left:0.3rem; }
+
+
+        /* ── Category tabs ── */
+        .acc-category-tabs { display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap; }
+        .acc-cat-tab { padding:0.35rem 0.8rem; border-radius:2rem; cursor:pointer; font-size:0.75rem; font-weight:600; border:2px solid transparent; background:var(--color-bg-alt); color:var(--color-text-secondary); transition:all 0.15s; display:flex; align-items:center; gap:0.3rem; }
+        .acc-cat-tab:hover { opacity:0.85; }
+        .acc-cat-tab.active { color:white; }
+        .acc-cat-tab .tab-count { font-family:var(--font-mono); font-size:0.65rem; }
+        .acc-cat-tab.both_correct.active { background:var(--acc-both-correct); border-color:var(--acc-both-correct); }
+        .acc-cat-tab.both_wrong.active { background:var(--acc-both-wrong); border-color:var(--acc-both-wrong); }
+        .acc-cat-tab.tool_failed.active, .acc-cat-tab.direct_failed.active, .acc-cat-tab.both_failed.active { background:#dc2626; border-color:#dc2626; }
+        .acc-cat-tab.direct_only.active { background:var(--acc-direct-only); border-color:var(--acc-direct-only); }
+        .acc-cat-tab.tool_only.active { background:var(--acc-tool-only); border-color:var(--acc-tool-only); }
+        .acc-cat-tab.all.active { background:var(--color-accent); border-color:var(--color-accent); }
+
+
+
+        /* Back to top */
+        #back-top { position:fixed; bottom:2rem; right:2rem; z-index:1000; background:var(--color-accent); color:white; border:none; border-radius:50%; width:44px; height:44px; font-size:1rem; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.2); opacity:0; transition:opacity 0.3s; pointer-events:none; }
+        #back-top.visible { opacity:1; pointer-events:auto; }
+        #back-top:hover { background:#1a5276; }
+
+        /* Modal */
+        .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:2000; justify-content:center; align-items:center; }
+        .modal-overlay.active { display:flex; }
+        .modal-content { background:white; border-radius:12px; max-width:900px; width:90%; max-height:90vh; overflow:auto; padding:1.5rem; position:relative; }
+        .modal-close { position:absolute; top:0.75rem; right:1rem; font-size:1.5rem; cursor:pointer; color:var(--color-text-muted); background:none; border:none; font-family:var(--font-sans); }
+        .modal-close:hover { color:var(--color-text); }
+        .modal-video { width:100%; border-radius:8px; margin-top:0.5rem; }
+        .modal-info { font-size:0.8rem; color:var(--color-text-secondary); margin-top:0.5rem; }
+
+        @media (max-width:700px) {
+            .two-col-compare { grid-template-columns:1fr; }
+            .compare-col + .compare-col { border-left:none; border-top:1px solid var(--color-border); }
+        }
+
+        #back-top { position:fixed; bottom:2rem; right:2rem; display:none; padding:0.5rem 1rem; background:var(--color-accent); color:white; border:none; border-radius:2rem; font-family:var(--font-sans); font-size:0.78rem; font-weight:500; cursor:pointer; box-shadow:0 2px 12px rgba(37,99,235,0.3); z-index:1000; }
+        #back-top:hover { box-shadow:0 4px 16px rgba(37,99,235,0.4); transform:translateY(-1px); }
+
+        .no-data { text-align:center; padding:2rem; color:var(--color-text-muted); font-size:0.85rem; }
+    </style>
+</head>
+<body>
+<header class="header">
+    <div class="header-tag">Execution Analysis</div>
+    <h1>执行分析 v2：Plan · Baseline · Tool</h1>
+    <p class="subtitle" id="header-subtitle">加载中...</p>
+</header>
+
+<main class="main">
+    <!-- Section 0: Tool Registry v10 (default collapsed) -->
+    <section class="section" id="sec-registry">
+        <div class="section-header collapsible-header collapsed" onclick="toggleSection('registry')">
+            <span class="section-number">00</span>
+            <span class="section-title">工具注册表 v10 & 后端配置</span>
+            <span class="section-count" id="registry-count"></span>
+            <span class="toggle-icon">&#9660;</span>
+        </div>
+        <div class="collapsible-body collapsed" id="registry-body">
+            <div class="filter-bar" id="registry-filter"></div>
+            <div id="registry-container"></div>
+        </div>
+    </section>
+
+    <!-- Section 1: Ability Framework (default collapsed) -->
+    <section class="section" id="sec-abilities">
+        <div class="section-header collapsible-header collapsed" onclick="toggleSection('abilities')">
+            <span class="section-number">01</span>
+            <span class="section-title">能力框架</span>
+            <span class="section-count" id="abilities-count"></span>
+            <span class="toggle-icon">&#9660;</span>
+        </div>
+        <div class="collapsible-body collapsed" id="abilities-body">
+            <div id="abilities-container"></div>
+        </div>
+    </section>
+
+    <!-- Section 2: Case Analysis (Plan | Baseline | Tool) -->
+    <section class="section" id="sec-accuracy">
+        <div class="section-header">
+            <span class="section-number">02</span>
+            <span class="section-title">Case 分析</span>
+            <span id="model-tabs" style="margin-left:auto;display:flex;gap:0.35rem;"></span>
+            <span class="section-count" id="accuracy-count"></span>
+        </div>
+        <div id="acc-stats"></div>
+        <div class="acc-category-tabs" id="acc-tabs"></div>
+        <div id="acc-questions"></div>
+    </section>
+</main>
+
+<button id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">&#8593; Top</button>
+
+<!-- Video Modal -->
+<div class="modal-overlay" id="video-modal" onclick="if(event.target===this)closeModal()">
+    <div class="modal-content">
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+        <h3 id="modal-title" style="font-family:var(--font-serif);font-size:1.1rem;margin-bottom:0.5rem;"></h3>
+        <video id="modal-video" class="modal-video" controls></video>
+        <div class="modal-info" id="modal-info"></div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+let DATA = null;
+const CAT_COLORS = {
+    'High-Level Reasoning': '#F44336',
+    'Temporal Relation': '#2196F3',
+    'Spatial Relation': '#FF9800',
+    'Audio-Visual': '#9C27B0',
+    'Visual Perception': '#4CAF50',
+};
+const CAT_ORDER = ['Visual Perception', 'Temporal Relation', 'High-Level Reasoning', 'Spatial Relation', 'Audio-Visual'];
+// Execution model → corresponding plan model
+const EXEC_TO_PLAN = {
+    'gemini-3.1-pro': 'gemini-3.1-pro-preview',
+};
+const MODEL_LABELS = {
+    'gemini-3.1-pro': 'Gemini 3.1 Pro',
+};
+
+let currentAccCategory = 'all';
+let currentExecModel = null; // set in init
+
+// ── Data Loading ──────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        const res = await fetch('../data/execution-comparison-v2.json?t=' + Date.now());
+        DATA = await res.json();
+        init();
+    } catch (e) {
+        document.getElementById('header-subtitle').textContent = '数据加载失败: ' + e.message;
+    }
+
+    // Back to top button visibility
+    const topBtn = document.getElementById('back-top');
+    window.addEventListener('scroll', () => {
+        topBtn.classList.toggle('visible', window.scrollY > 400);
+    });
+});
+
+function init() {
+    const meta = DATA.metadata;
+    currentExecModel = meta.execution_models[0];
+    document.getElementById('header-subtitle').textContent =
+        `${meta.total_questions} Questions · ${meta.execution_models.join(', ')} · ${meta.generated_date}`;
+
+    buildRegistry();
+    buildAbilityFramework();
+    buildAccuracySection();
+
+    window.addEventListener('scroll', () => {
+        document.getElementById('back-top').style.display = window.scrollY > 400 ? 'block' : 'none';
+    });
+}
+
+// ── Section 0: Tool Registry ──────────────────
+function buildRegistry() {
+    const tools = DATA.tool_registry;
+    document.getElementById('registry-count').textContent = `${tools.length} Tools`;
+
+    const levels = [...new Set(tools.map(t => t.processing_level))].sort();
+    const backends = [...new Set(tools.map(t => t.backend))].sort();
+    const filterBar = document.getElementById('registry-filter');
+
+    let html = '<span class="filter-label">Level:</span>';
+    html += `<button class="filter-btn active" onclick="filterRegistry('level','all',this)">All</button>`;
+    levels.forEach(l => {
+        html += `<button class="filter-btn" onclick="filterRegistry('level','${l}',this)">${l}</button>`;
+    });
+    html += '<span class="filter-sep"></span><span class="filter-label">Backend:</span>';
+    html += `<button class="filter-btn active" onclick="filterRegistry('backend','all',this)">All</button>`;
+    backends.forEach(b => {
+        html += `<button class="filter-btn" onclick="filterRegistry('backend','${b}',this)">${b}</button>`;
+    });
+    filterBar.innerHTML = html;
+    renderRegistryTools(tools);
+}
+
+let regLevelFilter = 'all', regBackendFilter = 'all';
+function filterRegistry(type, val, btn) {
+    if (type === 'level') regLevelFilter = val;
+    else regBackendFilter = val;
+    const bar = document.getElementById('registry-filter');
+    let inBackendSection = false;
+    bar.querySelectorAll('.filter-btn').forEach(b => {
+        if (b.previousElementSibling && b.previousElementSibling.classList.contains('filter-sep')) inBackendSection = true;
+        const bType = inBackendSection ? 'backend' : 'level';
+        if (bType === type) {
+            b.classList.toggle('active', b.textContent.toLowerCase() === val || (val === 'all' && b.textContent === 'All'));
+        }
+    });
+    const filtered = DATA.tool_registry.filter(t =>
+        (regLevelFilter === 'all' || t.processing_level === regLevelFilter) &&
+        (regBackendFilter === 'all' || t.backend === regBackendFilter)
+    );
+    renderRegistryTools(filtered);
+}
+
+function renderRegistryTools(tools) {
+    document.getElementById('registry-container').innerHTML = tools.map(t => `
+        <div class="tool-card collapsed" id="tool-${t.name}">
+            <div class="tool-card-header" onclick="this.parentElement.classList.toggle('collapsed')">
+                <span class="tool-card-name">${t.name}</span>
+                <span class="level-badge ${t.processing_level}">${t.processing_level}</span>
+                <span class="type-badge ${t.implementation.type}">${t.implementation.type}</span>
+                <span class="backend-badge ${t.backend}">${t.backend}${t.backend_model ? ' · ' + t.backend_model : ''}</span>
+                <span class="tool-card-desc">${t.description.split('.')[0]}</span>
+                <span class="tool-card-arrow">&#9654;</span>
+            </div>
+            <div class="tool-card-body">
+                <div class="tool-detail">
+                    <div class="detail-label">Description</div>
+                    <div class="detail-content">${t.description}</div>
+                    <div class="tool-detail-row" style="margin-top:0.75rem;">
+                        <div>
+                            <div class="detail-label">Input</div>
+                            <table class="io-table"><tr><th>Param</th><th>Type</th></tr>
+                                ${Object.entries(t.input).map(([k,v]) => `<tr><td class="io-key">${k}</td><td class="io-type">${v}</td></tr>`).join('')}
+                            </table>
+                        </div>
+                        <div>
+                            <div class="detail-label">Output</div>
+                            <table class="io-table"><tr><th>Field</th><th>Type</th></tr>
+                                ${Object.entries(t.output).map(([k,v]) => `<tr><td class="io-key">${k}</td><td class="io-type">${v}</td></tr>`).join('')}
+                            </table>
+                        </div>
+                    </div>
+                    ${t.implementation.notes ? `<div class="impl-notes">${t.implementation.notes}</div>` : ''}
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// ── Section 1: Ability Framework ──────────────
+function buildAbilityFramework() {
+    const execModel = currentExecModel;
+    // Group abilities
+    const catAbilities = {};
+    const abilityCounts = {};
+    DATA.questions.forEach(q => {
+        const aid = q.ability_id;
+        if (!aid) return;
+        if (!abilityCounts[aid]) abilityCounts[aid] = { total: 0, succeeded: 0, correct: 0, name: q.ability_name, category: q.ability_category };
+        abilityCounts[aid].total++;
+        const m = q.models[execModel];
+        if (m && m.tool && m.tool.succeeded) {
+            abilityCounts[aid].succeeded++;
+            if (m.tool.correct) abilityCounts[aid].correct++;
+        }
+    });
+
+    Object.entries(abilityCounts).forEach(([aid, info]) => {
+        const cat = info.category;
+        if (!catAbilities[cat]) catAbilities[cat] = [];
+        catAbilities[cat].push({ id: aid, ...info });
+    });
+
+    const totalAbilities = Object.keys(abilityCounts).length;
+    document.getElementById('abilities-count').textContent = `${totalAbilities} Abilities · 5 Categories`;
+
+    let html = '<div class="ability-overview-grid">';
+    CAT_ORDER.forEach(cat => {
+        const abilities = (catAbilities[cat] || []).sort((a, b) => Number(a.id) - Number(b.id));
+        const color = CAT_COLORS[cat] || '#888';
+        html += `<div class="ability-col">
+            <div class="ability-col-header" style="border-top:3px solid ${color}">
+                <div class="ability-col-name" style="color:${color}">${cat}</div>
+                <div class="ability-col-sub">${abilities.length} abilities</div>
+            </div>`;
+        abilities.forEach(a => {
+            const succRate = a.total ? Math.round(a.succeeded / a.total * 100) : 0;
+            const accRate = a.succeeded ? Math.round(a.correct / a.succeeded * 100) : 0;
+            html += `<div class="ability-item">
+                <div class="ability-item-header" onclick="jumpToAbility('${a.id}')">
+                    <span class="ability-item-id">${a.id}</span>
+                    <span class="ability-item-name">${a.name}</span>
+                    <span class="ability-item-stats">${succRate}% succ · ${accRate}% acc</span>
+                    <span class="ability-item-count">${a.total}q</span>
+                </div>
+            </div>`;
+        });
+        html += '</div>';
+    });
+    html += '</div>';
+    document.getElementById('abilities-container').innerHTML = html;
+}
+
+function jumpToAbility(aid) {
+    // Expand abilities section if collapsed
+    const abBody = document.getElementById('abilities-body');
+    if (abBody && abBody.classList.contains('collapsed')) {
+        toggleSection('abilities');
+    }
+    const el = document.getElementById('ag-' + aid);
+    if (el) {
+        el.classList.remove('collapsed');
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
+// ── Section 2: Case Analysis ──
+function buildAccuracySection() {
+    // Model tabs (in section header)
+    const modelTabsEl = document.getElementById('model-tabs');
+    let modelTabsHtml = '';
+    DATA.metadata.execution_models.forEach((m, i) => {
+        const label = MODEL_LABELS[m] || m;
+        modelTabsHtml += `<button class="filter-btn ${i === 0 ? 'active' : ''}" onclick="setExecModel('${m}',this)">${label}</button>`;
+    });
+    modelTabsEl.innerHTML = modelTabsHtml;
+
+    rebuildAccuracyStats();
+}
+
+function classifyCase(m) {
+    const dOk = m && m.direct && m.direct.succeeded;
+    const tOk = m && m.tool && m.tool.succeeded;
+    if (!dOk && !tOk) return 'both_failed';
+    if (!tOk) return 'tool_failed';
+    if (!dOk) return 'direct_failed';
+    const dc = m.direct.correct, tc = m.tool.correct;
+    if (dc && tc) return 'both_correct';
+    if (dc && !tc) return 'direct_only';
+    if (!dc && tc) return 'tool_only';
+    return 'both_wrong';
+}
+
+const ALL_CAT_LABELS = {
+    'both_correct': 'Both Correct',
+    'both_wrong': 'Both Wrong',
+    'direct_only': 'Baseline Only',
+    'tool_only': 'Tool Only',
+    'both_failed': 'Both Failed',
+    'tool_failed': 'Tool Failed',
+    'direct_failed': 'Baseline Failed',
+};
+
+function rebuildAccuracyStats() {
+    const summary = DATA.accuracy_summary[currentExecModel];
+    if (!summary) {
+        document.getElementById('acc-stats').innerHTML = '';
+        document.getElementById('acc-tabs').innerHTML = '';
+        document.getElementById('acc-questions').innerHTML = '<div class="no-data">暂无数据</div>';
+        return;
+    }
+
+    // Count categories across all questions
+    const catCounts = {};
+    DATA.questions.forEach(q => {
+        const m = q.models[currentExecModel];
+        if (!m) return;
+        const cat = classifyCase(m);
+        catCounts[cat] = (catCounts[cat] || 0) + 1;
+    });
+    const totalQ = DATA.questions.filter(q => q.models[currentExecModel]).length;
+
+    document.getElementById('accuracy-count').textContent = `${totalQ} Questions`;
+
+    // Stats bar — 正确率基于双方都成功的子集
+    const s = summary;
+    if (s.both_succeeded > 0) {
+        const directAcc = (s.direct_accuracy * 100).toFixed(1);
+        const toolAcc = (s.tool_accuracy * 100).toFixed(1);
+        document.getElementById('acc-stats').innerHTML = `
+        <div class="stats-grid" style="margin-bottom:1rem;">
+            <div class="stat-card"><div class="stat-value">${directAcc}%</div><div class="stat-label">Baseline 正确率 (${s.direct_correct}/${s.both_succeeded})</div><div class="stat-desc">直接用 Gemini 回答问题</div></div>
+            <div class="stat-card"><div class="stat-value">${toolAcc}%</div><div class="stat-label">Tool 正确率 (${s.tool_correct}/${s.both_succeeded})</div><div class="stat-desc">Gemini 作为主 Agent 调用工具</div></div>
+        </div>
+        <div style="font-size:0.65rem;color:var(--color-text-muted);margin-bottom:0.8rem;">* 正确率基于双方均成功产出答案的 ${s.both_succeeded}/${s.total_cases} 题（Tool 失败 ${s.tool_failed}，Baseline 失败 ${s.direct_failed}，双方失败 ${s.both_failed}）</div>`;
+    } else {
+        document.getElementById('acc-stats').innerHTML = '';
+    }
+
+    // Category tabs
+    const tabs = document.getElementById('acc-tabs');
+    const catOrder = ['both_correct', 'both_wrong', 'direct_only', 'tool_only', 'tool_failed', 'direct_failed', 'both_failed'];
+    let tabsHtml = `<button class="acc-cat-tab all active" onclick="setAccCategory('all',this)">All <span class="tab-count">${totalQ}</span></button>`;
+    catOrder.forEach(cat => {
+        if (catCounts[cat]) {
+            tabsHtml += `<button class="acc-cat-tab ${cat}" onclick="setAccCategory('${cat}',this)">${ALL_CAT_LABELS[cat]} <span class="tab-count">${catCounts[cat]}</span></button>`;
+        }
+    });
+    tabs.innerHTML = tabsHtml;
+
+    currentAccCategory = 'all';
+    renderAccQuestions();
+}
+
+function setAccCategory(cat, btn) {
+    currentAccCategory = cat;
+    document.querySelectorAll('.acc-cat-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderAccQuestions();
+}
+
+function setExecModel(model, btn) {
+    currentExecModel = model;
+    document.querySelectorAll('#model-tabs .filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    rebuildAccuracyStats();
+}
+
+function renderAccQuestions() {
+    const execModel = currentExecModel;
+    const planModel = EXEC_TO_PLAN[execModel] || execModel;
+    let questions = DATA.questions.filter(q => {
+        const m = q.models[execModel];
+        if (!m) return false;
+        if (currentAccCategory !== 'all') {
+            if (classifyCase(m) !== currentAccCategory) return false;
+        }
+        return true;
+    });
+
+    const container = document.getElementById('acc-questions');
+    if (!questions.length) {
+        container.innerHTML = '<div class="no-data">无匹配结果</div>';
+        return;
+    }
+
+    // Group by ability
+    const abilityGroups = {};
+    questions.forEach(q => {
+        const key = q.ability_id || 'unknown';
+        if (!abilityGroups[key]) abilityGroups[key] = { ability_id: q.ability_id, ability_name: q.ability_name, ability_category: q.ability_category, questions: [] };
+        abilityGroups[key].questions.push(q);
+    });
+    const sorted = Object.values(abilityGroups).sort((a, b) => Number(a.ability_id || 0) - Number(b.ability_id || 0));
+
+    container.innerHTML = sorted.map(group => {
+        const color = CAT_COLORS[group.ability_category] || '#888';
+
+        const questionsHtml = group.questions.map(q => {
+            const m = q.models[execModel];
+            const accCat = classifyCase(m);
+            const accLabel = ALL_CAT_LABELS[accCat] || accCat;
+            const optionsHtml = renderOptions(q);
+            const plan = q.planned && q.planned[planModel];
+            const planSteps = Array.isArray(plan) ? plan : (plan && plan.steps ? plan.steps : null);
+
+            const hasDirect = m.direct;
+            const hasTool = m.tool;
+            const toolSteps = hasTool ? m.tool.steps_count : 0;
+
+            // Baseline section
+            let baselineHtml = '';
+            if (hasDirect && hasDirect.succeeded) {
+                const hasReasoning = hasDirect.reasoning && hasDirect.reasoning.trim();
+                const tokenInfo = hasDirect.token_usage
+                    ? ` · ${hasDirect.token_usage.thoughts_tokens || 0} think tokens`
+                    : '';
+                const durationInfo = hasDirect.duration_seconds
+                    ? ` · ${hasDirect.duration_seconds.toFixed(1)}s`
+                    : '';
+                let bodyHtml = '';
+                if (hasReasoning) {
+                    bodyHtml += `<div class="baseline-reasoning"><div class="baseline-section-label">Reasoning</div><div class="baseline-md">${renderMarkdown(hasDirect.reasoning)}</div></div>`;
+                    bodyHtml += `<div class="baseline-answer-section"><div class="baseline-section-label">Response</div><div class="baseline-md">${renderMarkdown(hasDirect.response || '')}</div></div>`;
+                } else {
+                    bodyHtml += `<div class="baseline-response">${escHtml(hasDirect.response || '')}</div>`;
+                }
+                baselineHtml = `<div class="baseline-row">
+                    <div class="baseline-row-header">
+                        <span>Baseline</span>
+                        <span class="answer-indicator ${hasDirect.correct ? 'correct' : 'wrong'}">${hasDirect.correct ? '✓' : '✗'} ${hasDirect.answer || '—'}</span>
+                        <span style="font-size:0.6rem;color:var(--color-text-muted)">GT: ${q.ground_truth}${tokenInfo}${durationInfo}</span>
+                    </div>
+                    ${bodyHtml}
+                </div>`;
+            } else {
+                baselineHtml = `<div class="baseline-row">
+                    <div class="baseline-row-header">
+                        <span>Baseline</span>
+                        <span class="answer-indicator failed">FAILED</span>
+                        <span style="font-size:0.6rem;color:var(--color-text-muted)">GT: ${q.ground_truth}</span>
+                    </div>
+                </div>`;
+            }
+
+            // Tool Execution section
+            let toolHtml = '';
+            if (hasTool && hasTool.succeeded) {
+                toolHtml = `<div class="compare-col">
+                    <div class="compare-col-header exec">
+                        <span>Tool Execution</span>
+                        <span class="answer-indicator ${hasTool.correct ? 'correct' : 'wrong'}">${hasTool.correct ? '✓' : '✗'} ${hasTool.answer || '—'}</span>
+                        <span class="step-count">${toolSteps} steps</span>
+                        <button class="toggle-all-btn" onclick="event.stopPropagation();toggleAllDetails(this)">展开全部</button>
+                    </div>
+                    <div class="step-list">${renderExecSteps(hasTool.trajectory_summary)}</div>
+                </div>`;
+            } else if (hasTool) {
+                toolHtml = `<div class="compare-col">
+                    <div class="compare-col-header exec">
+                        <span>Tool Execution</span>
+                        <span class="answer-indicator failed">FAILED</span>
+                        <span class="step-count">${toolSteps} steps</span>
+                        <button class="toggle-all-btn" onclick="event.stopPropagation();toggleAllDetails(this)">展开全部</button>
+                    </div>
+                    <div class="step-list">${hasTool.trajectory_summary ? renderExecSteps(hasTool.trajectory_summary) : '<div class="no-data">执行失败</div>'}</div>
+                </div>`;
+            } else {
+                toolHtml = `<div class="compare-col">
+                    <div class="compare-col-header exec"><span>Tool Execution</span></div>
+                    <div class="step-list"><div class="no-data">无数据</div></div>
+                </div>`;
+            }
+
+            const metaSteps = hasTool ? `Plan: ${planSteps ? planSteps.length : '—'} → Exec: ${toolSteps} steps` : `Plan: ${planSteps ? planSteps.length : '—'} steps`;
+
+
+            return `
+            <div class="question-card" id="acc-${q.question_id}">
+                <div class="question-card-header" onclick="this.parentElement.classList.toggle('collapsed')">
+                    <div class="question-meta">
+                        <span class="ds-badge ${q.dataset}">${q.dataset}</span>
+                        <span class="acc-badge ${accCat}">${accLabel}</span>
+                        <span class="question-id">${q.question_id}</span>
+                        <span style="font-size:0.65rem;color:var(--color-text-muted)">${metaSteps}</span>
+                        ${renderVideoBtn(q)}
+                    </div>
+                    <div class="question-text">${escHtml(q.question_text)}</div>
+                    ${optionsHtml}
+                </div>
+                <div class="question-card-body">
+                    ${baselineHtml}
+                    <div class="two-col-compare">
+                        <div class="compare-col">
+                            <div class="compare-col-header plan">
+                                <span>Plan</span>
+                                <span class="step-count">${planSteps ? planSteps.length + ' steps' : '—'}</span>
+                            </div>
+                            <div class="step-list">
+                                ${planSteps ? renderPlanSteps(planSteps) : '<div class="no-data">无 Plan 数据</div>'}
+                            </div>
+                        </div>
+                        ${toolHtml}
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+
+        return `
+        <div class="ability-group" id="ag-${group.ability_id}">
+            <div class="ability-group-header" onclick="this.parentElement.classList.toggle('collapsed')">
+                <span class="ability-group-id" style="color:${color};background:${color}15">${group.ability_id}</span>
+                <span class="ability-group-name" style="color:${color}">${group.ability_name}</span>
+                <span class="ability-group-category">${group.ability_category}</span>
+                <span class="ability-group-count">${group.questions.length} questions</span>
+            </div>
+            <div class="ability-group-questions">
+                ${questionsHtml}
+            </div>
+        </div>`;
+    }).join('');
+}
+
+// ── Shared Renderers ──────────────────────────
+
+function renderOptions(q) {
+    if (!q.options || !q.options.length) return '';
+    return `<div class="question-options">${q.options.map(o => {
+        const optLetter = o.charAt(0);
+        const isCorrect = q.ground_truth && q.ground_truth.toUpperCase() === optLetter.toUpperCase();
+        return `<span class="opt ${isCorrect ? 'correct-opt' : ''}">${escHtml(o)}</span>`;
+    }).join('')}</div>`;
+}
+
+function renderVideoBtn(q) {
+    let btns = '';
+    if (q.video_path) {
+        btns += `<button class="video-btn" onclick="event.stopPropagation();openVideo('${q.video_path}','${q.question_id}',${q.video_info ? JSON.stringify(JSON.stringify(q.video_info)) : 'null'})">&#9654; 本地视频</button>`;
+    }
+    if (q.youtube_url) {
+        btns += `<a class="video-btn youtube-btn" href="${q.youtube_url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">&#9654; YouTube</a>`;
+    }
+    return btns;
+}
+
+function renderPlanSteps(steps) {
+    return steps.map((s, i) => {
+        const isLast = i === steps.length - 1;
+        const isReasoning = isLast && (!s.tool || s.tool === 'null' || s.tool === 'reasoning');
+        return `
+        <div class="tool-step">
+            <div class="tool-step-header">
+                <span class="step-num ${isReasoning ? 'reasoning' : ''}">${s.step}</span>
+                ${isReasoning
+                    ? `<span class="step-tool-name reasoning">Reasoning / Final Answer</span>`
+                    : `<span class="step-tool-name" onclick="jumpToTool('${s.tool}')">${s.tool}</span>`}
+                ${s.depends_on && s.depends_on.length ? `<span class="step-deps">← ${s.depends_on.join(',')}</span>` : ''}
+            </div>
+            ${s.purpose ? `<div class="step-purpose">${escHtml(s.purpose)}</div>` : ''}
+        </div>`;
+    }).join('');
+}
+
+function renderExecSteps(steps) {
+    if (!steps || !steps.length) return '<div class="no-data">无轨迹数据</div>';
+
+    // Steps are pre-grouped by AI call from build script
+    const uid = 'ex' + Math.random().toString(36).slice(2, 8);
+    return steps.map((step, si) => {
+        const isReasoningOnly = step.type === 'reasoning';
+        let html = '<div class="tool-step">';
+        html += `<div class="tool-step-header">`;
+        if (isReasoningOnly) {
+            html += `<span class="step-label reasoning">Reasoning / Final Answer</span>`;
+        } else {
+            html += `<span class="step-label">Step ${si + 1}</span>`;
+        }
+        html += `</div>`;
+
+        // Think content
+        if (step.think) {
+            html += `<div class="step-purpose">${escHtml(step.think)}</div>`;
+        }
+
+        // Tool list
+        step.tools.forEach((t, ti) => {
+            const detailId = `${uid}-${si}-${ti}`;
+            const hasInput = t.args_brief && t.args_brief.trim();
+            const hasOutput = t.output_brief && t.output_brief.trim();
+            html += `<div class="exec-tool-item">
+                <span class="exec-tool-dot"></span>
+                <span class="step-tool-name" onclick="toggleExecDetail('${detailId}')">${t.tool}</span>
+                <span class="expand-toggle" onclick="toggleExecDetail('${detailId}')" style="font-size:0.55rem;color:var(--color-accent);cursor:pointer">&#9654;</span>
+            </div>`;
+            if (hasInput || hasOutput) {
+                html += `<div class="exec-tool-detail" id="${detailId}">`;
+                if (hasInput) {
+                    html += `<div class="step-block input"><span class="step-block-label">Input</span><div class="step-block-content">${renderParamsTable(t.args_brief)}</div></div>`;
+                }
+                if (hasOutput) {
+                    html += `<div class="step-block output"><span class="step-block-label">Output</span><div class="step-block-content">${renderParamsTable(t.output_brief)}</div></div>`;
+                }
+                html += `</div>`;
+            }
+        });
+
+        html += '</div>';
+        return html;
+    }).join('');
+}
+
+function tryParseJson(str) {
+    if (!str) return null;
+    let s = str.trim();
+    // Strip markdown code block wrapper (complete or truncated)
+    const mdMatch = s.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?\s*```$/) || s.match(/^```(?:json)?\s*\n?([\s\S]+)$/);
+    if (mdMatch) s = mdMatch[1].trim();
+    // Direct parse
+    try { return JSON.parse(s); } catch(e) {}
+    // Fix truncated JSON (ends with "...")
+    if (!s.endsWith('...')) return null;
+    s = s.slice(0, -3);
+    // Strategy: progressively cut back to last comma, try closing brackets
+    for (let attempt = 0; attempt < 30; attempt++) {
+        // Try closing all open brackets at current position
+        const closed = autoClose(s);
+        if (closed !== null) {
+            try { return JSON.parse(closed); } catch(e) {}
+        }
+        // Cut back to the previous comma (safe value boundary)
+        const lastComma = s.lastIndexOf(',');
+        if (lastComma <= 0) break;
+        s = s.slice(0, lastComma);
+    }
+    return null;
+}
+
+function autoClose(s) {
+    // Walk the string tracking bracket depth and string state
+    let stack = [];
+    let i = 0;
+    let inStr = false;
+    while (i < s.length) {
+        const c = s[i];
+        if (inStr) {
+            if (c === '\\') { i += 2; continue; }
+            if (c === '"') inStr = false;
+            i++; continue;
+        }
+        if (c === '"') { inStr = true; i++; continue; }
+        if (c === '{') stack.push('}');
+        else if (c === '[') stack.push(']');
+        else if (c === '}' || c === ']') { if (stack.length) stack.pop(); else return null; }
+        i++;
+    }
+    // If still inside a string, it's broken — can't close cleanly
+    if (inStr) return null;
+    if (stack.length === 0) return s;
+    return s + stack.reverse().join('');
+}
+
+function renderParamValue(val, commonPrefix) {
+    if (val === null || val === undefined) return '<span style="color:var(--color-text-muted)">null</span>';
+    if (typeof val === 'string') {
+        return commonPrefix && val.startsWith(commonPrefix)
+            ? `<span class="param-prefix-dim">…/</span>${escHtml(val.slice(commonPrefix.length))}`
+            : escHtml(val);
+    }
+    if (Array.isArray(val)) {
+        if (val.length === 0) return '[]';
+        const allObj = val.every(item => typeof item === 'object' && item !== null && !Array.isArray(item));
+        if (allObj) return renderArrayTable(val, false);
+        // Simple array of primitives — inline
+        return escHtml(JSON.stringify(val));
+    }
+    if (typeof val === 'object') {
+        const entries = Object.entries(val);
+        if (entries.length === 0) return '{}';
+        // Small flat object — inline; otherwise nested table
+        const allPrimitive = entries.every(([,v]) => typeof v !== 'object' || v === null);
+        if (allPrimitive && entries.length <= 4) return escHtml(JSON.stringify(val));
+        return renderObjTable(val, false);
+    }
+    return escHtml(String(val));
+}
+
+function renderObjTable(obj, isTruncated) {
+    const entries = Object.entries(obj);
+    if (entries.length === 0) return '<span style="color:var(--color-text-muted)">（空）</span>';
+
+    // Find common prefix among string values
+    const strVals = entries.filter(([,v]) => typeof v === 'string' && v.length > 30).map(([,v]) => v);
+    let commonPrefix = '';
+    if (strVals.length >= 2) {
+        commonPrefix = strVals[0];
+        for (let i = 1; i < strVals.length; i++) {
+            while (commonPrefix && !strVals[i].startsWith(commonPrefix)) commonPrefix = commonPrefix.slice(0, -1);
+        }
+        const lastSep = Math.max(commonPrefix.lastIndexOf('/'), commonPrefix.lastIndexOf('\\'));
+        if (lastSep > 15) commonPrefix = commonPrefix.slice(0, lastSep + 1);
+        else commonPrefix = '';
+    }
+
+    let html = '';
+    if (commonPrefix) html += `<div class="param-prefix-hint">公共前缀: <code>${escHtml(commonPrefix)}</code></div>`;
+    html += '<table class="param-table"><tbody>';
+    entries.forEach(([key, val]) => {
+        html += `<tr><td class="param-key">${escHtml(key)}</td><td class="param-val">${renderParamValue(val, commonPrefix)}</td></tr>`;
+    });
+    html += '</tbody></table>';
+    if (isTruncated) html += '<div style="font-size:0.6rem;color:var(--color-text-muted);margin-top:0.2rem">⋯ 内容被截断</div>';
+    return html;
+}
+
+function renderArrayTable(arr, isTruncated) {
+    if (arr.length === 0) return '<span style="color:var(--color-text-muted)">（空数组）</span>';
+    // If array of objects with uniform keys, render as multi-row table
+    const allObj = arr.every(item => typeof item === 'object' && item !== null && !Array.isArray(item));
+    if (allObj) {
+        const allKeys = [...new Set(arr.flatMap(item => Object.keys(item)))];
+        let html = '<table class="param-table"><thead><tr>';
+        allKeys.forEach(k => { html += `<th class="param-key">${escHtml(k)}</th>`; });
+        html += '</tr></thead><tbody>';
+        arr.forEach(item => {
+            html += '<tr>';
+            allKeys.forEach(k => {
+                const v = item[k];
+                html += `<td class="param-val">${v !== undefined ? renderParamValue(v, '') : ''}</td>`;
+            });
+            html += '</tr>';
+        });
+        html += '</tbody></table>';
+        if (isTruncated) html += '<div style="font-size:0.6rem;color:var(--color-text-muted);margin-top:0.2rem">⋯ 内容被截断</div>';
+        return html;
+    }
+    // Simple array: one row per item
+    let html = '<table class="param-table"><tbody>';
+    arr.forEach((item, i) => {
+        html += `<tr><td class="param-key">[${i}]</td><td class="param-val">${renderParamValue(item, '')}</td></tr>`;
+    });
+    html += '</tbody></table>';
+    if (isTruncated) html += '<div style="font-size:0.6rem;color:var(--color-text-muted);margin-top:0.2rem">⋯ 内容被截断</div>';
+    return html;
+}
+
+function renderParamsTable(str) {
+    if (!str) return '';
+    const isTruncated = str.trimEnd().endsWith('...');
+    let parsed = tryParseJson(str);
+    if (parsed !== null) {
+        if (typeof parsed === 'string') {
+            // Double-encoded JSON
+            const inner = tryParseJson(parsed);
+            if (inner !== null) parsed = inner;
+            else return escHtml(parsed);
+        }
+        if (typeof parsed !== 'object' || parsed === null) return escHtml(String(parsed));
+        if (Array.isArray(parsed)) return renderArrayTable(parsed, isTruncated);
+        return renderObjTable(parsed, isTruncated);
+    }
+    // Not JSON at all — render as plain text
+    return escHtml(str);
+}
+
+// ── Utilities ─────────────────────────────────
+
+function renderMarkdown(s) {
+    if (!s) return '';
+    try {
+        return marked.parse(s);
+    } catch(e) {
+        return escHtml(s);
+    }
+}
+
+function escHtml(s) {
+    if (!s) return '';
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/\n/g,'<br>');
+}
+
+function toggleSection(id) {
+    const header = document.querySelector(`#sec-${id} .collapsible-header`);
+    const body = document.getElementById(`${id}-body`);
+    header.classList.toggle('collapsed');
+    body.classList.toggle('collapsed');
+}
+
+function toggleExecDetail(id) {
+    const el = document.getElementById(id);
+    if (el) {
+        el.classList.toggle('expanded');
+        // Toggle arrow direction
+        const item = el.previousElementSibling;
+        if (item) {
+            const arrow = item.querySelector('.expand-toggle');
+            if (arrow) arrow.textContent = el.classList.contains('expanded') ? '\u25BC' : '\u25B6';
+        }
+    }
+}
+
+function toggleAllDetails(btn) {
+    const col = btn.closest('.compare-col');
+    if (!col) return;
+    const details = col.querySelectorAll('.exec-tool-detail');
+    const allExpanded = [...details].every(d => d.classList.contains('expanded'));
+    details.forEach(d => {
+        if (allExpanded) d.classList.remove('expanded');
+        else d.classList.add('expanded');
+        const item = d.previousElementSibling;
+        if (item) {
+            const arrow = item.querySelector('.expand-toggle');
+            if (arrow) arrow.textContent = d.classList.contains('expanded') ? '\u25BC' : '\u25B6';
+        }
+    });
+    btn.textContent = allExpanded ? '展开全部' : '收起全部';
+}
+
+function jumpToTool(name) {
+    const el = document.getElementById('tool-' + name);
+    if (el) {
+        // Expand registry section if collapsed
+        const regBody = document.getElementById('registry-body');
+        if (regBody.classList.contains('collapsed')) {
+            toggleSection('registry');
+        }
+        el.classList.add('expanded');
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
+
+function openVideo(path, qid, infoStr) {
+    const modal = document.getElementById('video-modal');
+    const video = document.getElementById('modal-video');
+    const title = document.getElementById('modal-title');
+    const info = document.getElementById('modal-info');
+    title.textContent = qid;
+    video.src = '../' + path;
+    video.load();
+    let infoText = path;
+    if (infoStr) {
+        try {
+            const vi = JSON.parse(infoStr);
+            if (vi.duration) infoText += ` · ${(vi.duration / 60).toFixed(1)} min`;
+            if (vi.fps) infoText += ` · ${vi.fps} fps`;
+        } catch(e) {}
+    }
+    info.textContent = infoText;
+    modal.classList.add('active');
+}
+
+function closeModal() {
+    const modal = document.getElementById('video-modal');
+    const video = document.getElementById('modal-video');
+    video.pause();
+    video.src = '';
+    modal.classList.remove('active');
+}
+
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeModal();
+});
+</script>
+</body>
+</html>
