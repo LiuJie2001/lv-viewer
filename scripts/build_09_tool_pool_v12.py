@@ -11,7 +11,18 @@ Output: self-contained HTML with embedded data
 """
 import json
 import os
+import glob
+import re
+import base64
 from collections import Counter, defaultdict
+from io import BytesIO
+
+try:
+    from PIL import Image, ImageDraw
+    HAS_PIL = True
+except ImportError:
+    HAS_PIL = False
+    print("WARNING: Pillow not installed, image embedding disabled")
 
 BASE = "/root/paddlejob/workspace/env_run/output/bwh/lj"
 DATA_DIR = os.path.join(BASE, "video_cases_tools/data/outputs")
@@ -32,6 +43,154 @@ ABILITY_CATEGORY = {
     18: "Visual Perception", 19: "Visual Perception", 20: "Visual Perception",
     21: "Visual Perception", 22: "Visual Perception",
 }
+
+
+# ── Key cases for image visualization ──
+# Cat1: BL✓ All-Tool✗ | Cat3: BL✗ All-Tool✓
+KEY_VISUAL_CASES = {
+    "longvideobench_hf4WUOagFAw_1",
+    "lvbench_1069", "lvbench_1135", "lvbench_2362",
+    "lvbench_4023", "lvbench_4754",
+    "longvideobench_4QSmRYQBfN4_0", "videomme_011-3",
+}
+
+# Visual tool types that produce images/bboxes
+VISUAL_TOOLS = {"frame_extraction", "object_detection", "spatial_crop"}
+
+MAX_FRAMES_PER_STEP = 6  # Max frames to embed per frame_extraction step
+IMG_MAX_WIDTH = 280       # Thumbnail width in pixels
+IMG_JPEG_QUALITY = 55     # JPEG quality
+
+# Output directory for generated images (relative to lv-viewer root)
+IMG_OUTPUT_DIR = os.path.join(VIEWER_DIR, "images", "tool-visuals")
+IMG_REL_PREFIX = "../images/tool-visuals"  # Relative path from pages/ to images
+
+
+_img_counter = [0]  # mutable counter for unique filenames
+
+
+def _save_img(img, case_id, model_key, suffix):
+    """Save PIL Image to file and return relative path from pages/."""
+    _img_counter[0] += 1
+    case_dir = os.path.join(IMG_OUTPUT_DIR, case_id, model_key)
+    os.makedirs(case_dir, exist_ok=True)
+    fname = f"{_img_counter[0]:04d}_{suffix}.jpg"
+    out_path = os.path.join(case_dir, fname)
+    img.save(out_path, format="JPEG", quality=IMG_JPEG_QUALITY)
+    return f"{IMG_REL_PREFIX}/{case_id}/{model_key}/{fname}"
+
+
+def img_to_file(img_path, case_id, model_key, suffix="frame", max_w=IMG_MAX_WIDTH):
+    """Resize image and save to output dir. Return relative path."""
+    if not HAS_PIL or not os.path.exists(img_path):
+        return None
+    try:
+        img = Image.open(img_path).convert("RGB")
+        if img.width > max_w:
+            ratio = max_w / img.width
+            img = img.resize((max_w, int(img.height * ratio)), Image.LANCZOS)
+        return _save_img(img, case_id, model_key, suffix)
+    except Exception:
+        return None
+
+
+def draw_bboxes_to_file(img_path, detections, case_id, model_key, suffix="bbox", max_w=IMG_MAX_WIDTH):
+    """Draw bounding boxes on image, save to file, return relative path."""
+    if not HAS_PIL or not os.path.exists(img_path):
+        return None
+    try:
+        img = Image.open(img_path).convert("RGB")
+        draw = ImageDraw.Draw(img)
+        colors = ["#FF3333", "#33FF33", "#3333FF", "#FF33FF", "#FFFF33", "#33FFFF"]
+        for i, det in enumerate(detections):
+            bbox = det.get("bbox") or det.get("bounding_box", [])
+            if len(bbox) != 4:
+                continue
+            color = colors[i % len(colors)]
+            x1, y1, x2, y2 = [float(v) for v in bbox]
+            draw.rectangle([x1, y1, x2, y2], outline=color, width=max(2, img.width // 300))
+            label = det.get("object", "")
+            if label:
+                draw.text((x1 + 2, y1 + 2), label, fill=color)
+        if img.width > max_w:
+            ratio = max_w / img.width
+            img = img.resize((max_w, int(img.height * ratio)), Image.LANCZOS)
+        return _save_img(img, case_id, model_key, suffix)
+    except Exception:
+        return None
+
+
+def extract_visual_data_for_step(tool_data, tool_name, case_id, model_key, step_num, frame_lookup=None):
+    """Extract visual data from a tool output step, save images to files.
+    Returns list of {src: relative_path, label: str} or None.
+    """
+    if not HAS_PIL:
+        return None
+    content = tool_data.get("content", "")
+    if isinstance(content, list):
+        text = " ".join(c.get("text", "") for c in content if isinstance(c, dict))
+    else:
+        text = str(content)
+
+    images = []
+
+    if tool_name == "frame_extraction" and "image_path" in text:
+        try:
+            data = json.loads(text) if text.strip().startswith("{") else json.loads(
+                text.strip("` \n").lstrip("json\n"))
+            frames = data.get("frames", [])
+            if len(frames) > MAX_FRAMES_PER_STEP:
+                step_size = len(frames) / MAX_FRAMES_PER_STEP
+                indices = [int(i * step_size) for i in range(MAX_FRAMES_PER_STEP)]
+                frames = [frames[i] for i in indices]
+            for fi, fr in enumerate(frames):
+                path = fr.get("image_path", "")
+                ts = fr.get("timestamp", 0)
+                rel = img_to_file(path, case_id, model_key, suffix=f"s{step_num}_f{fi}_{ts:.1f}s")
+                if rel:
+                    images.append({"src": rel, "label": f"{ts:.1f}s"})
+        except Exception:
+            pass
+
+    elif tool_name == "object_detection" and ("bbox" in text or "bounding_box" in text):
+        try:
+            data = json.loads(text) if text.strip().startswith("{") else json.loads(
+                text.strip("` \n").lstrip("json\n"))
+            dets = data.get("detections", [])
+            if dets:
+                input_args = tool_data.get("input_args", {})
+                img_path = None
+                vf = input_args.get("video_frames", "")
+                if isinstance(vf, str) and os.path.exists(vf):
+                    img_path = vf
+                elif isinstance(vf, list) and vf and os.path.exists(str(vf[0])):
+                    img_path = str(vf[0])
+                if not img_path and frame_lookup:
+                    fi = input_args.get("frame_index") or (input_args.get("frame_indices", [None])[0] if input_args.get("frame_indices") else None)
+                    if fi is not None and fi in frame_lookup:
+                        img_path = frame_lookup[fi]
+                if img_path:
+                    rel = draw_bboxes_to_file(img_path, dets, case_id, model_key, suffix=f"s{step_num}_bbox")
+                    if rel:
+                        labels = [f"{d.get('object', '?')}" for d in dets[:5]]
+                        images.append({"src": rel, "label": ", ".join(labels)})
+        except Exception:
+            pass
+
+    elif tool_name == "spatial_crop" and "crop_path" in text:
+        try:
+            data = json.loads(text) if text.strip().startswith("{") else json.loads(
+                text.strip("` \n").lstrip("json\n"))
+            crop_path = data.get("crop_path", "")
+            bbox = data.get("bbox_pixel", [])
+            label = f"crop [{','.join(str(int(v)) for v in bbox)}]" if bbox else "crop"
+            rel = img_to_file(crop_path, case_id, model_key, suffix=f"s{step_num}_crop")
+            if rel:
+                images.append({"src": rel, "label": label})
+        except Exception:
+            pass
+
+    return images if images else None
 
 
 def load_json(path):
@@ -76,26 +235,33 @@ def _extract_tool_output_text(content):
     return str(content) if content else ""
 
 
-def parse_trajectory_steps(trajectory):
-    """Parse trajectory messages into steps with tool args and output."""
+def parse_trajectory_steps(trajectory, traj_folder=None, embed_images=False, case_id="", model_key=""):
+    """Parse trajectory messages into steps with tool args and output.
+    If traj_folder is provided, load full data (including thinking) from step files.
+    If embed_images=True, save visual data to files for key cases.
+    """
+    # If trajectory folder exists, prefer loading from files (has thinking + full content)
+    if traj_folder and os.path.exists(traj_folder):
+        return _parse_from_folder(traj_folder, embed_images=embed_images,
+                                   case_id=case_id, model_key=model_key)
+
     steps = []
     step_num = 0
-    # Build tool_call_id → output map for matching
-    pending_tool_calls = []  # list of (step_index, tool_call_name)
+    pending_tool_calls = []
     tool_output_queue = []
 
     # First pass: pair AI tool_calls with subsequent tool outputs
-    paired = []  # list of (ai_content, [(tool_name, args, output), ...])
+    paired = []  # list of ("tool_call"|"reasoning", ai_content, thinking, [(tool_name, args, output), ...])
     i = 0
     while i < len(trajectory):
         item = trajectory[i]
         if item.get("role") == "ai":
             content = (item.get("content") or "")
+            thinking = (item.get("thinking") or "")
             tool_calls = item.get("tool_calls") or []
             if tool_calls:
                 tools_with_output = []
                 for tc in tool_calls:
-                    # Look ahead for matching tool output
                     output_text = ""
                     j = i + 1
                     while j < len(trajectory):
@@ -107,38 +273,150 @@ def parse_trajectory_steps(trajectory):
                             break
                         j += 1
                     tools_with_output.append((tc.get("name", ""), tc.get("args", {}), output_text))
-                paired.append(("tool_call", content, tools_with_output))
-                # Skip past the tool outputs we consumed
+                paired.append(("tool_call", content, thinking, tools_with_output))
                 i += 1
                 while i < len(trajectory) and trajectory[i].get("role") == "tool":
                     i += 1
                 continue
             else:
-                paired.append(("reasoning", content, []))
+                paired.append(("reasoning", content, thinking, []))
         i += 1
 
     # Build steps
-    for entry_type, content, tools_data in paired:
+    for entry_type, content, thinking, tools_data in paired:
         if entry_type == "tool_call":
-            for tool_name, args, output in tools_data:
+            for idx, (tool_name, args, output) in enumerate(tools_data):
                 step_num += 1
                 args_brief = json.dumps(args, ensure_ascii=False) if args else ""
                 output_brief = output if output else ""
-                steps.append({
+                step = {
                     "step": step_num,
                     "tool": tool_name,
                     "purpose": content if content else "",
                     "args_brief": args_brief,
                     "output_brief": output_brief,
-                })
+                }
+                # Attach thinking only to the first tool call of this AI message
+                if idx == 0 and thinking:
+                    step["thinking"] = thinking
+                steps.append(step)
         else:
             step_num += 1
-            steps.append({
+            step = {
                 "step": step_num,
                 "tool": None,
                 "purpose": content,
-            })
+            }
+            if thinking:
+                step["thinking"] = thinking
+            steps.append(step)
     return steps
+
+
+def _parse_from_folder(folder_path, embed_images=False, case_id="", model_key=""):
+    """Parse trajectory from step files in a folder (has thinking field).
+    If embed_images=True, save visual data to files and reference them.
+    """
+    step_files = sorted(glob.glob(os.path.join(folder_path, "step_*.json")),
+                        key=lambda f: int(re.search(r'step_(\d+)', os.path.basename(f)).group(1)))
+    steps = []
+    step_num = 0
+
+    # For image embedding: build frame_index → image_path lookup from frame_extraction outputs
+    frame_lookup = {}  # frame_index → image_path (cumulative across all extractions)
+
+    # Group: each AI file followed by its tool output files
+    i = 0
+    while i < len(step_files):
+        sf = step_files[i]
+        fname = os.path.basename(sf)
+        with open(sf) as f:
+            data = json.load(f)
+
+        if data.get("role") == "ai":
+            content = data.get("content", "") or ""
+            thinking = data.get("thinking", "") or ""
+            tool_calls = data.get("tool_calls") or []
+
+            if tool_calls:
+                # Collect subsequent tool output files
+                j = i + 1
+                for tc_idx, tc in enumerate(tool_calls):
+                    tool_name = tc.get("name", "")
+                    args = tc.get("args", {})
+                    output_text = ""
+                    tool_data_raw = None
+                    if j < len(step_files):
+                        with open(step_files[j]) as tf:
+                            tool_data_raw = json.load(tf)
+                        if tool_data_raw.get("role") == "tool":
+                            output_text = _extract_tool_output_text(tool_data_raw.get("content", ""))
+                            j += 1
+                        else:
+                            tool_data_raw = None
+
+                    step_num += 1
+                    args_brief = json.dumps(args, ensure_ascii=False) if args else ""
+                    step = {
+                        "step": step_num,
+                        "tool": tool_name,
+                        "purpose": content if content else "",
+                        "args_brief": args_brief,
+                        "output_brief": output_text,
+                    }
+                    if tc_idx == 0 and thinking:
+                        step["thinking"] = thinking
+
+                    # Embed images for visual tools in key cases
+                    if embed_images and tool_data_raw and tool_name in VISUAL_TOOLS:
+                        # Add input_args to tool_data for bbox frame matching (prefer file's own)
+                        if "input_args" not in tool_data_raw:
+                            tool_data_raw["input_args"] = args
+                        imgs = extract_visual_data_for_step(
+                            tool_data_raw, tool_name, case_id, model_key, step_num, frame_lookup)
+                        if imgs:
+                            step["images"] = imgs
+
+                        # Update frame_lookup from frame_extraction outputs
+                        if tool_name == "frame_extraction" and tool_data_raw:
+                            _update_frame_lookup(frame_lookup, tool_data_raw)
+
+                    steps.append(step)
+                i = j
+            else:
+                step_num += 1
+                step = {
+                    "step": step_num,
+                    "tool": None,
+                    "purpose": content,
+                }
+                if thinking:
+                    step["thinking"] = thinking
+                steps.append(step)
+                i += 1
+        else:
+            # Tool output without AI parent (shouldn't happen, skip)
+            i += 1
+
+    return steps
+
+
+def _update_frame_lookup(frame_lookup, tool_data):
+    """Update frame_index → image_path from a frame_extraction tool output."""
+    content = tool_data.get("content", "")
+    if isinstance(content, list):
+        text = " ".join(c.get("text", "") for c in content if isinstance(c, dict))
+    else:
+        text = str(content)
+    try:
+        data = json.loads(text) if text.strip().startswith("{") else json.loads(
+            text.strip("` \n").lstrip("json\n"))
+        for idx, fr in enumerate(data.get("frames", [])):
+            path = fr.get("image_path", "")
+            if os.path.exists(path):
+                frame_lookup[idx] = path
+    except Exception:
+        pass
 
 
 def compute_bench_stats(cases_data, baseline_records, gpt_records, claude_records, gemini_records, case_lookup):
@@ -287,6 +565,13 @@ def compute_bench_stats(cases_data, baseline_records, gpt_records, claude_record
 
 
 def main():
+    # ── Clean up old generated images ──
+    import shutil
+    if os.path.exists(IMG_OUTPUT_DIR):
+        shutil.rmtree(IMG_OUTPUT_DIR)
+    os.makedirs(IMG_OUTPUT_DIR, exist_ok=True)
+    _img_counter[0] = 0
+
     # ── Load data ──
     reg_data = load_json(os.path.join(DATA_DIR, "s4_tool_registry_v12.json"))
     cases_data = load_json(os.path.join(DATA_DIR, "s2_case_abilities_116.json"))
@@ -356,6 +641,32 @@ def main():
             "ability_description": a["name"],
         })
 
+    # ── Build trajectory folder lookups (for thinking field) ──
+    traj_folder_lookups = {}
+    for mk, dirname in [
+        ("gpt-5.4", "s5_agent_results_tool_v12_gpt-5.4_trajectories"),
+        ("claude-opus-4-6", "s5_agent_results_tool_v12_claude-opus-4-6_trajectories"),
+    ]:
+        td = os.path.join(DATA_DIR, dirname)
+        lookup = {}
+        if os.path.exists(td):
+            for name in os.listdir(td):
+                full = os.path.join(td, name)
+                if os.path.isdir(full):
+                    lookup[name] = full
+        traj_folder_lookups[mk] = lookup
+
+    gem_folder_lookup = {}
+    for dirname in ["s5_agent_results_tool_v12_gemini-3-pro_trajectories",
+                     "s5_agent_results_tool_v12_gemini-3.1-pro_trajectories"]:
+        td = os.path.join(DATA_DIR, dirname)
+        if os.path.exists(td):
+            for name in os.listdir(td):
+                full = os.path.join(td, name)
+                if os.path.isdir(full):
+                    gem_folder_lookup[name] = full
+    traj_folder_lookups["gemini"] = gem_folder_lookup
+
     # ── Build questions with 3-model trajectories ──
     BENCH_ORDER = {"LVBench": 0, "LongVideoBench": 1, "Video-MME": 2}
     # Canonical model keys
@@ -372,7 +683,12 @@ def main():
         for model_key, lookup in [("gpt-5.4", gpt_lookup), ("claude-opus-4-6", claude_lookup), ("gemini", gemini_lookup)]:
             rec = lookup.get(short_qid)
             if rec:
-                steps = parse_trajectory_steps(rec.get("trajectory", []))
+                # Use trajectory folder if available (has thinking field)
+                traj_folder = traj_folder_lookups.get(model_key, {}).get(rec["question_id"])
+                is_key_case = rec["question_id"] in KEY_VISUAL_CASES
+                steps = parse_trajectory_steps(rec.get("trajectory", []), traj_folder=traj_folder,
+                                                embed_images=is_key_case,
+                                                case_id=rec["question_id"], model_key=model_key)
                 trajectories[model_key] = {"steps": steps}
                 per_model_info[model_key] = {
                     "correct": rec.get("correct", False),
@@ -723,7 +1039,7 @@ def generate_html(registry, abilities, traj_stats, traj_data, level_counts, benc
         .question-text {{ font-size:0.82rem; line-height:1.5; color:var(--color-text); }}
 
         .model-compare {{ display:grid; grid-template-columns:repeat(3,1fr); gap:0; }}
-        .model-column {{ border-right:1px solid var(--color-border); min-height:60px; }}
+        .model-column {{ border-right:1px solid var(--color-border); min-height:60px; min-width:0; overflow:hidden; }}
         .model-column:last-child {{ border-right:none; }}
         .model-col-header {{ padding:0.45rem 0.6rem; display:flex; align-items:center; gap:0.4rem; font-size:0.75rem; font-weight:600; border-bottom:1px solid var(--color-border); }}
         .model-col-header.gpt {{ background:#f0fdf4; color:var(--color-gpt); border-top:2px solid var(--color-gpt); }}
@@ -743,6 +1059,20 @@ def generate_html(registry, abilities, traj_stats, traj_data, level_counts, benc
         .step-name.reasoning {{ color:#6b7280; font-style:italic; cursor:default; }}
         .step-name.reasoning:hover {{ text-decoration:none; }}
         .step-purpose {{ font-size:0.66rem; color:var(--color-text-secondary); line-height:1.4; margin-top:0.2rem; padding-left:1.6rem; }}
+        .step-purpose p {{ margin:0.2rem 0; }}
+        .step-purpose strong {{ color:var(--color-text); }}
+        .step-purpose code {{ font-family:var(--font-mono); font-size:0.6rem; background:var(--color-bg-alt); padding:0.1rem 0.25rem; border-radius:3px; }}
+        .step-purpose ul, .step-purpose ol {{ margin:0.2rem 0; padding-left:1.2rem; }}
+        .step-purpose li {{ margin:0.1rem 0; }}
+        .step-collapsible {{ margin-top:0.25rem; border-radius:4px; border:1px solid #e5e7eb; }}
+        .step-collapsible-header {{ display:flex; align-items:center; gap:0.3rem; padding:0.25rem 0.6rem; background:#f3f4f6; cursor:pointer; font-size:0.58rem; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:0.04em; }}
+        .step-collapsible-header:hover {{ background:#e5e7eb; }}
+        .step-collapsible-toggle {{ font-size:0.5rem; transition:transform 0.15s; }}
+        .step-collapsible.expanded .step-collapsible-toggle {{ transform:rotate(90deg); }}
+        .step-collapsible-body {{ display:none; padding:0.4rem 0.5rem; font-family:var(--font-mono); font-size:0.6rem; line-height:1.5; color:#4b5563; white-space:pre-wrap; word-break:break-all; max-height:15em; overflow-y:auto; overflow-x:auto; background:#f9fafb; border-top:1px solid #e5e7eb; }}
+        .step-collapsible.expanded .step-collapsible-body {{ display:block; }}
+        .step-collapsible.thinking .step-collapsible-header {{ background:#f0f0f0; color:#9ca3af; }}
+        .step-collapsible.params .step-collapsible-header {{ background:#f0f9ff; color:#3b82f6; }}
         .no-tools {{ padding:1rem; text-align:center; font-size:0.75rem; color:var(--color-text-muted); }}
 
         /* Tool I/O detail blocks */
@@ -750,6 +1080,16 @@ def generate_html(registry, abilities, traj_stats, traj_data, level_counts, benc
         .exec-tool-dot {{ width:6px; height:6px; border-radius:50%; background:var(--color-accent); flex-shrink:0; }}
         .exec-tool-detail {{ display:none; margin:0.15rem 0 0.3rem 1.6rem; }}
         .exec-tool-detail.expanded {{ display:block; }}
+        /* ── Step images (key case thumbnails) ── */
+        .step-images {{ display:flex; flex-wrap:wrap; gap:0.4rem; margin:0.4rem 0 0.2rem 1.6rem; }}
+        .step-img-thumb {{ cursor:pointer; border:1px solid var(--color-border); border-radius:4px; overflow:hidden; display:flex; flex-direction:column; max-width:140px; transition:box-shadow 0.15s; }}
+        .step-img-thumb:hover {{ box-shadow:0 2px 8px rgba(0,0,0,0.15); }}
+        .step-img-thumb img {{ width:100%; height:auto; display:block; }}
+        .step-img-label {{ font-size:0.55rem; text-align:center; padding:0.15rem 0.25rem; background:var(--color-bg-alt); color:var(--color-text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }}
+        /* Lightbox */
+        .lightbox-overlay {{ position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.85); z-index:9999; display:flex; align-items:center; justify-content:center; cursor:pointer; }}
+        .lightbox-overlay img {{ max-width:90vw; max-height:90vh; border-radius:4px; box-shadow:0 4px 20px rgba(0,0,0,0.5); }}
+
         .step-block {{ margin-top:0.3rem; border-radius:4px; padding:0.5rem 0.75rem; font-size:0.68rem; line-height:1.6; position:relative; }}
         .step-block-label {{ display:inline-block; font-size:0.55rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; padding:0.05rem 0.3rem; border-radius:2px; margin-right:0.3rem; vertical-align:middle; }}
         .step-block-content {{ font-family:var(--font-mono); font-size:0.62rem; color:inherit; word-break:break-all; white-space:pre-wrap; max-height:20em; overflow-y:auto; margin-top:0.15rem; }}
@@ -806,6 +1146,22 @@ def generate_html(registry, abilities, traj_stats, traj_data, level_counts, benc
         .case-filter-btn {{ padding:0.25rem 0.6rem; border:1px solid var(--color-border); border-radius:2rem; background:white; cursor:pointer; font-size:0.7rem; font-family:var(--font-sans); color:var(--color-text-secondary); transition:all 0.15s; }}
         .case-filter-btn:hover {{ border-color:var(--color-accent); color:var(--color-accent); }}
         .case-filter-btn.active {{ background:var(--color-accent); color:white; border-color:var(--color-accent); }}
+        /* Combo tabs: model vs baseline */
+        .combo-filter-section {{ margin-bottom:1rem; }}
+        .combo-filter-group {{ display:flex; gap:0.35rem; margin-bottom:0.5rem; flex-wrap:wrap; align-items:center; }}
+        .combo-filter-group .combo-label {{ font-size:0.72rem; font-weight:600; min-width:140px; }}
+        .combo-tab {{ padding:0.3rem 0.7rem; border-radius:2rem; cursor:pointer; font-size:0.7rem; font-weight:600; border:2px solid transparent; background:var(--color-bg-alt); color:var(--color-text-secondary); transition:all 0.15s; display:inline-flex; align-items:center; gap:0.3rem; }}
+        .combo-tab:hover {{ opacity:0.85; }}
+        .combo-tab .tab-count {{ font-family:var(--font-mono); font-size:0.65rem; }}
+        .combo-tab.active {{ color:white; }}
+        .combo-tab.both_correct.active {{ background:var(--color-correct); border-color:var(--color-correct); }}
+        .combo-tab.bl_only.active {{ background:#FF9800; border-color:#FF9800; }}
+        .combo-tab.model_only.active {{ background:#2196F3; border-color:#2196F3; }}
+        .combo-tab.both_wrong.active {{ background:var(--color-wrong); border-color:var(--color-wrong); }}
+        .combo-tab.combo-all.active {{ background:var(--color-accent); border-color:var(--color-accent); }}
+        .combo-divider {{ display:flex; align-items:center; gap:0.5rem; margin:0.6rem 0; font-size:0.68rem; color:var(--color-text-muted); }}
+        .combo-divider::before, .combo-divider::after {{ content:''; flex:1; border-top:1px dashed var(--color-border); }}
+        /* Independent dropdown filters */
         .corr-filter-row {{ display:flex; gap:0.6rem; margin-bottom:1rem; flex-wrap:wrap; align-items:center; }}
         .corr-filter-row .case-filter-label {{ font-size:0.72rem; color:var(--color-text-muted); margin-right:0.2rem; }}
         .corr-filter-item {{ display:flex; align-items:center; gap:0.25rem; }}
@@ -890,6 +1246,8 @@ def generate_html(registry, abilities, traj_stats, traj_data, level_counts, benc
             <input type="text" id="case-search" placeholder="搜索题目关键词或序号（如 #12）..." oninput="applyAllFilters()">
         </div>
         <div class="case-filter-bar" id="case-filter"></div>
+        <div class="combo-filter-section" id="combo-filter-section"></div>
+        <div class="combo-divider">或 自定义组合</div>
         <div class="corr-filter-row" id="corr-filter-row"></div>
         <div class="pagination-bar" id="pagination-top"></div>
         <div id="cases-container"></div>
@@ -1083,19 +1441,6 @@ function renderCases() {{
     Object.entries(benchCounts).forEach(([b,c]) => {{ fh += `<button class="case-filter-btn" data-type="bench" data-val="${{b}}" onclick="setCaseFilter('bench','${{b}}',this)">${{b}} (${{c}})</button>`; }});
     document.getElementById('case-filter').innerHTML = fh;
 
-    // Correctness dropdown filters
-    let corrHtml = `<span class="case-filter-label">正误筛选:</span>`;
-    const corrModels = [
-        {{key:'bl',label:'Baseline',color:'#FF9800'}},
-        {{key:'gpt',label:'GPT-5.4',color:'#10a37f'}},
-        {{key:'claude',label:'Claude Opus',color:'#c96442'}},
-        {{key:'gem',label:'Gemini',color:'#4285f4'}},
-    ];
-    corrModels.forEach(m => {{
-        corrHtml += `<div class="corr-filter-item"><span class="corr-model-label" style="color:${{m.color}}">${{m.label}}</span><select id="corr-${{m.key}}" onchange="applyAllFilters()"><option value="all">All</option><option value="correct">✓ 正确</option><option value="wrong">✗ 错误</option></select></div>`;
-    }});
-    document.getElementById('corr-filter-row').innerHTML = corrHtml;
-
     // Build flat question list with filter metadata
     window._allCaseItems = [];
     ABILITIES.forEach(a => {{
@@ -1115,12 +1460,69 @@ function renderCases() {{
         }});
     }});
 
+    // Combo tabs: each model vs Baseline
+    const comboModels = [
+        {{key:'gpt', label:'GPT-5.4', color:'#10a37f'}},
+        {{key:'claude', label:'Claude Opus 4.6', color:'#c96442'}},
+        {{key:'gem', label:'Gemini 3.0 Pro', color:'#4285f4'}},
+    ];
+    const comboCats = ['both_correct','bl_only','model_only','both_wrong'];
+    const comboCatLabels = {{both_correct:'Both Correct', bl_only:'Baseline Only', model_only:'{{MODEL}} Only', both_wrong:'Both Wrong'}};
+
+    function getComboCategory(blVal, modelVal) {{
+        if(blVal===1 && modelVal===1) return 'both_correct';
+        if(blVal===1 && modelVal===0) return 'bl_only';
+        if(blVal===0 && modelVal===1) return 'model_only';
+        return 'both_wrong';
+    }}
+
+    let comboHtml = '';
+    comboModels.forEach(m => {{
+        // Count each category
+        const counts = {{both_correct:0, bl_only:0, model_only:0, both_wrong:0}};
+        window._allCaseItems.forEach(item => {{
+            if(item.bl >= 0 && item[m.key] >= 0) {{
+                counts[getComboCategory(item.bl, item[m.key])]++;
+            }}
+        }});
+        const total = Object.values(counts).reduce((a,b)=>a+b, 0);
+
+        comboHtml += `<div class="combo-filter-group" data-model="${{m.key}}">`;
+        comboHtml += `<span class="combo-label" style="color:${{m.color}}">${{m.label}} vs BL:</span>`;
+        comboHtml += `<button class="combo-tab combo-all active" data-model="${{m.key}}" data-combo="all" onclick="setComboFilter('${{m.key}}','all',this)">All <span class="tab-count">${{total}}</span></button>`;
+        comboCats.forEach(cat => {{
+            const label = comboCatLabels[cat].replace('{{MODEL}}', m.label.split(' ')[0]);
+            comboHtml += `<button class="combo-tab ${{cat}}" data-model="${{m.key}}" data-combo="${{cat}}" onclick="setComboFilter('${{m.key}}','${{cat}}',this)">${{label}} <span class="tab-count">${{counts[cat]}}</span></button>`;
+        }});
+        comboHtml += `</div>`;
+    }});
+    document.getElementById('combo-filter-section').innerHTML = comboHtml;
+
+    // Store getComboCategory globally
+    window._getComboCategory = getComboCategory;
+
+    // Correctness dropdown filters
+    let corrHtml = `<span class="case-filter-label">自定义:</span>`;
+    const corrModels = [
+        {{key:'bl',label:'Baseline',color:'#FF9800'}},
+        {{key:'gpt',label:'GPT-5.4',color:'#10a37f'}},
+        {{key:'claude',label:'Claude Opus',color:'#c96442'}},
+        {{key:'gem',label:'Gemini',color:'#4285f4'}},
+    ];
+    corrModels.forEach(m => {{
+        corrHtml += `<div class="corr-filter-item"><span class="corr-model-label" style="color:${{m.color}}">${{m.label}}</span><select id="corr-${{m.key}}" onchange="onDropdownChange()"><option value="all">All</option><option value="correct">Correct</option><option value="wrong">Wrong</option></select></div>`;
+    }});
+    document.getElementById('corr-filter-row').innerHTML = corrHtml;
+
     applyAllFilters();
 }}
 
 // ── Current filter state ──
 let _caseFilterType = 'cat'; // 'cat' or 'bench'
 let _caseFilterVal = 'all';
+let _comboModel = null; // 'gpt','claude','gem' or null
+let _comboCategory = 'all'; // 'both_correct','bl_only','model_only','both_wrong','all'
+let _filterMode = 'combo'; // 'combo' or 'dropdown'
 
 function setCaseFilter(type, val, btn) {{
     _caseFilterType = type;
@@ -1130,10 +1532,73 @@ function setCaseFilter(type, val, btn) {{
     applyAllFilters();
 }}
 
+function setComboFilter(model, cat, btn) {{
+    _filterMode = 'combo';
+    // Reset all combo tabs in all groups to inactive
+    document.querySelectorAll('.combo-tab').forEach(b => b.classList.remove('active'));
+    // Toggle: if clicking same selection → reset
+    if(_comboModel === model && _comboCategory === cat && cat !== 'all') {{
+        _comboModel = null;
+        _comboCategory = 'all';
+        document.querySelectorAll('.combo-tab.combo-all').forEach(b => b.classList.add('active'));
+    }} else {{
+        _comboModel = (cat === 'all') ? null : model;
+        _comboCategory = cat;
+        // Highlight All for other groups, selected for this group
+        document.querySelectorAll('.combo-tab.combo-all').forEach(b => {{
+            if(b.dataset.model !== model) b.classList.add('active');
+        }});
+        btn.classList.add('active');
+    }}
+    // Reset dropdowns
+    ['bl','gpt','claude','gem'].forEach(k => {{
+        const sel = document.getElementById('corr-'+k);
+        if(sel) {{ sel.value = 'all'; sel.className = ''; }}
+    }});
+    applyAllFilters();
+}}
+
+function onDropdownChange() {{
+    _filterMode = 'dropdown';
+    _comboModel = null;
+    _comboCategory = 'all';
+    document.querySelectorAll('.combo-tab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.combo-tab.combo-all').forEach(b => b.classList.add('active'));
+    applyAllFilters();
+}}
+
+function _passesCorrectness(item, corrFilters, corrKeys) {{
+    // Combo filter
+    if(_filterMode === 'combo' && _comboModel && _comboCategory !== 'all') {{
+        const blVal = item.bl, mVal = item[_comboModel];
+        if(blVal < 0 || mVal < 0) return false;
+        if(window._getComboCategory(blVal, mVal) !== _comboCategory) return false;
+    }}
+    // Dropdown filter
+    if(_filterMode === 'dropdown') {{
+        for(const k of corrKeys) {{
+            const state = corrFilters[k];
+            if(state === 'all') continue;
+            const val = item[k];
+            if(val === -1) continue;
+            if(state === 'correct' && val !== 1) return false;
+            if(state === 'wrong' && val !== 0) return false;
+        }}
+    }}
+    return true;
+}}
+
+function _passesSearch(item, searchRaw) {{
+    if(!searchRaw) return true;
+    const numMatch = searchRaw.match(/^#?(\\d+)$/);
+    if(numMatch) return item.q.sequential_id === parseInt(numMatch[1]);
+    return item.searchText.includes(searchRaw);
+}}
+
 function applyAllFilters() {{
     const searchRaw = (document.getElementById('case-search').value||'').trim().toLowerCase();
 
-    // Correctness filters
+    // Dropdown filters
     const corrKeys = ['bl','gpt','claude','gem'];
     const corrFilters = {{}};
     corrKeys.forEach(k => {{
@@ -1146,44 +1611,75 @@ function applyAllFilters() {{
 
     // Filter
     const filtered = window._allCaseItems.filter(item => {{
-        // Category / Benchmark filter
         if(_caseFilterType === 'cat' && _caseFilterVal !== 'all') {{
             if(item.cat !== _caseFilterVal) return false;
         }}
         if(_caseFilterType === 'bench') {{
             if(item.bench !== _caseFilterVal) return false;
         }}
-        // Correctness
-        for(const k of corrKeys) {{
-            const state = corrFilters[k];
-            if(state === 'all') continue;
-            const val = item[k];
-            if(val === -1) continue;
-            if(state === 'correct' && val !== 1) return false;
-            if(state === 'wrong' && val !== 0) return false;
-        }}
-        // Search
-        if(searchRaw) {{
-            // Support #num exact match
-            const numMatch = searchRaw.match(/^#?(\\d+)$/);
-            if(numMatch) {{
-                if(item.q.sequential_id !== parseInt(numMatch[1])) return false;
-            }} else {{
-                if(!item.searchText.includes(searchRaw)) return false;
-            }}
-        }}
+        if(!_passesCorrectness(item, corrFilters, corrKeys)) return false;
+        if(!_passesSearch(item, searchRaw)) return false;
         return true;
     }});
 
     caseFilteredIds = filtered;
     const totalQ = window._allCaseItems.length;
 
-    // Update count
+    // Update total count
     if(filtered.length === totalQ) {{
         document.getElementById('cases-count').textContent = `${{totalQ}} Questions`;
     }} else {{
         document.getElementById('cases-count').textContent = `${{filtered.length}} / ${{totalQ}} Questions`;
     }}
+
+    // ── Update category/benchmark tab counts ──
+    // Count items that pass correctness + search filters (ignoring cat/bench filter)
+    const catCounts = {{}};
+    const benchCounts = {{}};
+    let allCount = 0;
+    window._allCaseItems.forEach(item => {{
+        if(!_passesCorrectness(item, corrFilters, corrKeys)) return;
+        if(!_passesSearch(item, searchRaw)) return;
+        allCount++;
+        catCounts[item.cat] = (catCounts[item.cat]||0) + 1;
+        benchCounts[item.bench] = (benchCounts[item.bench]||0) + 1;
+    }});
+    document.querySelectorAll('#case-filter .case-filter-btn').forEach(btn => {{
+        const type = btn.dataset.type;
+        const val = btn.dataset.val;
+        let count = allCount;
+        if(type === 'cat' && val !== 'all') count = catCounts[val] || 0;
+        if(type === 'bench') count = benchCounts[val] || 0;
+        // Update text: keep label, update count in parens
+        const text = btn.textContent.replace(/\\s*\\(\\d+\\)/, '');
+        btn.textContent = `${{text}} (${{count}})`;
+    }});
+
+    // ── Update combo tab counts ──
+    // Count items that pass cat/bench + search filters (ignoring combo/dropdown)
+    const comboBase = window._allCaseItems.filter(item => {{
+        if(_caseFilterType === 'cat' && _caseFilterVal !== 'all' && item.cat !== _caseFilterVal) return false;
+        if(_caseFilterType === 'bench' && item.bench !== _caseFilterVal) return false;
+        if(!_passesSearch(item, searchRaw)) return false;
+        return true;
+    }});
+    const comboModels = ['gpt','claude','gem'];
+    const comboCats = ['both_correct','bl_only','model_only','both_wrong'];
+    comboModels.forEach(mk => {{
+        const counts = {{all:0, both_correct:0, bl_only:0, model_only:0, both_wrong:0}};
+        comboBase.forEach(item => {{
+            if(item.bl >= 0 && item[mk] >= 0) {{
+                const cat = window._getComboCategory(item.bl, item[mk]);
+                counts[cat]++;
+                counts.all++;
+            }}
+        }});
+        document.querySelectorAll(`.combo-tab[data-model="${{mk}}"]`).forEach(btn => {{
+            const combo = btn.dataset.combo;
+            const span = btn.querySelector('.tab-count');
+            if(span) span.textContent = counts[combo] || 0;
+        }});
+    }});
 
     // Reset to page 1
     casePage = 1;
@@ -1228,8 +1724,8 @@ function renderCasePage() {{
             }} else {{
                 blBody += `<div class="baseline-response"><div class="baseline-md">${{renderMarkdown(q.baseline.response||'')}}</div></div>`;
             }}
-            html += `<div class="baseline-row expanded" onclick="this.classList.toggle('expanded')">
-                <div class="baseline-row-header">
+            html += `<div class="baseline-row expanded">
+                <div class="baseline-row-header" onclick="this.parentElement.classList.toggle('expanded')">
                     <span>Baseline</span>
                     <span class="correct-badge ${{blC?'correct':'wrong'}}">${{blC?'\\u2713':'\\u2717'}} ${{q.baseline.answer||'—'}}</span>
                     <span style="font-size:0.6rem;color:var(--color-text-muted)">GT: ${{q.ground_truth}}</span>
@@ -1322,14 +1818,27 @@ function renderSteps(traj, model) {{
             html += `<span class="step-name reasoning">${{label}}</span>`;
         }} else {{
             html += `<span class="step-name" onclick="jumpTo('tool-${{s.tool}}')">${{label}}</span>`;
-            if(hasIO) html += `<span style="font-size:0.55rem;color:var(--color-accent);cursor:pointer;margin-left:auto" onclick="toggleExecDetail('${{detailId}}')">&#9654;</span>`;
         }}
         html += `</div>`;
-        if(s.purpose) html += `<div class="step-purpose">${{escHtml(s.purpose)}}</div>`;
+        // Thinking (collapsible, above content)
+        if(s.thinking) {{
+            html += `<div class="step-collapsible thinking"><div class="step-collapsible-header" onclick="this.parentElement.classList.toggle('expanded')"><span class="step-collapsible-toggle">&#9654;</span>Thinking</div><div class="step-collapsible-body">${{escHtml(s.thinking)}}</div></div>`;
+        }}
+        // Content (purpose)
+        if(s.purpose) html += `<div class="step-purpose">${{renderMarkdown(s.purpose)}}</div>`;
+        // Params bar (collapsible, below content)
         if(hasIO) {{
-            html += `<div class="exec-tool-detail" id="${{detailId}}">`;
-            if(s.args_brief) html += `<div class="step-block input"><span class="step-block-label">Input</span><div class="step-block-content">${{renderParamsTable(s.args_brief)}}</div></div>`;
-            if(s.output_brief) html += `<div class="step-block output"><span class="step-block-label">Output</span><div class="step-block-content">${{renderParamsTable(s.output_brief)}}</div></div>`;
+            let paramsBody = '';
+            if(s.args_brief) paramsBody += `<div class="step-block input"><span class="step-block-label">Input</span><div class="step-block-content">${{renderParamsTable(s.args_brief)}}</div></div>`;
+            if(s.output_brief) paramsBody += `<div class="step-block output"><span class="step-block-label">Output</span><div class="step-block-content">${{renderParamsTable(s.output_brief)}}</div></div>`;
+            html += `<div class="step-collapsible params"><div class="step-collapsible-header" onclick="this.parentElement.classList.toggle('expanded')"><span class="step-collapsible-toggle">&#9654;</span>Params</div><div class="step-collapsible-body">${{paramsBody}}</div></div>`;
+        }}
+        // Embedded images (key cases only)
+        if(s.images && s.images.length) {{
+            html += `<div class="step-images">`;
+            s.images.forEach(img => {{
+                html += `<div class="step-img-thumb" onclick="showLightbox(this)"><img src="${{img.src}}" loading="lazy" alt="${{escHtml(img.label)}}"><span class="step-img-label">${{escHtml(img.label)}}</span></div>`;
+            }});
             html += `</div>`;
         }}
         html += `</div>`;
@@ -1517,6 +2026,19 @@ function switchTab(tabEl) {{
     document.querySelector(`.model-tab-panel[data-qid="${{qid}}"][data-idx="${{idx}}"]`).classList.add('active');
 }}
 function renderMarkdown(s) {{ if(typeof marked!=='undefined'&&marked.parse) return marked.parse(s||''); return escHtml(s||'').replace(/\\n/g,'<br>'); }}
+
+function showLightbox(thumb) {{
+    const img = thumb.querySelector('img');
+    if(!img) return;
+    const overlay = document.createElement('div');
+    overlay.className = 'lightbox-overlay';
+    overlay.innerHTML = `<img src="${{img.src}}">`;
+    overlay.onclick = () => overlay.remove();
+    document.addEventListener('keydown', function handler(e) {{
+        if(e.key==='Escape') {{ overlay.remove(); document.removeEventListener('keydown',handler); }}
+    }});
+    document.body.appendChild(overlay);
+}}
 function escHtml(s) {{ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }}
 document.addEventListener('DOMContentLoaded', init);
 </script>
