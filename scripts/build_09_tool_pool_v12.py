@@ -564,6 +564,187 @@ def compute_bench_stats(cases_data, baseline_records, gpt_records, claude_record
     return bench_stats
 
 
+# ── Annotations for key cases ──
+# Each case has: summary (overall analysis), baseline_note, and per-model step annotations
+# Step annotations: {model_key: {step_num: "annotation text"}}
+CASE_ANNOTATIONS = {
+    # ══════════ Cat1: BL✓ All-Tool✗ ══════════
+    "hf4WUOagFAw_1": {
+        "category": "cat1",
+        "tag": "BL✓ All-Tool✗",
+        "summary": "K-pop 舞台表演视频（216s），需要在视频末尾找到穿紫色上衣比 7 手势闭眼的人，再回溯其第一次出现时的动作。三个工具模型全部错选 E（拿麦跳舞），GT 是 B（坐在舞台上伸展）。",
+        "failure_reason": "多步时间回溯中人物跟踪丢失：从 211s 回溯到 13s 需要跨越大量帧，工具的 temporal_grounding 对'第一次出现'的定位不稳定（有的返回 13s、有的 20s、有的 37s），最终都锁定到了该人拿麦跳舞的片段而非最早的坐姿片段。",
+        "baseline_note": "Baseline 直接观看完整视频帧，一次性看到 13s 时该人坐在舞台地板上的画面，与 211s 的紫色上衣形成正确关联。端到端视觉理解在人物跨时间匹配方面有天然优势。",
+        "model_notes": {
+            "gpt-5.4": "24 步中花费大量步骤做 frame_extraction + object_detection，最终定位到 36-40s 该人拿麦跳舞的片段，错过了更早的 13s 坐姿。",
+            "claude-opus-4-6": "71 步（最多），step_51 实际检测到 13s 坐姿+手靠嘴，step_57 检测到 leaning back，但在最终推理时被大量矛盾证据淹没，犹豫后选了 E。过度调用工具反而引入噪声。",
+            "gemini": "17 步，将第一次出现定位到 ~20s 拿麦唱歌，完全跳过了 13s 的坐姿。temporal_grounding 对'first appearance'理解有偏差。",
+        },
+        "step_annotations": {
+            "gpt-5.4": {
+                2: "采样了 12 帧的全局概览，但分辨率不足以识别紫色上衣人物",
+                15: "在 176-188s 做 object_detection 找近景镜头，但这些都是黑色衣服",
+                21: "尝试 frame_comparison + pose_estimation 分析手势，方向正确但范围不对",
+                24: "最终在 36-40s 发现 dancing with microphone 就下了结论，没有继续回溯更早时间",
+            },
+            "claude-opus-4-6": {
+                4: "第一次 temporal_grounding 找到 210s 的紫色上衣 + 13s 出现在金色舞台",
+                26: "attribute_recognition 确认 13.5s 有 purple_top=yes, holding_microphone=yes, action=dancing",
+                34: "关键失误：step_51 检测到坐姿，但被后续大量 dancing/microphone 的证据覆盖",
+                51: "检测到 13.5s 'sitting on floor, hand near mouth'——这是正确答案的直接证据！",
+                57: "检测到 13-14s 'sitting on floor, leaning back, hands on floor'——再次验证 B 选项",
+                71: "最终推理中列出了 B 选项的证据，但认为 microphone 更显著，选了 E。信息过载导致判断失误。",
+            },
+            "gemini": {
+                3: "全局帧采样只有 4 帧，对 216s 视频太稀疏",
+                7: "temporal_grounding 找到 37-39s 作为 purple hoodie 首次出现，跳过了 13s",
+                17: "基于错误的时间定位直接得出 'dancing with microphone' 结论",
+            },
+        },
+    },
+
+    # ══════════ Cat3: BL✗ All-Tool✓ ══════════
+    "1069": {
+        "category": "cat3",
+        "tag": "BL✗ All-Tool✓",
+        "summary": "长视频（2665s）中辨认戴蓝色短袖+眼镜的人佩戴的手表颜色。GT=B 黑色。Baseline 误判为金色（A），三个工具模型均正确。",
+        "failure_reason": "Baseline 在 2665s 长视频中帧采样密度不足，手表细节在缩略帧中难以辨认，误将金色表扣/棕色表带判断为金色手表。",
+        "baseline_note": "Baseline 回答 A（Golden），从 response 看它注意到了手表有 'gold-colored face and brown leather strap'，但实际手表表盘是黑色的，表扣可能是金色。长视频低分辨率帧下的细节判断出错。",
+        "model_notes": {
+            "gpt-5.4": "26 步，通过反复 object_detection + spatial_crop 定位手腕区域并放大，最终识别出黑色表盘。",
+            "claude-opus-4-6": "仅 8 步，高效定位 → crop → 识别，快速得出正确答案。",
+            "gemini": "23 步，也通过 crop + attribute_recognition 确认黑色手表。",
+        },
+        "step_annotations": {
+            "gpt-5.4": {
+                1: "frame_extraction 在 2665s 视频中采样关键帧",
+                8: "object_detection 定位手腕区域的手表",
+                18: "spatial_crop 放大手腕区域——工具方法的核心优势",
+                26: "最终通过放大细节确认黑色表盘",
+            },
+            "claude-opus-4-6": {
+                3: "快速定位到戴眼镜蓝色短袖的人",
+                5: "精准 crop 手腕区域",
+                8: "attribute_recognition 确认黑色手表，全程高效",
+            },
+        },
+    },
+    "1135": {
+        "category": "cat3",
+        "tag": "BL✗ All-Tool✓",
+        "summary": "长视频（2960s）中判断 06:01 时一个男人的表情。GT=D 笑。Baseline 误判为麻木（A），工具模型均正确。",
+        "failure_reason": "Baseline 帧采样间隔太大，可能未采样到 06:01 附近的帧，或在缩略帧中表情细节丢失。",
+        "baseline_note": "Baseline 判断 'neutral and serious, not crying/angry/laughing → numb'。但 06:01 处该男子实际在笑。帧采样粒度不够精确。",
+        "model_notes": {
+            "gpt-5.4": "仅 4 步！精确提取 06:01 附近帧，直接识别出笑容。",
+            "claude-opus-4-6": "3 步，同样快速定位 + 识别。",
+            "gemini": "9 步，稍多但同样正确。",
+        },
+        "step_annotations": {
+            "gpt-5.4": {
+                2: "精确提取 361s（06:01）附近的帧",
+                4: "直接从帧中识别出笑容表情——工具的时间定位精度是关键优势",
+            },
+        },
+    },
+    "2362": {
+        "category": "cat3",
+        "tag": "BL✗ All-Tool✓",
+        "summary": "超长视频（7547s/2h+）中定位小美人鱼第一次出现的时间。GT=B（03:40）。Baseline 选了 D（02:40），工具模型全对。",
+        "failure_reason": "7547s 超长视频，Baseline 帧采样覆盖不足，在时间定位精度上天然劣势。",
+        "baseline_note": "Baseline 在 2 小时视频中逐帧扫描，但采样间隔过大导致定位不准，误判为 02:40。",
+        "model_notes": {
+            "gpt-5.4": "8 步，使用 temporal_grounding 精准搜索 'little mermaid' 首次出现。",
+            "claude-opus-4-6": "10 步，同样通过 temporal_grounding 定位。",
+            "gemini": "20 步，多次验证确认时间点。",
+        },
+        "step_annotations": {
+            "gpt-5.4": {
+                3: "temporal_grounding 搜索 'little mermaid first appearance'——工具的语义搜索能力是杀手锏",
+                8: "确认 03:40 首次出现，直接给出正确答案",
+            },
+        },
+    },
+    "4023": {
+        "category": "cat3",
+        "tag": "BL✗ All-Tool✓",
+        "summary": "网球比赛视频（2792s），问在特定比分时镜头对准数字的原因。GT=A（发球速度极高）。Baseline 选 C（球击中了数字），工具模型全对。",
+        "failure_reason": "Baseline 无法精确读取速度数字，误判了因果关系。",
+        "baseline_note": "Baseline 看到镜头对准数字但无法用 OCR 精确读取速度值，误以为是球击中了显示屏上的数字。",
+        "model_notes": {
+            "gpt-5.4": "13 步，通过 OCR + 帧提取读出速度数字为极高值。",
+            "claude-opus-4-6": "23 步，用 text_recognition 精确读出发球速度。",
+            "gemini": "15 步，同样通过 OCR 读数。",
+        },
+        "step_annotations": {
+            "gpt-5.4": {
+                3: "提取比分附近帧，定位到速度显示区域",
+                7: "text_recognition 读出速度数字——OCR 工具的精确读数能力 Baseline 做不到",
+            },
+        },
+    },
+    "4754": {
+        "category": "cat3",
+        "tag": "BL✗ All-Tool✓",
+        "summary": "长视频（2450s）中辨认 20:29 画面最近的人穿什么衣服。GT=C（条纹衫）。Baseline 选 D（格子衫），工具模型全对。",
+        "failure_reason": "Baseline 在低分辨率帧中将条纹误判为格子。细节纹理在缩略帧中容易混淆。",
+        "baseline_note": "Baseline 简短回答 'plaid shirt'（格子衫），可能在缩小帧中条纹和格子的纹理难以区分。",
+        "model_notes": {
+            "gpt-5.4": "11 步，通过 spatial_crop 放大人物服装区域，清晰看到条纹纹理。",
+            "claude-opus-4-6": "17 步，crop + attribute_recognition 确认条纹。",
+            "gemini": "9 步，高效完成。",
+        },
+        "step_annotations": {
+            "gpt-5.4": {
+                5: "object_detection 定位画面中最近的人",
+                9: "spatial_crop 放大服装区域——条纹 vs 格子在放大后一目了然",
+            },
+            "claude-opus-4-6": {
+                4: "object_detection 定位人物 bbox",
+                6: "spatial_crop 裁剪放大",
+                12: "attribute_recognition 确认 'striped shirt'",
+            },
+        },
+    },
+    "4QSmRYQBfN4_0": {
+        "category": "cat3",
+        "tag": "BL✗ All-Tool✓",
+        "summary": "短视频（17s）中识别旗帜图案细节：字幕后出现了什么。GT=C（白色箭头 + 红旗上两个黄色图案）。Baseline 选 D，工具模型全对。",
+        "failure_reason": "Baseline 在快速切换的画面中遗漏了部分视觉元素的共现。",
+        "baseline_note": "虽然只有 17s，但画面切换快且细节密集。Baseline 正确识别了箭头和旗帜，但对旗帜上的黄色图案数量判断错误。",
+        "model_notes": {
+            "gpt-5.4": "10 步，通过密集帧提取捕捉快速切换的画面。",
+            "claude-opus-4-6": "115 步（极多！），对这个 17s 视频做了极其详尽的逐帧分析。",
+            "gemini": "18 步，通过 spatial_crop 放大旗帜细节。",
+        },
+        "step_annotations": {
+            "gpt-5.4": {
+                3: "在 17s 视频中密集提取 16 帧，捕获所有关键画面",
+                10: "text_recognition 读取字幕文本精确定位时间点",
+            },
+        },
+    },
+    "011-3": {
+        "category": "cat3",
+        "tag": "BL✗ All-Tool✓",
+        "summary": "芭蕾舞视频（118s），识别最后一幕的舞蹈动作。GT=A（单膝跪地后仰）。Baseline 选 D（passé + Grand jeté），工具模型全对。",
+        "failure_reason": "Baseline 对专业芭蕾术语的视觉对应理解不准确。",
+        "baseline_note": "Baseline 在最后几帧中看到了抬腿和弯膝动作，误判为 passé + Grand jeté。实际上最终动作是单膝跪地后仰。",
+        "model_notes": {
+            "gpt-5.4": "9 步，提取最后几秒帧 + pose_estimation 确认跪地后仰。",
+            "claude-opus-4-6": "5 步，快速高效。",
+            "gemini": "4 步，最精简。",
+        },
+        "step_annotations": {
+            "gpt-5.4": {
+                3: "提取最后 10s 的帧，聚焦于最终动作",
+                7: "action_recognition 识别 'kneel down and lean back'——精确匹配选项 A",
+            },
+        },
+    },
+}
+
+
 def main():
     # ── Clean up old generated images ──
     import shutil
@@ -716,6 +897,20 @@ def main():
                 "reasoning": reasoning_text,
             }
 
+        # Annotations for key cases
+        ann = CASE_ANNOTATIONS.get(short_qid)
+        ann_data = None
+        if ann:
+            ann_data = {
+                "category": ann["category"],
+                "tag": ann["tag"],
+                "summary": ann["summary"],
+                "failure_reason": ann.get("failure_reason", ""),
+                "baseline_note": ann.get("baseline_note", ""),
+                "model_notes": ann.get("model_notes", {}),
+                "step_annotations": ann.get("step_annotations", {}),
+            }
+
         questions.append({
             "question_id": short_qid,
             "ability_id": primary_aid,
@@ -727,6 +922,7 @@ def main():
             "trajectories": trajectories,
             "per_model": per_model_info,
             "baseline": baseline,
+            "annotations": ann_data,
         })
 
     # Fix ground_truth — get from actual record
@@ -1090,6 +1286,36 @@ def generate_html(registry, abilities, traj_stats, traj_data, level_counts, benc
         .lightbox-overlay {{ position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.85); z-index:9999; display:flex; align-items:center; justify-content:center; cursor:pointer; }}
         .lightbox-overlay img {{ max-width:90vw; max-height:90vh; border-radius:4px; box-shadow:0 4px 20px rgba(0,0,0,0.5); }}
 
+        /* ── Annotations panel ── */
+        .ann-panel {{ border:2px solid #f59e0b; border-radius:8px; margin-top:1rem; background:#fffbeb; }}
+        .ann-panel-header {{ display:flex; align-items:center; gap:0.5rem; padding:0.6rem 0.8rem; background:#fef3c7; border-bottom:1px solid #f59e0b40; cursor:pointer; border-radius:7px 7px 0 0; }}
+        .ann-panel.collapsed .ann-panel-header {{ border-radius:7px; border-bottom:none; }}
+        .ann-panel.collapsed .ann-panel-body {{ display:none; }}
+        .ann-panel-tag {{ font-size:0.6rem; font-weight:700; padding:0.15rem 0.5rem; border-radius:3px; color:white; }}
+        .ann-panel-tag.cat1 {{ background:#ef4444; }}
+        .ann-panel-tag.cat3 {{ background:#22c55e; }}
+        .ann-panel-title {{ font-size:0.75rem; font-weight:700; color:#92400e; }}
+        .ann-panel-toggle {{ font-size:0.6rem; color:#92400e; margin-left:auto; }}
+        .ann-panel-body {{ padding:0.6rem 0.8rem; font-size:0.72rem; line-height:1.6; color:#78350f; }}
+        .ann-section {{ margin-bottom:0.6rem; }}
+        .ann-section-label {{ font-size:0.62rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:#b45309; margin-bottom:0.2rem; }}
+        .ann-summary {{ font-size:0.72rem; line-height:1.5; }}
+        .ann-failure {{ background:#fef2f2; border-left:3px solid #ef4444; padding:0.4rem 0.6rem; border-radius:0 4px 4px 0; margin:0.4rem 0; font-size:0.7rem; color:#991b1b; }}
+        .ann-bl-note {{ background:#fff7ed; border-left:3px solid #f59e0b; padding:0.4rem 0.6rem; border-radius:0 4px 4px 0; margin:0.4rem 0; font-size:0.7rem; color:#9a3412; }}
+        .ann-model-note {{ background:#eff6ff; border-left:3px solid #3b82f6; padding:0.4rem 0.6rem; border-radius:0 4px 4px 0; margin:0.3rem 0; font-size:0.68rem; color:#1e40af; }}
+        .ann-model-note .ann-model-name {{ font-weight:700; }}
+        /* Step annotation badge */
+        .step-ann {{ display:inline-flex; align-items:flex-start; gap:0.3rem; margin:0.25rem 0 0.1rem 1.6rem; padding:0.3rem 0.5rem; background:#fef3c7; border:1px solid #f59e0b40; border-radius:4px; font-size:0.62rem; line-height:1.4; color:#92400e; }}
+        .step-ann::before {{ content:'📝'; font-size:0.55rem; flex-shrink:0; margin-top:0.1rem; }}
+        /* Quick filter buttons */
+        .quick-filter-bar {{ display:flex; gap:0.4rem; margin-bottom:0.6rem; align-items:center; }}
+        .quick-filter-btn {{ padding:0.3rem 0.7rem; border:2px solid; border-radius:2rem; cursor:pointer; font-size:0.7rem; font-weight:600; font-family:var(--font-sans); transition:all 0.15s; background:white; }}
+        .quick-filter-btn:hover {{ opacity:0.8; }}
+        .quick-filter-btn.cat1 {{ border-color:#ef4444; color:#ef4444; }}
+        .quick-filter-btn.cat1.active {{ background:#ef4444; color:white; }}
+        .quick-filter-btn.cat3 {{ border-color:#22c55e; color:#22c55e; }}
+        .quick-filter-btn.cat3.active {{ background:#22c55e; color:white; }}
+
         .step-block {{ margin-top:0.3rem; border-radius:4px; padding:0.5rem 0.75rem; font-size:0.68rem; line-height:1.6; position:relative; }}
         .step-block-label {{ display:inline-block; font-size:0.55rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; padding:0.05rem 0.3rem; border-radius:2px; margin-right:0.3rem; vertical-align:middle; }}
         .step-block-content {{ font-family:var(--font-mono); font-size:0.62rem; color:inherit; word-break:break-all; white-space:pre-wrap; max-height:20em; overflow-y:auto; margin-top:0.15rem; }}
@@ -1246,6 +1472,7 @@ def generate_html(registry, abilities, traj_stats, traj_data, level_counts, benc
             <input type="text" id="case-search" placeholder="搜索题目关键词或序号（如 #12）..." oninput="applyAllFilters()">
         </div>
         <div class="case-filter-bar" id="case-filter"></div>
+        <div class="quick-filter-bar" id="quick-filter-bar"></div>
         <div class="combo-filter-section" id="combo-filter-section"></div>
         <div class="combo-divider">或 自定义组合</div>
         <div class="corr-filter-row" id="corr-filter-row"></div>
@@ -1501,6 +1728,14 @@ function renderCases() {{
     // Store getComboCategory globally
     window._getComboCategory = getComboCategory;
 
+    // Quick filter buttons for annotated cases
+    const cat1Count = window._allCaseItems.filter(item => item.q.annotations && item.q.annotations.category === 'cat1').length;
+    const cat3Count = window._allCaseItems.filter(item => item.q.annotations && item.q.annotations.category === 'cat3').length;
+    let qfHtml = `<span class="case-filter-label">Key Cases:</span>`;
+    qfHtml += `<button class="quick-filter-btn cat1" onclick="quickFilter('cat1',this)">BL&#10003; All-Tool&#10007; (${{cat1Count}})</button>`;
+    qfHtml += `<button class="quick-filter-btn cat3" onclick="quickFilter('cat3',this)">BL&#10007; All-Tool&#10003; (${{cat3Count}})</button>`;
+    document.getElementById('quick-filter-bar').innerHTML = qfHtml;
+
     // Correctness dropdown filters
     let corrHtml = `<span class="case-filter-label">自定义:</span>`;
     const corrModels = [
@@ -1522,7 +1757,8 @@ let _caseFilterType = 'cat'; // 'cat' or 'bench'
 let _caseFilterVal = 'all';
 let _comboModel = null; // 'gpt','claude','gem' or null
 let _comboCategory = 'all'; // 'both_correct','bl_only','model_only','both_wrong','all'
-let _filterMode = 'combo'; // 'combo' or 'dropdown'
+let _filterMode = 'combo'; // 'combo', 'dropdown', or 'quick'
+let _quickCategory = null; // 'cat1' or 'cat3'
 
 function setCaseFilter(type, val, btn) {{
     _caseFilterType = type;
@@ -1534,6 +1770,8 @@ function setCaseFilter(type, val, btn) {{
 
 function setComboFilter(model, cat, btn) {{
     _filterMode = 'combo';
+    _quickCategory = null;
+    document.querySelectorAll('.quick-filter-btn').forEach(b => b.classList.remove('active'));
     // Reset all combo tabs in all groups to inactive
     document.querySelectorAll('.combo-tab').forEach(b => b.classList.remove('active'));
     // Toggle: if clicking same selection → reset
@@ -1560,14 +1798,45 @@ function setComboFilter(model, cat, btn) {{
 
 function onDropdownChange() {{
     _filterMode = 'dropdown';
+    _quickCategory = null;
     _comboModel = null;
     _comboCategory = 'all';
     document.querySelectorAll('.combo-tab').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.combo-tab.combo-all').forEach(b => b.classList.add('active'));
+    document.querySelectorAll('.quick-filter-btn').forEach(b => b.classList.remove('active'));
+    applyAllFilters();
+}}
+
+function quickFilter(cat, btn) {{
+    // Toggle
+    if(_filterMode === 'quick' && _quickCategory === cat) {{
+        _filterMode = 'combo';
+        _quickCategory = null;
+        btn.classList.remove('active');
+    }} else {{
+        _filterMode = 'quick';
+        _quickCategory = cat;
+        // Reset other filters UI
+        document.querySelectorAll('.quick-filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.querySelectorAll('.combo-tab').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.combo-tab.combo-all').forEach(b => b.classList.add('active'));
+        _comboModel = null;
+        _comboCategory = 'all';
+        ['bl','gpt','claude','gem'].forEach(k => {{
+            const sel = document.getElementById('corr-'+k);
+            if(sel) {{ sel.value = 'all'; sel.className = ''; }}
+        }});
+    }}
     applyAllFilters();
 }}
 
 function _passesCorrectness(item, corrFilters, corrKeys) {{
+    // Quick filter (key cases)
+    if(_filterMode === 'quick' && _quickCategory) {{
+        const ann = item.q.annotations;
+        if(!ann || ann.category !== _quickCategory) return false;
+    }}
     // Combo filter
     if(_filterMode === 'combo' && _comboModel && _comboCategory !== 'all') {{
         const blVal = item.bl, mVal = item[_comboModel];
@@ -1724,6 +1993,11 @@ function renderCasePage() {{
             }} else {{
                 blBody += `<div class="baseline-response"><div class="baseline-md">${{renderMarkdown(q.baseline.response||'')}}</div></div>`;
             }}
+            // Baseline annotation note
+            const blAnn = q.annotations && q.annotations.baseline_note;
+            if(blAnn) {{
+                blBody = `<div class="ann-bl-note" style="margin:0.5rem 0.8rem">${{escHtml(blAnn)}}</div>` + blBody;
+            }}
             html += `<div class="baseline-row expanded">
                 <div class="baseline-row-header" onclick="this.parentElement.classList.toggle('expanded')">
                     <span>Baseline</span>
@@ -1745,7 +2019,11 @@ function renderCasePage() {{
             html += `<div class="model-column"><div class="model-col-header ${{css}}"><span class="model-dot ${{css}}"></span>${{MODEL_SHORT[m]||m}}`;
             if(info.agent_answer !== undefined) html += `<span class="correct-badge ${{isCorrect?'correct':'wrong'}}">${{isCorrect?'\\u2713':'\\u2717'}} ${{info.agent_answer}}</span>`;
             html += `<span class="step-count">${{traj&&traj.steps? traj.steps.length+' steps':'-'}}</span></div>`;
-            html += renderSteps(traj,m);
+            const stepAnns = (q.annotations&&q.annotations.step_annotations&&q.annotations.step_annotations[m])||{{}};
+            // Model-level annotation note
+            const modelNote = q.annotations&&q.annotations.model_notes&&q.annotations.model_notes[m];
+            if(modelNote) html += `<div class="ann-model-note">${{escHtml(modelNote)}}</div>`;
+            html += renderSteps(traj,m,stepAnns);
             html += `</div>`;
         }});
         html += `</div>`;
@@ -1758,9 +2036,22 @@ function renderCasePage() {{
         html += `</div>`;
         models.forEach((m,i) => {{
             const traj = (q.trajectories||{{}})[m];
-            html += `<div class="model-tab-panel ${{i===0?'active':''}}" data-qid="${{qId}}" data-idx="${{i}}">${{renderSteps(traj,m)}}</div>`;
+            const stepAnns = (q.annotations&&q.annotations.step_annotations&&q.annotations.step_annotations[m])||{{}};
+            html += `<div class="model-tab-panel ${{i===0?'active':''}}" data-qid="${{qId}}" data-idx="${{i}}">${{renderSteps(traj,m,stepAnns)}}</div>`;
         }});
         html += `</div>`;
+
+        // ── Annotation panel (key cases only) ──
+        if(q.annotations) {{
+            const a = q.annotations;
+            html += `<div class="ann-panel">`;
+            html += `<div class="ann-panel-header" onclick="this.parentElement.classList.toggle('collapsed')"><span class="ann-panel-tag ${{a.category}}">${{a.tag}}</span><span class="ann-panel-title">Case Analysis</span><span class="ann-panel-toggle">click to expand/collapse</span></div>`;
+            html += `<div class="ann-panel-body">`;
+            html += `<div class="ann-section"><div class="ann-section-label">Summary</div><div class="ann-summary">${{escHtml(a.summary)}}</div></div>`;
+            if(a.failure_reason) html += `<div class="ann-failure">${{escHtml(a.failure_reason)}}</div>`;
+            if(a.baseline_note) html += `<div class="ann-section"><div class="ann-section-label">Baseline</div><div class="ann-bl-note">${{escHtml(a.baseline_note)}}</div></div>`;
+            html += `</div></div>`;
+        }}
 
         html += `</div>`;
     }});
@@ -1804,9 +2095,10 @@ function goPage(p) {{
     document.getElementById('sec-cases').scrollIntoView({{behavior:'smooth'}});
 }}
 
-function renderSteps(traj, model) {{
+function renderSteps(traj, model, stepAnns) {{
     if(!traj||!traj.steps||!traj.steps.length) return '<div class="no-tools">--</div>';
     const uid = 'st'+Math.random().toString(36).slice(2,8);
+    const anns = stepAnns || {{}};
     let html = '<div class="step-list">';
     traj.steps.forEach((s,si) => {{
         const isR = !s.tool||s.tool==='null';
@@ -1840,6 +2132,11 @@ function renderSteps(traj, model) {{
                 html += `<div class="step-img-thumb" onclick="showLightbox(this)"><img src="${{img.src}}" loading="lazy" alt="${{escHtml(img.label)}}"><span class="step-img-label">${{escHtml(img.label)}}</span></div>`;
             }});
             html += `</div>`;
+        }}
+        // Step annotation
+        const ann = anns[String(s.step)];
+        if(ann) {{
+            html += `<div class="step-ann">${{escHtml(ann)}}</div>`;
         }}
         html += `</div>`;
     }});
