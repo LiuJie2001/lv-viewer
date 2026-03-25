@@ -577,31 +577,31 @@ CASE_ANNOTATIONS = {
         "baseline_note": "Baseline 直接观看完整视频帧，一次性看到 13s 时该人坐在舞台地板上的画面，与 211s 的紫色上衣形成正确关联。端到端视觉理解在人物跨时间匹配方面有天然优势。",
         "model_notes": {
             "gpt-5.4": "24 步中花费大量步骤做 frame_extraction + object_detection，最终定位到 36-40s 该人拿麦跳舞的片段，错过了更早的 13s 坐姿。",
-            "claude-opus-4-6": "71 步（最多），step_51 实际检测到 13s 坐姿+手靠嘴，step_57 检测到 leaning back，但在最终推理时被大量矛盾证据淹没，犹豫后选了 E。过度调用工具反而引入噪声。",
+            "claude-opus-4-6": "72 步（最多），第 35 步实际检测到 13s 坐姿+手靠嘴，第 39 步检测到 leaning back，但在最终推理时被大量矛盾证据淹没，犹豫后选了 E。过度调用工具反而引入噪声。",
             "gemini": "17 步，将第一次出现定位到 ~20s 拿麦唱歌，完全跳过了 13s 的坐姿。temporal_grounding 对'first appearance'理解有偏差。",
         },
         "step_annotations": {
             "gpt-5.4": {
                 2: "frame_extraction 采样了 12 帧全局概览，但分辨率不足以识别紫色上衣人物",
-                9: "在后半段密集做 object_detection 找近景镜头",
-                16: "发现前面都是黑色衣服，全局重新搜索 purple top",
+                9: "object_detection 在后半段密集检测近景镜头中的人物",
+                16: "frame_extraction 全局重新搜索 purple top，前面都是黑色衣服",
                 19: "temporal_grounding 定位到 211-212s 最后出现，但回溯首次出现时定位到 37-40s",
                 22: "action_recognition 在 36-40s 识别到 dancing with microphone → 错误锚定",
-                25: "最终推理基于错误的首次出现定位，选了 E",
+                24: "object_reidentification 尝试跨时间匹配但失败。最终基于错误定位选了 E",
             },
             "claude-opus-4-6": {
                 3: "temporal_grounding 找到 210s 紫色上衣 + 七手势",
                 17: "attribute_recognition 确认 13.5s purple_top=yes, action=dancing",
                 34: "attribute_recognition 确认紫色在 frame_index 6（13.5s 右下角）",
-                39: "关键发现：13.5s sitting on floor, hand near mouth——正确答案的直接证据！",
+                39: "attribute_recognition 关键发现：13.5s sitting on floor, hand near mouth——正确答案的直接证据！",
                 62: "temporal_grounding 再次确认 13s sitting + 13.5s holding microphone",
-                72: "最终推理列出了 B 选项证据，但被大量 dancing/microphone 证据干扰，选了 E",
+                71: "object_tracking 尝试跟踪紫色人物移动。最终推理列出 B 选项证据，但被大量 dancing 证据干扰选了 E",
             },
             "gemini": {
                 2: "frame_extraction 全局采样 15 帧",
                 11: "frame_extraction 提取视频开头 0-20s 的帧，查找首次出现",
                 16: "attribute_recognition 检查 10s 和 20s 帧，判断首次出现在 20s 拿麦唱歌",
-                18: "基于错误的首次出现定位，选了 E",
+                17: "attribute_recognition 验证指向动作，基于错误的首次出现定位选了 E",
             },
         },
     },
@@ -621,10 +621,10 @@ CASE_ANNOTATIONS = {
         "step_annotations": {
             "gpt-5.4": {
                 2: "frame_extraction 在 2665s 长视频中采样关键帧",
-                4: "大量 object_detection（step 4-15）在各帧中搜索手表",
+                4: "object_detection 开始在各帧中搜索手表（连续多步检测）",
                 16: "frame_extraction 聚焦到候选帧段",
                 23: "spatial_crop 放大手腕区域——工具方法的核心优势，近距离看清手表细节",
-                27: "最终确认黑色表盘",
+                26: "attribute_recognition 确认黑色表盘",
             },
             "claude-opus-4-6": {
                 2: "temporal_grounding 快速定位蓝色短袖+眼镜出现的时段",
@@ -695,7 +695,7 @@ CASE_ANNOTATIONS = {
                 4: "text_recognition OCR 读取比分和速度信息",
                 9: "text_recognition 在候选帧上精确 OCR",
                 12: "text_recognition 精确读出速度数字 192——OCR 工具的精确读数能力 Baseline 做不到",
-                14: "frame_comparison 确认大号 '192' 出现在画面中，对应发球速度极高",
+                13: "frame_comparison 确认大号 '192' 出现在画面中，对应发球速度极高",
             },
             "claude-opus-4-6": {
                 2: "temporal_grounding 搜索 'serve speed number'",
