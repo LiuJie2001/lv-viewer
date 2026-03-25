@@ -122,12 +122,12 @@ def parse_trajectory_steps(trajectory):
         if entry_type == "tool_call":
             for tool_name, args, output in tools_data:
                 step_num += 1
-                args_brief = json.dumps(args, ensure_ascii=False)[:500] if args else ""
-                output_brief = output[:1000] if output else ""
+                args_brief = json.dumps(args, ensure_ascii=False) if args else ""
+                output_brief = output if output else ""
                 steps.append({
                     "step": step_num,
                     "tool": tool_name,
-                    "purpose": content[:200] if content else "",
+                    "purpose": content if content else "",
                     "args_brief": args_brief,
                     "output_brief": output_brief,
                 })
@@ -136,7 +136,7 @@ def parse_trajectory_steps(trajectory):
             steps.append({
                 "step": step_num,
                 "tool": None,
-                "purpose": content[:300],
+                "purpose": content,
             })
     return steps
 
@@ -321,6 +321,18 @@ def main():
     claude_lookup = build_lookup(claude_records)
     baseline_lookup = build_lookup(baseline_records)
 
+    # ── Fix question_text: use full question + options from JSONL (s2 file truncates at 200 chars) ──
+    for short_qid, case in case_lookup.items():
+        for lookup in [gpt_lookup, claude_lookup, gemini_lookup, baseline_lookup]:
+            rec = lookup.get(short_qid)
+            if rec and rec.get("question"):
+                full_text = rec["question"]
+                opts = rec.get("options", [])
+                if opts:
+                    full_text += "\n" + "\n".join(opts)
+                case["question_text"] = full_text
+                break
+
     # ── YouTube map ──
     yt_map = {}
     for q in comp_data.get("questions", []):
@@ -384,8 +396,8 @@ def main():
             baseline = {
                 "correct": baseline_rec.get("correct", False),
                 "answer": baseline_rec.get("agent_answer", ""),
-                "response": response_text[:1000],  # truncate for page size
-                "reasoning": reasoning_text[:1000] if reasoning_text else "",
+                "response": response_text,
+                "reasoning": reasoning_text,
             }
 
         questions.append({
@@ -656,7 +668,7 @@ def generate_html(registry, abilities, traj_stats, traj_data, level_counts, benc
         .level-badge.image {{ background:#fce7f3; color:#9d174d; }}
         .level-badge.sequence {{ background:#e0e7ff; color:#3730a3; }}
         .level-badge.audio {{ background:#fef9c3; color:#854d0e; }}
-        .tool-card-desc {{ flex:1; font-size:0.72rem; color:var(--color-text-secondary); line-height:1.4; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:500px; }}
+        .tool-card-desc {{ flex:1; font-size:0.72rem; color:var(--color-text-secondary); line-height:1.4; }}
         .tool-card-freq {{ display:flex; align-items:center; gap:0.3rem; margin-left:auto; flex-shrink:0; }}
         .freq-bar {{ width:60px; height:5px; background:#eee; border-radius:3px; overflow:hidden; }}
         .freq-fill {{ height:100%; border-radius:3px; }}
@@ -708,7 +720,7 @@ def generate_html(registry, abilities, traj_stats, traj_data, level_counts, benc
         .question-benchmark {{ font-size:0.62rem; font-weight:600; padding:0.1rem 0.35rem; border-radius:3px; background:#e0e7ff; color:#3730a3; }}
         .question-id {{ font-family:var(--font-mono); font-size:0.65rem; color:var(--color-text-muted); }}
         .question-seq {{ font-family:var(--font-mono); font-size:0.72rem; font-weight:700; color:var(--color-accent); }}
-        .question-text {{ font-size:0.82rem; line-height:1.5; color:var(--color-text); max-height:4.5em; overflow-y:auto; }}
+        .question-text {{ font-size:0.82rem; line-height:1.5; color:var(--color-text); }}
 
         .model-compare {{ display:grid; grid-template-columns:repeat(3,1fr); gap:0; }}
         .model-column {{ border-right:1px solid var(--color-border); min-height:60px; }}
@@ -738,9 +750,9 @@ def generate_html(registry, abilities, traj_stats, traj_data, level_counts, benc
         .exec-tool-dot {{ width:6px; height:6px; border-radius:50%; background:var(--color-accent); flex-shrink:0; }}
         .exec-tool-detail {{ display:none; margin:0.15rem 0 0.3rem 1.6rem; }}
         .exec-tool-detail.expanded {{ display:block; }}
-        .step-block {{ margin-top:0.3rem; margin-left:1.6rem; border-radius:4px; padding:0.5rem 0.75rem; font-size:0.68rem; line-height:1.6; position:relative; overflow:hidden; }}
+        .step-block {{ margin-top:0.3rem; border-radius:4px; padding:0.5rem 0.75rem; font-size:0.68rem; line-height:1.6; position:relative; }}
         .step-block-label {{ display:inline-block; font-size:0.55rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; padding:0.05rem 0.3rem; border-radius:2px; margin-right:0.3rem; vertical-align:middle; }}
-        .step-block-content {{ font-family:var(--font-mono); font-size:0.62rem; color:inherit; word-break:break-all; white-space:pre-wrap; max-height:8em; overflow-y:auto; margin-top:0.15rem; }}
+        .step-block-content {{ font-family:var(--font-mono); font-size:0.62rem; color:inherit; word-break:break-all; white-space:pre-wrap; max-height:20em; overflow-y:auto; margin-top:0.15rem; }}
         .step-block.input {{ background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; }}
         .step-block.input .step-block-label {{ background:#bfdbfe; color:#1e3a8a; }}
         .step-block.output {{ background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; }}
@@ -778,8 +790,8 @@ def generate_html(registry, abilities, traj_stats, traj_data, level_counts, benc
         .baseline-row-header:hover {{ background:#fff3e0; }}
         .baseline-body {{ display:none; }}
         .baseline-row.expanded .baseline-body {{ display:block; }}
-        .baseline-response {{ font-size:0.72rem; color:var(--color-text-secondary); line-height:1.5; padding:0.6rem 0.8rem; max-height:12em; overflow-y:auto; }}
-        .baseline-reasoning {{ padding:0.6rem 0.8rem; border-bottom:1px solid var(--color-border); max-height:12em; overflow-y:auto; }}
+        .baseline-response {{ font-size:0.72rem; color:var(--color-text-secondary); line-height:1.5; padding:0.6rem 0.8rem; }}
+        .baseline-reasoning {{ padding:0.6rem 0.8rem; border-bottom:1px solid var(--color-border); }}
         .baseline-section-label {{ font-size:0.62rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--color-text-muted); margin-bottom:0.3rem; }}
         .baseline-md {{ font-size:0.72rem; line-height:1.6; color:var(--color-text-secondary); }}
         .baseline-md p {{ margin:0.3rem 0; }}
@@ -794,10 +806,29 @@ def generate_html(registry, abilities, traj_stats, traj_data, level_counts, benc
         .case-filter-btn {{ padding:0.25rem 0.6rem; border:1px solid var(--color-border); border-radius:2rem; background:white; cursor:pointer; font-size:0.7rem; font-family:var(--font-sans); color:var(--color-text-secondary); transition:all 0.15s; }}
         .case-filter-btn:hover {{ border-color:var(--color-accent); color:var(--color-accent); }}
         .case-filter-btn.active {{ background:var(--color-accent); color:white; border-color:var(--color-accent); }}
-        .corr-toggle {{ padding:0.25rem 0.6rem; border:1.5px solid var(--color-border); border-radius:2rem; background:white; cursor:pointer; font-size:0.68rem; font-family:var(--font-sans); color:var(--color-text-secondary); transition:all 0.15s; }}
-        .corr-toggle:hover {{ opacity:0.8; }}
-        .corr-toggle.filter-correct {{ background:var(--color-correct-bg); color:var(--color-correct); border-color:var(--color-correct); }}
-        .corr-toggle.filter-wrong {{ background:var(--color-wrong-bg); color:var(--color-wrong); border-color:var(--color-wrong); }}
+        .corr-filter-row {{ display:flex; gap:0.6rem; margin-bottom:1rem; flex-wrap:wrap; align-items:center; }}
+        .corr-filter-row .case-filter-label {{ font-size:0.72rem; color:var(--color-text-muted); margin-right:0.2rem; }}
+        .corr-filter-item {{ display:flex; align-items:center; gap:0.25rem; }}
+        .corr-filter-item .corr-model-label {{ font-size:0.7rem; font-weight:600; }}
+        .corr-filter-item select {{ padding:0.2rem 0.4rem; border:1.5px solid var(--color-border); border-radius:4px; font-size:0.68rem; font-family:var(--font-sans); color:var(--color-text-secondary); background:white; cursor:pointer; outline:none; transition:border-color 0.15s; }}
+        .corr-filter-item select:focus {{ border-color:var(--color-accent); }}
+        .corr-filter-item select.filter-correct {{ border-color:var(--color-correct); color:var(--color-correct); background:var(--color-correct-bg); }}
+        .corr-filter-item select.filter-wrong {{ border-color:var(--color-wrong); color:var(--color-wrong); background:var(--color-wrong-bg); }}
+
+        /* Search */
+        .case-search-row {{ margin-bottom:0.8rem; }}
+        .case-search-row input {{ width:100%; max-width:400px; padding:0.4rem 0.7rem; border:1.5px solid var(--color-border); border-radius:6px; font-size:0.75rem; font-family:var(--font-sans); color:var(--color-text); outline:none; transition:border-color 0.15s; }}
+        .case-search-row input:focus {{ border-color:var(--color-accent); }}
+        .case-search-row input::placeholder {{ color:var(--color-text-muted); }}
+        /* Pagination */
+        .pagination-bar {{ display:flex; align-items:center; justify-content:center; gap:0.3rem; margin:0.8rem 0; flex-wrap:wrap; }}
+        .pagination-bar:empty {{ display:none; }}
+        .page-btn {{ padding:0.25rem 0.55rem; border:1px solid var(--color-border); border-radius:4px; background:white; cursor:pointer; font-size:0.7rem; font-family:var(--font-sans); color:var(--color-text-secondary); transition:all 0.12s; }}
+        .page-btn:hover {{ border-color:var(--color-accent); color:var(--color-accent); }}
+        .page-btn.active {{ background:var(--color-accent); color:white; border-color:var(--color-accent); }}
+        .page-btn.disabled {{ opacity:0.4; pointer-events:none; }}
+        .page-info {{ font-size:0.7rem; color:var(--color-text-muted); margin:0 0.5rem; }}
+        .page-size-select {{ padding:0.2rem 0.3rem; border:1px solid var(--color-border); border-radius:4px; font-size:0.68rem; font-family:var(--font-sans); color:var(--color-text-secondary); margin-left:0.5rem; }}
 
         /* Mobile tabs */
         .model-tabs-wrapper {{ display:none; }}
@@ -855,8 +886,14 @@ def generate_html(registry, abilities, traj_stats, traj_data, level_counts, benc
 
     <section class="section" id="sec-cases">
         <div class="section-header"><span class="section-number">06</span><span class="section-title">轨迹详情</span><span class="section-count" id="cases-count"></span></div>
+        <div class="case-search-row">
+            <input type="text" id="case-search" placeholder="搜索题目关键词或序号（如 #12）..." oninput="applyAllFilters()">
+        </div>
         <div class="case-filter-bar" id="case-filter"></div>
+        <div class="corr-filter-row" id="corr-filter-row"></div>
+        <div class="pagination-bar" id="pagination-top"></div>
         <div id="cases-container"></div>
+        <div class="pagination-bar" id="pagination-bottom"></div>
     </section>
 </main>
 
@@ -962,7 +999,7 @@ function renderToolPool() {{
         html += `<div class="tool-card" data-type="${{impl.type}}" data-level="${{level}}" id="tool-${{tool.name}}">`;
         html += `<div class="tool-card-header" onclick="toggleToolCard(this)"><span class="tool-card-rank">${{idx+1}}</span><span class="tool-card-name">${{tool.name}}</span><span class="type-badge ${{impl.type}}">${{TYPE_LABELS[impl.type]}}</span>`;
         if(level) html += `<span class="level-badge ${{level}}">${{LEVEL_LABELS[level]||level}}</span>`;
-        html += `<span class="tool-card-desc">${{tool.description.slice(0,80)}}${{tool.description.length>80?'...':''}}</span><span class="tool-card-freq"><span class="freq-bar"><span class="freq-fill" style="width:${{pct}}%;background:var(--color-accent)"></span></span><span class="freq-num">${{trajTotal}}&times;</span></span><span class="tool-card-arrow">&#9654;</span></div>`;
+        html += `<span class="tool-card-desc">${{tool.description}}</span><span class="tool-card-freq"><span class="freq-bar"><span class="freq-fill" style="width:${{pct}}%;background:var(--color-accent)"></span></span><span class="freq-num">${{trajTotal}}&times;</span></span><span class="tool-card-arrow">&#9654;</span></div>`;
 
         html += `<div class="tool-card-body"><div class="tool-detail">`;
         html += `<div style="margin-bottom:1rem"><div class="detail-label">Description</div><div class="detail-content">${{tool.description}}</div></div>`;
@@ -1025,115 +1062,250 @@ function renderTrajectories() {{
     document.getElementById('traj-container').innerHTML = html;
 }}
 
+// ── Pagination state ──
+let casePage = 1;
+let casePageSize = 10;
+let caseFilteredIds = []; // sequential_ids of filtered questions
+
 function renderCases() {{
     const models = TRAJ_DATA.metadata.models;
     const totalQ = TRAJ_DATA.questions.length;
-    document.getElementById('cases-count').textContent = `${{totalQ}} Questions · ${{totalQ*models.length}} Trajectories`;
 
-    let fh = `<span class="case-filter-label">Filter:</span><button class="case-filter-btn active" onclick="filterCases('all',this)">All (${{totalQ}})</button>`;
+    // Category + Benchmark filter bar
+    let fh = `<span class="case-filter-label">Filter:</span><button class="case-filter-btn active" data-type="cat" data-val="all" onclick="setCaseFilter('cat','all',this)">All (${{totalQ}})</button>`;
     catOrder.forEach(cat => {{
         const color = CATEGORY_COLORS[cat]; const abs = abilitiesByCategory[cat]||[]; let count=0;
         abs.forEach(a => {{ count += (questionsPerAbility[a.ability_id]||0); }});
-        fh += `<button class="case-filter-btn" data-cat="${{cat}}" onclick="filterCases('${{cat}}',this)" style="border-color:${{color}}40">${{cat.split(' ')[0]}} (${{count}})</button>`;
+        fh += `<button class="case-filter-btn" data-type="cat" data-val="${{cat}}" onclick="setCaseFilter('cat','${{cat}}',this)" style="border-color:${{color}}40">${{cat.split(' ')[0]}} (${{count}})</button>`;
     }});
     const benchCounts = {{}}; TRAJ_DATA.questions.forEach(q => {{ benchCounts[q.benchmark]=(benchCounts[q.benchmark]||0)+1; }});
     fh += `<span style="color:var(--color-border);margin:0 0.3rem">|</span>`;
-    Object.entries(benchCounts).forEach(([b,c]) => {{ fh += `<button class="case-filter-btn" data-bench="${{b}}" onclick="filterCasesBench('${{b}}',this)">${{b}} (${{c}})</button>`; }});
+    Object.entries(benchCounts).forEach(([b,c]) => {{ fh += `<button class="case-filter-btn" data-type="bench" data-val="${{b}}" onclick="setCaseFilter('bench','${{b}}',this)">${{b}} (${{c}})</button>`; }});
+    document.getElementById('case-filter').innerHTML = fh;
 
-    // Correctness toggle filters
-    fh += `<span style="color:var(--color-border);margin:0 0.3rem">|</span>`;
-    fh += `<span class="case-filter-label">正误筛选:</span>`;
+    // Correctness dropdown filters
+    let corrHtml = `<span class="case-filter-label">正误筛选:</span>`;
     const corrModels = [
         {{key:'bl',label:'Baseline',color:'#FF9800'}},
-        {{key:'gpt',label:'GPT',color:'#10a37f'}},
-        {{key:'claude',label:'Claude',color:'#c96442'}},
+        {{key:'gpt',label:'GPT-5.4',color:'#10a37f'}},
+        {{key:'claude',label:'Claude Opus',color:'#c96442'}},
         {{key:'gem',label:'Gemini',color:'#4285f4'}},
     ];
     corrModels.forEach(m => {{
-        fh += `<button class="corr-toggle" id="corr-${{m.key}}" data-key="${{m.key}}" data-state="all" onclick="toggleCorrFilter('${{m.key}}')" style="border-color:${{m.color}}60">${{m.label}}: All</button>`;
+        corrHtml += `<div class="corr-filter-item"><span class="corr-model-label" style="color:${{m.color}}">${{m.label}}</span><select id="corr-${{m.key}}" onchange="applyAllFilters()"><option value="all">All</option><option value="correct">✓ 正确</option><option value="wrong">✗ 错误</option></select></div>`;
     }});
-    document.getElementById('case-filter').innerHTML = fh;
+    document.getElementById('corr-filter-row').innerHTML = corrHtml;
 
-    let html = '';
+    // Build flat question list with filter metadata
+    window._allCaseItems = [];
     ABILITIES.forEach(a => {{
         const qs = questionsByAbility[a.ability_id]; if(!qs||!qs.length) return;
-        const color = CATEGORY_COLORS[a.ability_category]||'#888';
-        html += `<div class="ability-group" id="ag-${{a.ability_id}}" data-cat="${{a.ability_category}}">`;
-        html += `<div class="ability-group-header" style="background:${{color}}" onclick="this.parentElement.classList.toggle('collapsed')"><span class="ability-group-id">${{a.ability_id}}</span><span class="ability-group-name">${{a.ability_name}}</span><span class="ability-group-category">${{a.ability_category}}</span><span class="ability-group-count">${{qs.length}} questions</span></div>`;
-        html += `<div class="ability-group-questions">`;
-
         qs.forEach(q => {{
-            const qId = `q-${{q.sequential_id}}`;
             const blOk = q.baseline ? (q.baseline.correct?1:0) : -1;
             const gptOk = (q.per_model&&q.per_model['gpt-5.4']) ? (q.per_model['gpt-5.4'].correct?1:0) : -1;
             const clOk = (q.per_model&&q.per_model['claude-opus-4-6']) ? (q.per_model['claude-opus-4-6'].correct?1:0) : -1;
             const gemOk = (q.per_model&&q.per_model['gemini']) ? (q.per_model['gemini'].correct?1:0) : -1;
-            html += `<div class="question-card" id="${{qId}}" data-bench="${{q.benchmark}}" data-bl="${{blOk}}" data-gpt="${{gptOk}}" data-claude="${{clOk}}" data-gem="${{gemOk}}">`;
-            html += `<div class="question-card-header"><div class="question-info">`;
-            html += `<span class="question-seq">#${{q.sequential_id}}</span>`;
-            const vdur = q.video_duration||0;
-            const vmin = Math.floor(vdur/60), vsec = Math.round(vdur%60);
-            html += `<span class="vid-dur">${{vmin>0?vmin+'m':''}}${{vsec}}s</span>`;
-            html += `<span class="question-benchmark">${{q.benchmark}}</span>`;
-            html += `<span class="question-id">Q:${{q.question_id}}</span>`;
-            html += `<span class="ability-tag" style="background:${{color}}15;color:${{color}};cursor:pointer" onclick="jumpTo('ability-${{a.ability_id}}')">${{a.ability_id}}. ${{a.ability_name}}</span>`;
-            html += `<span class="answer-detail">GT:${{q.ground_truth}}</span>`;
-            if(q.youtube_url) html += `<a class="video-btn youtube-btn" href="${{q.youtube_url}}" target="_blank" rel="noopener" onclick="event.stopPropagation()">&#9654; YouTube</a>`;
-            html += `</div><div class="question-text">${{escHtml(q.question_text)}}</div></div>`;
+            window._allCaseItems.push({{
+                q, a,
+                bl: blOk, gpt: gptOk, claude: clOk, gem: gemOk,
+                cat: a.ability_category,
+                bench: q.benchmark,
+                searchText: `#${{q.sequential_id}} ${{q.question_text}} ${{q.question_id}}`.toLowerCase(),
+            }});
+        }});
+    }});
 
-            // Baseline row
-            if(q.baseline) {{
-                const blC = q.baseline.correct;
-                let blBody = '';
-                if(q.baseline.reasoning) {{
-                    blBody += `<div class="baseline-reasoning"><div class="baseline-section-label">Reasoning</div><div class="baseline-md">${{renderMarkdown(q.baseline.reasoning)}}</div></div>`;
-                    blBody += `<div class="baseline-response"><div class="baseline-section-label">Response</div><div class="baseline-md">${{renderMarkdown(q.baseline.response||'')}}</div></div>`;
-                }} else {{
-                    blBody += `<div class="baseline-response"><div class="baseline-md">${{renderMarkdown(q.baseline.response||'')}}</div></div>`;
-                }}
-                html += `<div class="baseline-row expanded" onclick="this.classList.toggle('expanded')">
-                    <div class="baseline-row-header">
-                        <span>Baseline</span>
-                        <span class="correct-badge ${{blC?'correct':'wrong'}}">${{blC?'\\u2713':'\\u2717'}} ${{q.baseline.answer||'—'}}</span>
-                        <span style="font-size:0.6rem;color:var(--color-text-muted)">GT: ${{q.ground_truth}}</span>
-                        <span class="baseline-toggle">&#9660;</span>
-                    </div>
-                    <div class="baseline-body">${{blBody}}</div>
-                </div>`;
+    applyAllFilters();
+}}
+
+// ── Current filter state ──
+let _caseFilterType = 'cat'; // 'cat' or 'bench'
+let _caseFilterVal = 'all';
+
+function setCaseFilter(type, val, btn) {{
+    _caseFilterType = type;
+    _caseFilterVal = val;
+    document.querySelectorAll('#case-filter .case-filter-btn').forEach(b => b.classList.remove('active'));
+    if(btn) btn.classList.add('active');
+    applyAllFilters();
+}}
+
+function applyAllFilters() {{
+    const searchRaw = (document.getElementById('case-search').value||'').trim().toLowerCase();
+
+    // Correctness filters
+    const corrKeys = ['bl','gpt','claude','gem'];
+    const corrFilters = {{}};
+    corrKeys.forEach(k => {{
+        const sel = document.getElementById('corr-'+k);
+        if(sel) {{
+            corrFilters[k] = sel.value;
+            sel.className = sel.value==='correct'?'filter-correct':sel.value==='wrong'?'filter-wrong':'';
+        }}
+    }});
+
+    // Filter
+    const filtered = window._allCaseItems.filter(item => {{
+        // Category / Benchmark filter
+        if(_caseFilterType === 'cat' && _caseFilterVal !== 'all') {{
+            if(item.cat !== _caseFilterVal) return false;
+        }}
+        if(_caseFilterType === 'bench') {{
+            if(item.bench !== _caseFilterVal) return false;
+        }}
+        // Correctness
+        for(const k of corrKeys) {{
+            const state = corrFilters[k];
+            if(state === 'all') continue;
+            const val = item[k];
+            if(val === -1) continue;
+            if(state === 'correct' && val !== 1) return false;
+            if(state === 'wrong' && val !== 0) return false;
+        }}
+        // Search
+        if(searchRaw) {{
+            // Support #num exact match
+            const numMatch = searchRaw.match(/^#?(\\d+)$/);
+            if(numMatch) {{
+                if(item.q.sequential_id !== parseInt(numMatch[1])) return false;
+            }} else {{
+                if(!item.searchText.includes(searchRaw)) return false;
             }}
+        }}
+        return true;
+    }});
 
-            // Desktop: 3-column
-            html += `<div class="model-compare">`;
-            models.forEach(m => {{
-                const traj = (q.trajectories||{{}})[m];
-                const info = (q.per_model||{{}})[m]||{{}};
-                const isCorrect = info.correct;
-                const css = MODEL_CSS[m]||'gemini';
-                html += `<div class="model-column"><div class="model-col-header ${{css}}"><span class="model-dot ${{css}}"></span>${{MODEL_SHORT[m]||m}}`;
-                if(info.agent_answer !== undefined) html += `<span class="correct-badge ${{isCorrect?'correct':'wrong'}}">${{isCorrect?'\\u2713':'\\u2717'}} ${{info.agent_answer}}</span>`;
-                html += `<span class="step-count">${{traj&&traj.steps? traj.steps.length+' steps':'-'}}</span></div>`;
-                html += renderSteps(traj,m);
-                html += `</div>`;
-            }});
-            html += `</div>`;
+    caseFilteredIds = filtered;
+    const totalQ = window._allCaseItems.length;
 
-            // Mobile: tabs
-            html += `<div class="model-tabs-wrapper"><div class="model-tabs">`;
-            models.forEach((m,i) => {{
-                html += `<div class="model-tab ${{i===0?'active':''}}" data-qid="${{qId}}" data-idx="${{i}}" onclick="switchTab(this)" style="${{i===0?'border-bottom-color:'+MODEL_COLORS[m]+';color:'+MODEL_COLORS[m]:''}}""><span class="model-dot ${{MODEL_CSS[m]||'gemini'}}"></span>${{MODEL_SHORT[m]||m}}</div>`;
-            }});
-            html += `</div>`;
-            models.forEach((m,i) => {{
-                const traj = (q.trajectories||{{}})[m];
-                html += `<div class="model-tab-panel ${{i===0?'active':''}}" data-qid="${{qId}}" data-idx="${{i}}">${{renderSteps(traj,m)}}</div>`;
-            }});
-            html += `</div>`;
+    // Update count
+    if(filtered.length === totalQ) {{
+        document.getElementById('cases-count').textContent = `${{totalQ}} Questions`;
+    }} else {{
+        document.getElementById('cases-count').textContent = `${{filtered.length}} / ${{totalQ}} Questions`;
+    }}
 
+    // Reset to page 1
+    casePage = 1;
+    renderCasePage();
+}}
+
+function renderCasePage() {{
+    const total = caseFilteredIds.length;
+    const totalPages = Math.max(1, Math.ceil(total / casePageSize));
+    if(casePage > totalPages) casePage = totalPages;
+    const start = (casePage - 1) * casePageSize;
+    const end = Math.min(start + casePageSize, total);
+    const pageItems = caseFilteredIds.slice(start, end);
+
+    const models = TRAJ_DATA.metadata.models;
+    let html = '';
+    pageItems.forEach(item => {{
+        const q = item.q;
+        const a = item.a;
+        const color = CATEGORY_COLORS[a.ability_category]||'#888';
+        const qId = `q-${{q.sequential_id}}`;
+        html += `<div class="question-card" id="${{qId}}">`;
+        html += `<div class="question-card-header"><div class="question-info">`;
+        html += `<span class="question-seq">#${{q.sequential_id}}</span>`;
+        const vdur = q.video_duration||0;
+        const vmin = Math.floor(vdur/60), vsec = Math.round(vdur%60);
+        html += `<span class="vid-dur">${{vmin>0?vmin+'m':''}}${{vsec}}s</span>`;
+        html += `<span class="question-benchmark">${{q.benchmark}}</span>`;
+        html += `<span class="question-id">Q:${{q.question_id}}</span>`;
+        html += `<span class="ability-tag" style="background:${{color}}15;color:${{color}};cursor:pointer" onclick="jumpTo('ability-${{a.ability_id}}')">${{a.ability_id}}. ${{a.ability_name}}</span>`;
+        html += `<span class="answer-detail">GT:${{q.ground_truth}}</span>`;
+        if(q.youtube_url) html += `<a class="video-btn youtube-btn" href="${{q.youtube_url}}" target="_blank" rel="noopener" onclick="event.stopPropagation()">&#9654; YouTube</a>`;
+        html += `</div><div class="question-text">${{escHtml(q.question_text)}}</div></div>`;
+
+        // Baseline row
+        if(q.baseline) {{
+            const blC = q.baseline.correct;
+            let blBody = '';
+            if(q.baseline.reasoning) {{
+                blBody += `<div class="baseline-reasoning"><div class="baseline-section-label">Reasoning</div><div class="baseline-md">${{renderMarkdown(q.baseline.reasoning)}}</div></div>`;
+                blBody += `<div class="baseline-response"><div class="baseline-section-label">Response</div><div class="baseline-md">${{renderMarkdown(q.baseline.response||'')}}</div></div>`;
+            }} else {{
+                blBody += `<div class="baseline-response"><div class="baseline-md">${{renderMarkdown(q.baseline.response||'')}}</div></div>`;
+            }}
+            html += `<div class="baseline-row expanded" onclick="this.classList.toggle('expanded')">
+                <div class="baseline-row-header">
+                    <span>Baseline</span>
+                    <span class="correct-badge ${{blC?'correct':'wrong'}}">${{blC?'\\u2713':'\\u2717'}} ${{q.baseline.answer||'—'}}</span>
+                    <span style="font-size:0.6rem;color:var(--color-text-muted)">GT: ${{q.ground_truth}}</span>
+                    <span class="baseline-toggle">&#9660;</span>
+                </div>
+                <div class="baseline-body">${{blBody}}</div>
+            </div>`;
+        }}
+
+        // Desktop: 3-column
+        html += `<div class="model-compare">`;
+        models.forEach(m => {{
+            const traj = (q.trajectories||{{}})[m];
+            const info = (q.per_model||{{}})[m]||{{}};
+            const isCorrect = info.correct;
+            const css = MODEL_CSS[m]||'gemini';
+            html += `<div class="model-column"><div class="model-col-header ${{css}}"><span class="model-dot ${{css}}"></span>${{MODEL_SHORT[m]||m}}`;
+            if(info.agent_answer !== undefined) html += `<span class="correct-badge ${{isCorrect?'correct':'wrong'}}">${{isCorrect?'\\u2713':'\\u2717'}} ${{info.agent_answer}}</span>`;
+            html += `<span class="step-count">${{traj&&traj.steps? traj.steps.length+' steps':'-'}}</span></div>`;
+            html += renderSteps(traj,m);
             html += `</div>`;
         }});
-        html += `</div></div>`;
+        html += `</div>`;
+
+        // Mobile: tabs
+        html += `<div class="model-tabs-wrapper"><div class="model-tabs">`;
+        models.forEach((m,i) => {{
+            html += `<div class="model-tab ${{i===0?'active':''}}" data-qid="${{qId}}" data-idx="${{i}}" onclick="switchTab(this)" style="${{i===0?'border-bottom-color:'+MODEL_COLORS[m]+';color:'+MODEL_COLORS[m]:''}}""><span class="model-dot ${{MODEL_CSS[m]||'gemini'}}"></span>${{MODEL_SHORT[m]||m}}</div>`;
+        }});
+        html += `</div>`;
+        models.forEach((m,i) => {{
+            const traj = (q.trajectories||{{}})[m];
+            html += `<div class="model-tab-panel ${{i===0?'active':''}}" data-qid="${{qId}}" data-idx="${{i}}">${{renderSteps(traj,m)}}</div>`;
+        }});
+        html += `</div>`;
+
+        html += `</div>`;
     }});
+
     document.getElementById('cases-container').innerHTML = html;
+
+    // Pagination controls
+    const pagHtml = buildPaginationHtml(total, totalPages);
+    document.getElementById('pagination-top').innerHTML = pagHtml;
+    document.getElementById('pagination-bottom').innerHTML = pagHtml;
+}}
+
+function buildPaginationHtml(total, totalPages) {{
+    if(total === 0) return `<span class="page-info">无匹配结果</span>`;
+    const start = (casePage-1)*casePageSize+1;
+    const end = Math.min(casePage*casePageSize, total);
+    let h = `<span class="page-info">显示 ${{start}}-${{end}} / ${{total}}</span>`;
+    h += `<button class="page-btn ${{casePage<=1?'disabled':''}}" onclick="goPage(${{casePage-1}})">&#8592;</button>`;
+    // Show page buttons with ellipsis
+    const pages = [];
+    for(let i=1;i<=totalPages;i++) {{
+        if(i===1||i===totalPages||Math.abs(i-casePage)<=2) pages.push(i);
+        else if(pages[pages.length-1]!=='...') pages.push('...');
+    }}
+    pages.forEach(p => {{
+        if(p==='...') {{ h += `<span class="page-info">…</span>`; }}
+        else {{ h += `<button class="page-btn ${{p===casePage?'active':''}}" onclick="goPage(${{p}})">${{p}}</button>`; }}
+    }});
+    h += `<button class="page-btn ${{casePage>=totalPages?'disabled':''}}" onclick="goPage(${{casePage+1}})">&#8594;</button>`;
+    h += `<select class="page-size-select" onchange="casePageSize=parseInt(this.value);casePage=1;renderCasePage()">`;
+    [10,20,50].forEach(n => {{ h += `<option value="${{n}}" ${{n===casePageSize?'selected':''}}>${{n}}/页</option>`; }});
+    h += `</select>`;
+    return h;
+}}
+
+function goPage(p) {{
+    const totalPages = Math.max(1, Math.ceil(caseFilteredIds.length / casePageSize));
+    if(p<1||p>totalPages) return;
+    casePage = p;
+    renderCasePage();
+    document.getElementById('sec-cases').scrollIntoView({{behavior:'smooth'}});
 }}
 
 function renderSteps(traj, model) {{
@@ -1153,7 +1325,7 @@ function renderSteps(traj, model) {{
             if(hasIO) html += `<span style="font-size:0.55rem;color:var(--color-accent);cursor:pointer;margin-left:auto" onclick="toggleExecDetail('${{detailId}}')">&#9654;</span>`;
         }}
         html += `</div>`;
-        if(s.purpose) html += `<div class="step-purpose">${{escHtml(s.purpose.slice(0,200))}}</div>`;
+        if(s.purpose) html += `<div class="step-purpose">${{escHtml(s.purpose)}}</div>`;
         if(hasIO) {{
             html += `<div class="exec-tool-detail" id="${{detailId}}">`;
             if(s.args_brief) html += `<div class="step-block input"><span class="step-block-label">Input</span><div class="step-block-content">${{renderParamsTable(s.args_brief)}}</div></div>`;
@@ -1165,49 +1337,6 @@ function renderSteps(traj, model) {{
     html += '</div>'; return html;
 }}
 
-function toggleCorrFilter(key) {{
-    const btn = document.getElementById('corr-'+key);
-    if(!btn) return;
-    const states = ['all','correct','wrong'];
-    const labels = {{'all':'All','correct':'\\u2713','wrong':'\\u2717'}};
-    let cur = btn.dataset.state;
-    let next = states[(states.indexOf(cur)+1)%states.length];
-    btn.dataset.state = next;
-    btn.className = 'corr-toggle' + (next==='correct'?' filter-correct':'') + (next==='wrong'?' filter-wrong':'');
-    const modelLabel = btn.textContent.split(':')[0];
-    btn.textContent = modelLabel + ': ' + labels[next];
-    applyCorrFilters();
-}}
-
-function applyCorrFilters() {{
-    const keys = ['bl','gpt','claude','gem'];
-    const filters = {{}};
-    keys.forEach(k => {{
-        const btn = document.getElementById('corr-'+k);
-        if(btn) filters[k] = btn.dataset.state;
-    }});
-    const anyActive = Object.values(filters).some(v => v!=='all');
-
-    document.querySelectorAll('.question-card').forEach(c => {{
-        if(!anyActive) {{ c.style.display=''; return; }}
-        let show = true;
-        keys.forEach(k => {{
-            const state = filters[k];
-            if(state==='all') return;
-            const val = c.dataset[k];
-            if(val==='-1') return; // no data for this model
-            if(state==='correct' && val!=='1') show = false;
-            if(state==='wrong' && val!=='0') show = false;
-        }});
-        c.style.display = show ? '' : 'none';
-    }});
-
-    // Hide empty ability groups
-    document.querySelectorAll('.ability-group').forEach(g => {{
-        const visible = g.querySelectorAll('.question-card:not([style*="display: none"])');
-        g.style.display = visible.length > 0 ? '' : 'none';
-    }});
-}}
 
 function toggleSection(name) {{
     const header = document.querySelector(`#sec-${{name}} .collapsible-header`);
@@ -1378,8 +1507,6 @@ function renderBenchStats() {{
 
 function toggleToolCard(h) {{ h.parentElement.classList.toggle('expanded'); }}
 function filterTools(d,v,btn) {{ document.querySelectorAll('#tool-filter .filter-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); document.querySelectorAll('.tool-card').forEach(c=>{{ if(d==='all'){{c.style.display='';return;}} if(d==='type'){{c.style.display=c.dataset.type===v?'':'none';return;}} if(d==='level'){{c.style.display=c.dataset.level===v?'':'none';return;}} }}); }}
-function filterCases(cat,btn) {{ document.querySelectorAll('#case-filter .case-filter-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); document.querySelectorAll('.ability-group').forEach(g=>{{g.style.display=(cat==='all'||g.dataset.cat===cat)?'':'none';}}); document.querySelectorAll('.question-card').forEach(c=>{{c.style.display='';}}); }}
-function filterCasesBench(bench,btn) {{ document.querySelectorAll('#case-filter .case-filter-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); document.querySelectorAll('.ability-group').forEach(g=>{{g.style.display='';}}); document.querySelectorAll('.question-card').forEach(c=>{{c.style.display=c.dataset.bench===bench?'':'none';}}); document.querySelectorAll('.ability-group').forEach(g=>{{const v=g.querySelectorAll('.question-card:not([style*="display: none"])'); g.style.display=v.length>0?'':'none';}}); }}
 function switchTab(tabEl) {{
     const qid=tabEl.dataset.qid, idx=tabEl.dataset.idx;
     document.querySelectorAll(`.model-tab[data-qid="${{qid}}"]`).forEach(t=>{{t.classList.remove('active');t.style.borderBottomColor='transparent';t.style.color='var(--color-text-muted)';}});
