@@ -52,6 +52,10 @@ KEY_VISUAL_CASES = {
     "lvbench_1069", "lvbench_1135", "lvbench_2362",
     "lvbench_4023", "lvbench_4754",
     "longvideobench_4QSmRYQBfN4_0", "videomme_011-3",
+    # Cat2: BL✓ + 2 Tools✗
+    "videomme_053-1", "videomme_416-1", "lvbench_63",
+    "lvbench_135", "videomme_019-2", "videomme_619-2",
+    "lvbench_61", "lvbench_41",
 }
 
 # Visual tool types that produce images/bboxes
@@ -781,6 +785,194 @@ CASE_ANNOTATIONS = {
             },
         },
     },
+
+    # ══════════ Cat2: BL✓ + 2 Tools✗ ══════════
+    "053-1": {
+        "category": "cat2",
+        "tag": "Baseline✓ 2-Tool✗",
+        "summary": "岩浆颜色变化视频（93s），问岩浆暴露在空气中短时间后颜色如何变化。GT=C（变银色）。GPT 选 B（红色），Claude 选 D（黑色），Gemini 正确。",
+        "failure_reason": "岩浆冷却过程涉及多阶段颜色变化：红/橙 → 银灰色 → 黑色。GPT 和 Claude 分别锁定了不同的错误阶段。关键词是 'short while'（短时间），对应银灰色过渡态。",
+        "baseline_note": "Baseline 直接观察到岩浆从明亮橙红色到冷却表面的颜色变化，正确识别出短时间暴露后的银灰色外壳。端到端视频理解在连续颜色渐变观察上有优势。",
+        "model_notes": {
+            "gpt-5.4": "11 步，尝试通过 speech_transcription 和 text_recognition 获取解说但未找到明确描述，最终 frame_comparison 只观察到红色和黑色两个极端状态，选了 B（红色）。",
+            "claude-opus-4-6": "10 步，attribute_recognition 检测到颜色从 orange → red → black 的变化，frame_comparison 提到了 'silvery-grey' 但最终推理时未能将其与 'short while' 关联，选了 D（黑色）。",
+            "gemini": "仅 4 步，高效完成。通过 frame_extraction + audio 分析准确判断银色。",
+        },
+        "step_annotations": {
+            "gpt-5.4": {
+                3: "frame_extraction 采样关键帧，但帧间隔可能跳过了银灰色过渡态",
+                10: "frame_comparison 只对比了红色熔岩和黑色冷却面，遗漏了中间的银灰色阶段",
+            },
+            "claude-opus-4-6": {
+                3: "attribute_recognition 检测到颜色序列 orange → red → black",
+                8: "frame_comparison 提到了 'metallic silvery-grey' 冷却外壳——正确证据出现但被忽略",
+                9: "text_recognition 未找到字幕解说。最终选了黑色而非银色",
+            },
+        },
+    },
+    "416-1": {
+        "category": "cat2",
+        "tag": "Baseline✓ 2-Tool✗",
+        "summary": "企鹅视频（260s），问视频开头小企鹅的移动方向。GT=B（从左到右）。Claude 选 C（从右到左），Gemini 选 A（原地不动），GPT 正确。",
+        "failure_reason": "小企鹅在开头几秒移动幅度很小，工具的 object_tracking 和 bbox 变化检测精度不足，Claude 误判方向，Gemini 判断为静止。",
+        "baseline_note": "Baseline 直接看视频帧就能判断企鹅从左向右移动，简单直观的视觉判断不需要工具辅助。",
+        "model_notes": {
+            "gpt-5.4": "6 步，frame_comparison + object_detection 检测 bbox 位移，正确判断从左到右。",
+            "claude-opus-4-6": "10 步，object_tracking 报告企鹅 'stationary'，但 bbox 数据有噪声：x 坐标在 519-723 间振荡。Claude 取首尾差值判断为从右到左，实际是噪声干扰。",
+            "gemini": "9 步，action_recognition 检测到 'standing'，object_tracking 判断位置不变，得出原地不动。工具对微小移动的检测灵敏度不够。",
+        },
+        "step_annotations": {
+            "claude-opus-4-6": {
+                3: "object_tracking 报告企鹅 'stationary'，与后续 bbox 分析矛盾",
+                7: "object_detection 获取 bbox 但 x 坐标在帧间有较大噪声波动",
+                9: "camera_motion_analysis 确认镜头静止，但 bbox 噪声导致方向判断反转",
+            },
+            "gemini": {
+                6: "object_tracking 判断企鹅 'stationary, shivering'，遗漏了缓慢的左→右位移",
+                8: "action_recognition 检测到 'standing' 而非 'walking'，确认了静止的错误判断",
+            },
+        },
+    },
+    "63": {
+        "category": "cat2",
+        "tag": "Baseline✓ 2-Tool✗",
+        "summary": "历史日剧（3666s），问主角在香炉里插了几根香。GT=D（1根）。GPT 和 Claude 都选 A（3根），Gemini 正确。",
+        "failure_reason": "香炉中最终可见 3 根香（含之前已存在的），但主角本次只插了 1 根。工具检测到的是最终状态的数量，而非动作增量。",
+        "baseline_note": "Baseline 直接观看完整动作序列，正确识别出主角拿着一根香点燃并插入，计数准确。",
+        "model_notes": {
+            "gpt-5.4": "12 步，temporal_grounding 定位到香炉场景，但 frame_comparison 看到最终 4 根香（含已有的），推断插入了 3 根。混淆了'已有数量'和'插入数量'。",
+            "claude-opus-4-6": "33 步（过度分析），多次 spatial_crop 放大香炉区域，attribute_recognition 检测到'1 stick being held'，但后续看到最终 3 根就改判为 A。前后证据矛盾时选了错误的。",
+            "gemini": "18 步，通过密集 frame_comparison 跟踪动作序列，正确识别出只插入了 1 根。",
+        },
+        "step_annotations": {
+            "gpt-5.4": {
+                5: "temporal_grounding 定位到 682-694s 的香炉场景",
+                11: "frame_comparison 看到最终 4 根香，错误推断插入了 3 根。应区分已有 vs 新增",
+            },
+            "claude-opus-4-6": {
+                2: "temporal_grounding 搜索 'incense burner' 场景",
+                8: "spatial_crop 放大香炉区域观察细节",
+                21: "attribute_recognition 检测到 '1 stick being held'——这是正确答案的直接证据！",
+                31: "spatial_crop 看到最终 3 根香后改判 A。被'最终状态'误导，忽略了之前 step 21 的证据",
+            },
+        },
+    },
+    "135": {
+        "category": "cat2",
+        "tag": "Baseline✓ 2-Tool✗",
+        "summary": "长视频（3296s），问 37:30-38:05 发生了什么。GT=A（男子重访两人去过的地方）。GPT 选 B（新地方），Claude 选 C（去过+想去+新地方），Gemini 正确。",
+        "failure_reason": "需要对比 37:30 片段中的场景与视频前半段出现过的场景，判断是'重访'还是'新地方'。工具无法进行跨时段场景匹配。",
+        "baseline_note": "Baseline 直接观看完整视频帧，能将 37:30 的蒙太奇场景与前面出现过的场景对应起来，判断为重访旧地。",
+        "model_notes": {
+            "gpt-5.4": "13 步，scene_recognition 和 frame_comparison 只识别出'多个户外场景的蒙太奇'，但无法判断这些场景是否之前出现过。选了 B（新地方）。",
+            "claude-opus-4-6": "31 步，大量 temporal_grounding 尝试搜索之前出现过的场景，但搜索结果都返回高置信度匹配，导致误判为'去过+想去+新地方都有'。",
+            "gemini": "10 步，高效正确判断。",
+        },
+        "step_annotations": {
+            "gpt-5.4": {
+                3: "scene_recognition 识别出雨天户外蒙太奇，但无法判断是否为旧地",
+                7: "frame_comparison 对比帧间变化，只看到场景切换但无法与前半段匹配",
+                12: "frame_comparison 最终只能判断'多个不同地点'，缺乏跨时段对比能力",
+            },
+            "claude-opus-4-6": {
+                9: "temporal_grounding 搜索'man visits places he and woman have been to'，返回高置信度",
+                20: "temporal_grounding 尝试搜索'new places'和'would like to go'，也返回高置信度——搜索结果不可靠",
+                23: "frame_comparison 发现动画角色信息，但仍无法区分'旧地'和'新地'",
+            },
+        },
+    },
+    "019-2": {
+        "category": "cat2",
+        "tag": "Baseline✓ 2-Tool✗",
+        "summary": "乌鸦视频（107s），问乌鸦在做什么。GT=A（吃东西）。GPT 选 B（飞），Claude 选 C（走），Gemini 正确。",
+        "failure_reason": "乌鸦在地面啄食，action_recognition 对鸟类的细粒度动作识别不佳，将'啄食'误判为'飞'或'走'。",
+        "baseline_note": "Baseline 直接看到乌鸦低头啄地的画面，简单直观地判断为吃东西。视觉常识推理不需要工具。",
+        "model_notes": {
+            "gpt-5.4": "10 步，action_recognition 返回 'flying' 作为主要动作。后续 frame_comparison 也未能纠正，选了 B。",
+            "claude-opus-4-6": "22 步，大量 object_detection 和 temporal_grounding，scene_recognition 识别出'黑色鸟在草地上'。但 action_recognition 返回 walking，最终选了 C。",
+            "gemini": "仅 3 步，frame_extraction + object_detection 直接判断出吃东西。",
+        },
+        "step_annotations": {
+            "gpt-5.4": {
+                3: "action_recognition 返回 'flying'——对鸟类地面啄食动作的误判",
+                9: "frame_comparison 观察到乌鸦在地面但未纠正 action_recognition 的错误判断",
+            },
+            "claude-opus-4-6": {
+                7: "action_recognition 返回 'walking'——与 GPT 错误方向不同但同样错误",
+                9: "temporal_grounding 搜索 'raven eating'，但结果不够明确",
+                21: "attribute_recognition 分析乌鸦姿态，最终仍选了 walking",
+            },
+        },
+    },
+    "619-2": {
+        "category": "cat2",
+        "tag": "Baseline✓ 2-Tool✗",
+        "summary": "陶瓷制作视频（1980s），问烧制前陶瓷的颜色。GT=C（棕色）。GPT 和 Claude 都选 B（白色），Gemini 正确。",
+        "failure_reason": "陶瓷制作有多个阶段：棕色泥坯 → 成型后表面变浅（白色/米色）→ 上釉前的状态。工具提取的帧可能是上釉或半干状态，看起来偏白/浅色。",
+        "baseline_note": "Baseline 观察到完整的制作过程，从始至终看到泥坯是棕色的。正确判断烧制前为棕色。",
+        "model_notes": {
+            "gpt-5.4": "14 步，attribute_recognition 检测到 'white/tan/light brown'。在白色和棕色之间犹豫，最终选了白色。",
+            "claude-opus-4-6": "18 步，attribute_recognition 检测到 'off-white'，虽然在 180s 处发现了 brown 的 raw 状态，但最终被后续帧的 white 证据覆盖。",
+            "gemini": "12 步，正确判断棕色。",
+        },
+        "step_annotations": {
+            "gpt-5.4": {
+                7: "temporal_grounding 搜索 ceramics before furnace 场景",
+                9: "attribute_recognition 检测到 'white/tan/light brown'——颜色判断模糊",
+            },
+            "claude-opus-4-6": {
+                4: "attribute_recognition 检测到 'off-white' 颜色",
+                10: "attribute_recognition 在视频开头发现 'brown' raw 状态——正确证据出现但被后续覆盖",
+                17: "attribute_recognition 最终确认 'white'。被半成品/干燥后的浅色误导",
+            },
+        },
+    },
+    "61": {
+        "category": "cat2",
+        "tag": "Baseline✓ 2-Tool✗",
+        "summary": "历史日剧（3666s），持枪人威胁厨师后主角做什么。GT=A（推桌站起对峙→杀人→离开→厨师跟随）。Claude 选 B（injuries 而非 kills），Gemini 选 D（无厨师跟随）。",
+        "failure_reason": "选项 A 和 B 的区别仅在于 kills vs injuries；A 和 D 的区别在于厨师是否跟随。需要精确判断这些细节。",
+        "baseline_note": "Baseline 看完整个场景序列，正确识别出主角杀了持枪人且厨师跟随离开。",
+        "model_notes": {
+            "gpt-5.4": "17 步，通过密集分析正确判断：无枪、杀人、厨师跟随。选 A 正确。",
+            "claude-opus-4-6": "28 步，正确判断无枪和厨师跟随，但在 kills vs injuries 上判断错误。frame_comparison 显示的动作模糊，无法确定结果是死亡还是受伤。选了 B。",
+            "gemini": "17 步，正确判断杀人，但遗漏了厨师跟随的细节。选了 D。",
+        },
+        "step_annotations": {
+            "claude-opus-4-6": {
+                7: "frame_extraction 提取对峙场景的关键帧",
+                22: "frame_comparison 分析战斗结果，但无法确定是 kills 还是 injuries",
+                25: "frame_comparison 观察到对方倒地但判断为受伤而非死亡。选了 B",
+            },
+            "gemini": {
+                5: "action_recognition 分析战斗动作",
+                11: "frame_extraction 提取离开场景",
+                16: "action_recognition 分析离开后的动作，但遗漏了厨师跟随的细节",
+            },
+        },
+    },
+    "41": {
+        "category": "cat2",
+        "tag": "Baseline✓ 2-Tool✗",
+        "summary": "长视频（2044s），问主角在 10:33 如何通过通道。GT=B（跑过但腿受伤）。GPT 答案提取失败（None），Gemini 选 C（丢失武器）。Claude 正确。",
+        "failure_reason": "GPT 仅 2 步就因 frame_extraction 失败而放弃。Gemini 在密集动作场景中将长矛刺伤误判为丢失武器。",
+        "baseline_note": "Baseline 看到主角跑过通道时被长矛刺中腿部，然后拔出继续前进。正确判断为腿受伤。",
+        "model_notes": {
+            "gpt-5.4": "仅 2 步！frame_extraction 后直接结束，答案提取失败返回 None。这是工具方法最严重的失败模式——流程中断。",
+            "claude-opus-4-6": "19 步，精确定位到 633-676s 的通道场景，通过 temporal_grounding 找到腿部受伤片段。选 B 正确。",
+            "gemini": "17 步，action_recognition 检测到 'running and dodging'，但将矛刺伤误解为丢失武器。选了 C。",
+        },
+        "step_annotations": {
+            "gpt-5.4": {
+                2: "frame_extraction 提取 10:33 附近帧后直接结束，未进行任何分析。答案为 None",
+            },
+            "gemini": {
+                3: "action_recognition 检测到 running and dodging",
+                9: "frame_comparison 分析动作细节，但将矛刺伤误读为武器脱手",
+                15: "action_recognition 继续分析但未能纠正错误判断",
+            },
+        },
+    },
 }
 
 
@@ -1332,6 +1524,7 @@ def generate_html(registry, abilities, traj_stats, traj_data, level_counts, benc
         .ann-panel.collapsed .ann-panel-body {{ display:none; }}
         .ann-panel-tag {{ font-size:0.6rem; font-weight:700; padding:0.15rem 0.5rem; border-radius:3px; color:white; }}
         .ann-panel-tag.cat1 {{ background:#ef4444; }}
+        .ann-panel-tag.cat2 {{ background:#f59e0b; }}
         .ann-panel-tag.cat3 {{ background:#22c55e; }}
         .ann-panel-title {{ font-size:0.75rem; font-weight:700; color:#92400e; }}
         .ann-panel-toggle {{ font-size:0.6rem; color:#92400e; margin-left:auto; }}
@@ -1352,6 +1545,8 @@ def generate_html(registry, abilities, traj_stats, traj_data, level_counts, benc
         .quick-filter-btn:hover {{ opacity:0.8; }}
         .quick-filter-btn.cat1 {{ border-color:#ef4444; color:#ef4444; }}
         .quick-filter-btn.cat1.active {{ background:#ef4444; color:white; }}
+        .quick-filter-btn.cat2 {{ border-color:#f59e0b; color:#b45309; }}
+        .quick-filter-btn.cat2.active {{ background:#f59e0b; color:white; }}
         .quick-filter-btn.cat3 {{ border-color:#22c55e; color:#22c55e; }}
         .quick-filter-btn.cat3.active {{ background:#22c55e; color:white; }}
 
@@ -1769,9 +1964,11 @@ function renderCases() {{
 
     // Quick filter buttons for annotated cases
     const cat1Count = window._allCaseItems.filter(item => item.q.annotations && item.q.annotations.category === 'cat1').length;
+    const cat2Count = window._allCaseItems.filter(item => item.q.annotations && item.q.annotations.category === 'cat2').length;
     const cat3Count = window._allCaseItems.filter(item => item.q.annotations && item.q.annotations.category === 'cat3').length;
     let qfHtml = `<span class="case-filter-label">Key Cases:</span>`;
     qfHtml += `<button class="quick-filter-btn cat1" onclick="quickFilter('cat1',this)">Baseline&#10003; All-Tool&#10007; (${{cat1Count}})</button>`;
+    qfHtml += `<button class="quick-filter-btn cat2" onclick="quickFilter('cat2',this)">Baseline&#10003; 2-Tool&#10007; (${{cat2Count}})</button>`;
     qfHtml += `<button class="quick-filter-btn cat3" onclick="quickFilter('cat3',this)">Baseline&#10007; All-Tool&#10003; (${{cat3Count}})</button>`;
     document.getElementById('quick-filter-bar').innerHTML = qfHtml;
 
@@ -2297,18 +2494,19 @@ function renderBenchStats() {{
     const fk = v => v >= 1000 ? (v/1000).toFixed(1)+'k' : v < 1 ? '<1' : Math.round(v).toString();
     const fmtDur = d => {{ const m=Math.floor(d/60),s=Math.round(d%60); return m>0 ? m+'m'+s+'s' : s+'s'; }};
 
-    // ── Compute accuracy per model per benchmark + average ──
+    // ── Compute accuracy per model per benchmark + overall average ──
     const accData = {{}};
     modelOrder.forEach(mk => {{
-        const accs = [];
+        let totalCorrect = 0, totalN = 0;
         benchOrder.forEach(ds => {{
             const s = BENCH_STATS[ds] && BENCH_STATS[ds][mk];
             const acc = s ? s.accuracy : null;
             if(!accData[mk]) accData[mk] = {{}};
             accData[mk][ds] = acc;
-            if(acc !== null) accs.push(acc);
+            if(s) {{ totalCorrect += Math.round(s.accuracy * s.n / 100); totalN += s.n; }}
         }});
-        accData[mk].avg = accs.length ? Math.round(accs.reduce((a,b)=>a+b,0)/accs.length*10)/10 : null;
+        // Overall = total correct / total questions (not avg of per-benchmark accuracies)
+        accData[mk].avg = totalN > 0 ? Math.round(totalCorrect / totalN * 1000) / 10 : null;
     }});
 
     // Find max accuracy per column
@@ -2336,7 +2534,7 @@ function renderBenchStats() {{
         const dur = bl ? fmtDur(bl.avg_vid_duration) : '?';
         html += `<th style="text-align:center;min-width:100px">${{benchLabels[ds]}}<br><span style="font-weight:400;font-size:0.58rem;color:var(--color-text-muted)">${{n}}题 · 均 ${{dur}}</span></th>`;
     }});
-    html += `<th style="text-align:center;min-width:80px;background:#f8f9fa">平均</th>`;
+    html += `<th style="text-align:center;min-width:80px;background:#f8f9fa">总体<br><span style="font-weight:400;font-size:0.58rem;color:var(--color-text-muted)">116题</span></th>`;
     html += `</tr></thead><tbody>`;
 
     modelOrder.forEach(mk => {{
