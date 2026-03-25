@@ -571,7 +571,7 @@ CASE_ANNOTATIONS = {
     # ══════════ Cat1: BL✓ All-Tool✗ ══════════
     "hf4WUOagFAw_1": {
         "category": "cat1",
-        "tag": "BL✓ All-Tool✗",
+        "tag": "Baseline✓ All-Tool✗",
         "summary": "K-pop 舞台表演视频（216s），需要在视频末尾找到穿紫色上衣比 7 手势闭眼的人，再回溯其第一次出现时的动作。三个工具模型全部错选 E（拿麦跳舞），GT 是 B（坐在舞台上伸展）。",
         "failure_reason": "多步时间回溯中人物跟踪丢失：从 211s 回溯到 13s 需要跨越大量帧，工具的 temporal_grounding 对'第一次出现'的定位不稳定（有的返回 13s、有的 20s、有的 37s），最终都锁定到了该人拿麦跳舞的片段而非最早的坐姿片段。",
         "baseline_note": "Baseline 直接观看完整视频帧，一次性看到 13s 时该人坐在舞台地板上的画面，与 211s 的紫色上衣形成正确关联。端到端视觉理解在人物跨时间匹配方面有天然优势。",
@@ -609,7 +609,7 @@ CASE_ANNOTATIONS = {
     # ══════════ Cat3: BL✗ All-Tool✓ ══════════
     "1069": {
         "category": "cat3",
-        "tag": "BL✗ All-Tool✓",
+        "tag": "Baseline✗ All-Tool✓",
         "summary": "长视频（2665s）中辨认戴蓝色短袖+眼镜的人佩戴的手表颜色。GT=B 黑色。Baseline 误判为金色（A），三个工具模型均正确。",
         "failure_reason": "Baseline 在 2665s 长视频中帧采样密度不足，手表细节在缩略帧中难以辨认，误将金色表扣/棕色表带判断为金色手表。",
         "baseline_note": "Baseline 回答 A（Golden），从 response 看它注意到了手表有 'gold-colored face and brown leather strap'，但实际手表表盘是黑色的，表扣可能是金色。长视频低分辨率帧下的细节判断出错。",
@@ -636,7 +636,7 @@ CASE_ANNOTATIONS = {
     },
     "1135": {
         "category": "cat3",
-        "tag": "BL✗ All-Tool✓",
+        "tag": "Baseline✗ All-Tool✓",
         "summary": "长视频（2960s）中判断 06:01 时一个男人的表情。GT=D 笑。Baseline 误判为麻木（A），工具模型均正确。",
         "failure_reason": "Baseline 帧采样间隔太大，可能未采样到 06:01 附近的帧，或在缩略帧中表情细节丢失。",
         "baseline_note": "Baseline 判断 'neutral and serious, not crying/angry/laughing → numb'。但 06:01 处该男子实际在笑。帧采样粒度不够精确。",
@@ -658,7 +658,7 @@ CASE_ANNOTATIONS = {
     },
     "2362": {
         "category": "cat3",
-        "tag": "BL✗ All-Tool✓",
+        "tag": "Baseline✗ All-Tool✓",
         "summary": "超长视频（7547s/2h+）中定位小美人鱼第一次出现的时间。GT=B（03:40）。Baseline 选了 D（02:40），工具模型全对。",
         "failure_reason": "7547s 超长视频，Baseline 帧采样覆盖不足，在时间定位精度上天然劣势。",
         "baseline_note": "Baseline 在 2 小时视频中逐帧扫描，但采样间隔过大导致定位不准，误判为 02:40。",
@@ -681,7 +681,7 @@ CASE_ANNOTATIONS = {
     },
     "4023": {
         "category": "cat3",
-        "tag": "BL✗ All-Tool✓",
+        "tag": "Baseline✗ All-Tool✓",
         "summary": "网球比赛视频（2792s），问在特定比分时镜头对准数字的原因。GT=A（发球速度极高）。Baseline 选 C（球击中了数字），工具模型全对。",
         "failure_reason": "Baseline 无法精确读取速度数字，误判了因果关系。",
         "baseline_note": "Baseline 看到镜头对准数字但无法用 OCR 精确读取速度值，误以为是球击中了显示屏上的数字。",
@@ -707,7 +707,7 @@ CASE_ANNOTATIONS = {
     },
     "4754": {
         "category": "cat3",
-        "tag": "BL✗ All-Tool✓",
+        "tag": "Baseline✗ All-Tool✓",
         "summary": "长视频（2450s）中辨认 20:29 画面最近的人穿什么衣服。GT=C（条纹衫）。Baseline 选 D（格子衫），工具模型全对。",
         "failure_reason": "Baseline 在低分辨率帧中将条纹误判为格子。细节纹理在缩略帧中容易混淆。",
         "baseline_note": "Baseline 简短回答 'plaid shirt'（格子衫），可能在缩小帧中条纹和格子的纹理难以区分。",
@@ -733,7 +733,7 @@ CASE_ANNOTATIONS = {
     },
     "4QSmRYQBfN4_0": {
         "category": "cat3",
-        "tag": "BL✗ All-Tool✓",
+        "tag": "Baseline✗ All-Tool✓",
         "summary": "短视频（17s）中识别旗帜图案细节：字幕后出现了什么。GT=C（白色箭头 + 红旗上两个黄色图案）。Baseline 选 D，工具模型全对。",
         "failure_reason": "Baseline 在快速切换的画面中遗漏了部分视觉元素的共现。",
         "baseline_note": "虽然只有 17s，但画面切换快且细节密集。Baseline 正确识别了箭头和旗帜，但对旗帜上的黄色图案数量判断错误。",
@@ -753,7 +753,7 @@ CASE_ANNOTATIONS = {
     },
     "011-3": {
         "category": "cat3",
-        "tag": "BL✗ All-Tool✓",
+        "tag": "Baseline✗ All-Tool✓",
         "summary": "芭蕾舞视频（118s），识别最后一幕的舞蹈动作。GT=A（单膝跪地后仰）。Baseline 选 D（passé + Grand jeté），工具模型全对。",
         "failure_reason": "Baseline 对专业芭蕾术语的视觉对应理解不准确。",
         "baseline_note": "Baseline 在最后几帧中看到了抬腿和弯膝动作，误判为 passé + Grand jeté。实际上最终动作是单膝跪地后仰。",
@@ -1771,8 +1771,8 @@ function renderCases() {{
     const cat1Count = window._allCaseItems.filter(item => item.q.annotations && item.q.annotations.category === 'cat1').length;
     const cat3Count = window._allCaseItems.filter(item => item.q.annotations && item.q.annotations.category === 'cat3').length;
     let qfHtml = `<span class="case-filter-label">Key Cases:</span>`;
-    qfHtml += `<button class="quick-filter-btn cat1" onclick="quickFilter('cat1',this)">BL&#10003; All-Tool&#10007; (${{cat1Count}})</button>`;
-    qfHtml += `<button class="quick-filter-btn cat3" onclick="quickFilter('cat3',this)">BL&#10007; All-Tool&#10003; (${{cat3Count}})</button>`;
+    qfHtml += `<button class="quick-filter-btn cat1" onclick="quickFilter('cat1',this)">Baseline&#10003; All-Tool&#10007; (${{cat1Count}})</button>`;
+    qfHtml += `<button class="quick-filter-btn cat3" onclick="quickFilter('cat3',this)">Baseline&#10007; All-Tool&#10003; (${{cat3Count}})</button>`;
     document.getElementById('quick-filter-bar').innerHTML = qfHtml;
 
     // Correctness dropdown filters
