@@ -1688,7 +1688,7 @@ function renderTrajectories() {{
 
 // ── Pagination state ──
 let casePage = 1;
-let casePageSize = 10;
+let casePageSize = 1;
 let caseFilteredIds = []; // sequential_ids of filtered questions
 
 function renderCases() {{
@@ -2120,8 +2120,11 @@ function buildPaginationHtml(total, totalPages) {{
         else {{ h += `<button class="page-btn ${{p===casePage?'active':''}}" onclick="goPage(${{p}})">${{p}}</button>`; }}
     }});
     h += `<button class="page-btn ${{casePage>=totalPages?'disabled':''}}" onclick="goPage(${{casePage+1}})">&#8594;</button>`;
+    h += `<span style="margin-left:0.5rem;font-size:0.68rem;color:var(--color-text-muted)">跳转</span>`;
+    h += `<input type="number" class="page-jump-input" min="1" max="${{totalPages}}" value="${{casePage}}" onkeydown="if(event.key==='Enter')goPage(parseInt(this.value))" style="width:3.5rem;padding:0.2rem 0.3rem;border:1px solid var(--color-border);border-radius:4px;font-size:0.68rem;text-align:center;font-family:var(--font-mono)">`;
+    h += `<span style="font-size:0.62rem;color:var(--color-text-muted)">/ ${{totalPages}}</span>`;
     h += `<select class="page-size-select" onchange="casePageSize=parseInt(this.value);casePage=1;renderCasePage()">`;
-    [10,20,50].forEach(n => {{ h += `<option value="${{n}}" ${{n===casePageSize?'selected':''}}>${{n}}/页</option>`; }});
+    [1,5,10,20].forEach(n => {{ h += `<option value="${{n}}" ${{n===casePageSize?'selected':''}}>${{n}}/页</option>`; }});
     h += `</select>`;
     return h;
 }}
@@ -2133,6 +2136,15 @@ function goPage(p) {{
     renderCasePage();
     document.getElementById('sec-cases').scrollIntoView({{behavior:'smooth'}});
 }}
+
+// Keyboard navigation: left/right arrow to switch pages
+document.addEventListener('keydown', function(e) {{
+    // Skip if user is typing in an input/select/textarea
+    const tag = (e.target.tagName||'').toLowerCase();
+    if(tag === 'input' || tag === 'select' || tag === 'textarea') return;
+    if(e.key === 'ArrowLeft') {{ e.preventDefault(); goPage(casePage - 1); }}
+    else if(e.key === 'ArrowRight') {{ e.preventDefault(); goPage(casePage + 1); }}
+}});
 
 function renderSteps(traj, model, stepAnns) {{
     if(!traj||!traj.steps||!traj.steps.length) return '<div class="no-tools">--</div>';
@@ -2277,57 +2289,128 @@ function renderBenchStats() {{
     const benchOrder = ['lvbench','longvideobench','videomme'];
     const benchLabels = {{'lvbench':'LVBench','longvideobench':'LongVideoBench','videomme':'Video-MME'}};
     const modelOrder = ['baseline','gpt-5.4','claude-opus-4-6','gemini'];
-    const modelLabels = {{'baseline':'Baseline','gpt-5.4':'GPT-5.4','claude-opus-4-6':'Claude Opus 4.6','gemini':'Gemini'}};
+    const modelLabels = {{'baseline':'Baseline (Gemini 3.1 Pro Direct)','gpt-5.4':'GPT-5.4','claude-opus-4-6':'Claude Opus 4.6','gemini':'Gemini 3.0 Pro'}};
+    const modelShort = {{'baseline':'Baseline','gpt-5.4':'GPT-5.4','claude-opus-4-6':'Claude','gemini':'Gemini'}};
     const modelColors = {{'baseline':'#FF9800','gpt-5.4':'#10a37f','claude-opus-4-6':'#c96442','gemini':'#4285f4'}};
     const CPT = 4;
 
     const fk = v => v >= 1000 ? (v/1000).toFixed(1)+'k' : v < 1 ? '<1' : Math.round(v).toString();
     const fmtDur = d => {{ const m=Math.floor(d/60),s=Math.round(d%60); return m>0 ? m+'m'+s+'s' : s+'s'; }};
 
-    let html = '<div style="overflow-x:auto"><table class="model-compare-table" style="font-size:0.72rem">';
+    // ── Compute accuracy per model per benchmark + average ──
+    const accData = {{}};
+    modelOrder.forEach(mk => {{
+        const accs = [];
+        benchOrder.forEach(ds => {{
+            const s = BENCH_STATS[ds] && BENCH_STATS[ds][mk];
+            const acc = s ? s.accuracy : null;
+            if(!accData[mk]) accData[mk] = {{}};
+            accData[mk][ds] = acc;
+            if(acc !== null) accs.push(acc);
+        }});
+        accData[mk].avg = accs.length ? Math.round(accs.reduce((a,b)=>a+b,0)/accs.length*10)/10 : null;
+    }});
 
-    // Header row 1: benchmark groups
-    html += `<thead><tr><th rowspan="2" style="min-width:140px">Model</th>`;
+    // Find max accuracy per column
+    const maxAcc = {{}};
+    [...benchOrder, 'avg'].forEach(col => {{
+        let best = -1;
+        modelOrder.forEach(mk => {{
+            const v = col === 'avg' ? accData[mk].avg : accData[mk][col];
+            if(v !== null && v > best) best = v;
+        }});
+        maxAcc[col] = best;
+    }});
+
+    // Baseline accuracy for delta
+    const blAcc = accData['baseline'] || {{}};
+
+    // ── Table 1: 准确率对比 ──
+    let html = `<div style="margin-bottom:1.5rem">`;
+    html += `<div style="font-size:0.78rem;font-weight:700;margin-bottom:0.5rem;color:var(--color-text)">准确率对比</div>`;
+    html += `<table class="model-compare-table" style="font-size:0.75rem;width:auto">`;
+    html += `<thead><tr><th style="min-width:180px">模型</th>`;
     benchOrder.forEach(ds => {{
         const bl = BENCH_STATS[ds] && BENCH_STATS[ds].baseline;
         const n = bl ? bl.n : '?';
         const dur = bl ? fmtDur(bl.avg_vid_duration) : '?';
-        html += `<th colspan="5" style="text-align:center;border-left:2px solid var(--color-border)">${{benchLabels[ds]}}<br><span style="font-weight:400;font-size:0.6rem;color:var(--color-text-muted)">${{n}} cases · avg ${{dur}}</span></th>`;
+        html += `<th style="text-align:center;min-width:100px">${{benchLabels[ds]}}<br><span style="font-weight:400;font-size:0.58rem;color:var(--color-text-muted)">${{n}}题 · 均 ${{dur}}</span></th>`;
     }});
-    html += `</tr>`;
+    html += `<th style="text-align:center;min-width:80px;background:#f8f9fa">平均</th>`;
+    html += `</tr></thead><tbody>`;
 
-    // Header row 2: metrics
-    html += `<tr>`;
+    modelOrder.forEach(mk => {{
+        const color = modelColors[mk];
+        const isBl = mk === 'baseline';
+        html += `<tr${{isBl?' style="background:#fff7ed"':''}}>`;
+        html += `<td style="white-space:nowrap"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${{color}};margin-right:0.4rem;vertical-align:middle"></span>${{modelLabels[mk]}}</td>`;
+
+        [...benchOrder, 'avg'].forEach(col => {{
+            const acc = col === 'avg' ? accData[mk].avg : accData[mk][col];
+            const isMax = acc !== null && acc === maxAcc[col];
+            const isAvgCol = col === 'avg';
+            let cell = '';
+            if(acc === null) {{
+                cell = '—';
+            }} else {{
+                const accStr = isMax ? `<strong>${{acc}}%</strong>` : `${{acc}}%`;
+                if(!isBl) {{
+                    const blVal = col === 'avg' ? blAcc.avg : blAcc[col];
+                    if(blVal !== null && blVal !== undefined) {{
+                        const delta = Math.round((acc - blVal)*10)/10;
+                        const sign = delta >= 0 ? '+' : '';
+                        const dColor = delta > 0 ? '#16a34a' : delta < 0 ? '#dc2626' : '#888';
+                        cell = `${{accStr}} <span style="font-size:0.6rem;color:${{dColor}}">${{sign}}${{delta}}</span>`;
+                    }} else {{
+                        cell = accStr;
+                    }}
+                }} else {{
+                    cell = accStr;
+                }}
+            }}
+            const bgStyle = isAvgCol ? 'background:#f8f9fa;' : '';
+            html += `<td style="text-align:center;${{bgStyle}}">${{cell}}</td>`;
+        }});
+        html += `</tr>`;
+    }});
+    html += `</tbody></table></div>`;
+
+    // ── Table 2: 上下文长度统计 ──
+    html += `<div style="margin-bottom:0.8rem">`;
+    html += `<div style="font-size:0.78rem;font-weight:700;margin-bottom:0.5rem;color:var(--color-text)">上下文长度统计 <span style="font-weight:400;font-size:0.62rem;color:var(--color-text-muted)">（单位：k tokens）</span></div>`;
+    html += `<table class="model-compare-table" style="font-size:0.72rem">`;
+    html += `<thead><tr><th style="min-width:140px">模型</th>`;
+    benchOrder.forEach(ds => {{
+        html += `<th colspan="4" style="text-align:center;border-left:2px solid var(--color-border)">${{benchLabels[ds]}}</th>`;
+    }});
+    html += `</tr><tr><th></th>`;
     benchOrder.forEach(() => {{
-        html += `<th style="border-left:2px solid var(--color-border)">Acc</th><th>Final Input</th><th>Final Output</th><th>Tool Input</th><th>Tool Output</th>`;
+        html += `<th style="border-left:2px solid var(--color-border);font-size:0.6rem">输入上下文</th><th style="font-size:0.6rem">输出</th><th style="font-size:0.6rem">工具输入</th><th style="font-size:0.6rem">工具输出</th>`;
     }});
     html += `</tr></thead><tbody>`;
 
-    // Model rows
     modelOrder.forEach(mk => {{
         const color = modelColors[mk];
-        html += `<tr${{mk==='baseline'?' style="background:#fff7ed"':''}}>`;
-        html += `<td style="white-space:nowrap"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${{color}};margin-right:0.4rem;vertical-align:middle"></span><strong>${{modelLabels[mk]}}</strong></td>`;
+        const isBl = mk === 'baseline';
+        html += `<tr${{isBl?' style="background:#fff7ed"':''}}>`;
+        html += `<td style="white-space:nowrap"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${{color}};margin-right:0.4rem;vertical-align:middle"></span><strong>${{modelShort[mk]}}</strong></td>`;
 
         benchOrder.forEach(ds => {{
             const s = BENCH_STATS[ds] && BENCH_STATS[ds][mk];
             if(!s) {{
-                html += `<td style="border-left:2px solid var(--color-border)" colspan="5">—</td>`;
+                html += `<td style="border-left:2px solid var(--color-border)" colspan="4">—</td>`;
                 return;
             }}
-
-            if(mk === 'baseline') {{
-                html += `<td style="border-left:2px solid var(--color-border)"><strong>${{s.accuracy}}%</strong></td>`;
-                html += `<td>${{fk(s.avg_input_tokens)}}</td>`;
+            if(isBl) {{
+                html += `<td style="border-left:2px solid var(--color-border)">${{fk(s.avg_input_tokens)}}</td>`;
                 html += `<td>${{fk(s.avg_output_tokens)}}</td>`;
-                html += `<td>—</td><td>—</td>`;
+                html += `<td style="color:#aaa">—</td><td style="color:#aaa">—</td>`;
             }} else {{
                 const ctxTok = s.avg_final_input_chars ? Math.round(s.avg_final_input_chars / CPT) : 0;
                 const outTok = s.avg_last_output_chars ? Math.round(s.avg_last_output_chars / CPT) : 0;
                 const tiTok = s.avg_tool_input_chars ? Math.round(s.avg_tool_input_chars / CPT) : 0;
                 const toTok = s.avg_tool_output_chars ? Math.round(s.avg_tool_output_chars / CPT) : 0;
-                html += `<td style="border-left:2px solid var(--color-border)"><strong>${{s.accuracy}}%</strong></td>`;
-                html += `<td>${{fk(ctxTok)}}</td>`;
+                html += `<td style="border-left:2px solid var(--color-border)">${{fk(ctxTok)}}</td>`;
                 html += `<td>${{fk(outTok)}}</td>`;
                 html += `<td>${{fk(tiTok)}}</td>`;
                 html += `<td>${{fk(toTok)}}</td>`;
@@ -2335,16 +2418,13 @@ function renderBenchStats() {{
         }});
         html += `</tr>`;
     }});
-
     html += `</tbody></table></div>`;
 
     // Legend
-    html += `<div style="margin-top:0.8rem;font-size:0.65rem;color:var(--color-text-muted);line-height:1.8">`;
-    html += `所有长度单位：<strong>k tokens</strong><br>`;
-    html += `<strong>Final Input</strong> = 最后一轮 AI 调用的输入上下文长度 = system + user + 所有 AI 历史输出 + 所有 Tool Output<br>`;
-    html += `<strong>Final Output</strong> = 最后一轮 AI 输出长度<br>`;
-    html += `<strong>Tool Input</strong> = Final Input 中工具调用参数的总长度；<strong>Tool Output</strong> = Final Input 中工具返回结果的总长度<br>`;
-    html += `Baseline 为实际 token 数，含 image tokens 占 99%+；Tool 模型为估算 token 数 text chars ÷ 4，不含图像`;
+    html += `<div style="font-size:0.62rem;color:var(--color-text-muted);line-height:1.7">`;
+    html += `<strong>输入上下文</strong> = 最后一轮 AI 调用的输入长度（含 system + user + 历史 AI 输出 + 工具返回）<br>`;
+    html += `<strong>工具输入</strong> = 输入上下文中工具调用参数总长度；<strong>工具输出</strong> = 输入上下文中工具返回结果总长度<br>`;
+    html += `Baseline 为实际 token 数（含 image tokens 占 99%+）；Tool 模型为估算值（text chars ÷ 4，不含图像）`;
     html += `</div>`;
 
     document.getElementById('bench-container').innerHTML = html;
