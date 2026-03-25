@@ -910,7 +910,7 @@ const BENCH_STATS = {bench_stats_json};
 
 const CATEGORY_COLORS = {{'High-Level Reasoning':'#F44336','Temporal Relation':'#2196F3','Spatial Relation':'#FF9800','Audio-Visual':'#9C27B0','Visual Perception':'#4CAF50'}};
 const MODEL_COLORS = {{'gpt-5.4':'#10a37f','claude-opus-4-6':'#c96442','gemini':'#4285f4'}};
-const MODEL_SHORT = {{'gpt-5.4':'GPT-5.4','claude-opus-4-6':'Claude Opus 4.6','gemini':'Gemini'}};
+const MODEL_SHORT = {{'gpt-5.4':'GPT-5.4','claude-opus-4-6':'Claude Opus 4.6','gemini':'Gemini 3.0 Pro'}};
 const MODEL_CSS = {{'gpt-5.4':'gpt','claude-opus-4-6':'claude','gemini':'gemini'}};
 const TYPE_LABELS = {{'single_model':'Single Model','pipeline':'Pipeline','script':'Script'}};
 const LEVEL_LABELS = {{'image':'Image','sequence':'Sequence','audio':'Audio'}};
